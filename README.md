@@ -47,7 +47,7 @@ AI 侧默认以 **Claude Code 的 channel 插件**形态运行——你在手机
 | [`backend/`](backend/) | 你的 VPS | relay 后端（FastAPI + sqlite）。落库 + SSE 扇出 + 可选 TTS/推送 | [backend/DEPLOY.md](backend/DEPLOY.md) |
 | [`channel/`](channel/) | 你的电脑 | Claude Code channel 插件（Bun + MCP）。把消息变成 CC 会话里的 `<channel>` 块 | [channel/DEPLOY.md](channel/DEPLOY.md) |
 | [`web/`](web/) | 你的 VPS（静态） | 手机 PWA（单文件 `index.html`，无构建）。装到主屏就是独立 App | [web/DEPLOY.md](web/DEPLOY.md) |
-| [`examples/api_loop.py`](examples/api_loop.py) | 你的 VPS（可选） | 服务器常驻 OpenAI-compatible API loop；PWA 可在 Desktop / API 之间切换 | [examples/.env.example](examples/.env.example) |
+| [`examples/api_loop.py`](examples/api_loop.py) | 你的 VPS（可选） | 服务器常驻 OpenAI-compatible API loop；PWA 可在 Desktop / API 间切换 | [examples/.env.example](examples/.env.example) |
 
 **这是一套 Claude Code 一站式方案**：AI 的「大脑」就是你本地的 Claude Code，channel 插件是它的嘴和耳朵，relay 是中转，PWA 是你手里的对讲机。三件套都在这个仓库里，互相用同一把 `RELAY_SECRET` 对认。
 
@@ -232,5 +232,6 @@ const USE_MOCK  = false;      // ← 改成 true 可零后端先看 UI（自带�
 
 ## License
 
-[MIT](LICENSE) © 2026 Companion Channel contributors —— 可自由使用 / 修改 / 再分发，保留版权声明即可。
-想署自己的名,把 `LICENSE` 里的版权方换成你的名字 / 账号即可。
+本项目当前采用 [GNU Affero General Public License v3.0](LICENSE)。如果你修改后通过网络向用户提供服务，AGPL 的网络源码条款也会适用。
+
+2026-08-16 之前的历史版本曾以 MIT License 发布；许可切换与历史说明见 [NOTICE](NOTICE)。
