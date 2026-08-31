@@ -70,6 +70,24 @@ MINIMAX_GROUP_ID = os.environ.get("MINIMAX_GROUP_ID", "")
 MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "speech-02-hd")
 MINIMAX_VOICE_ZH = os.environ.get("MINIMAX_VOICE_ZH", "")
 MINIMAX_TTS_TIMEOUT = float(os.environ.get("MINIMAX_TTS_TIMEOUT", "30"))
+# --- MOSS TTS（月光默认语音：Daddy 音色） -----------------------------------
+MOSS_API_BASE = os.environ.get("MOSS_API_BASE", "https://api.mosi.cn")
+MOSS_API_KEY = os.environ.get("MOSS_API_KEY", "")
+MOSS_MODEL = os.environ.get("MOSS_MODEL", "moss-tts")
+MOSS_VOICE_ID = os.environ.get("MOSS_VOICE_ID", "")
+MOSS_TTS_TIMEOUT = float(os.environ.get("MOSS_TTS_TIMEOUT", "30"))
+# --- Groq ASR（语音识别，免费额度） ------------------------------------------
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_BASE = os.environ.get("GROQ_API_BASE", "https://api.groq.com/openai")
+GROQ_ASR_MODEL = os.environ.get("GROQ_ASR_MODEL", "whisper-large-v3-turbo")
+GROQ_ASR_TIMEOUT = float(os.environ.get("GROQ_ASR_TIMEOUT", "60"))
+# --- 心潮面板（实时状态） ---------------------------------------------------
+XINCHAO_ENABLED = os.environ.get("XINCHAO_ENABLED", "false").lower() == "true"
+XINCHAO_API_BASE = os.environ.get("XINCHAO_API_BASE", "")
+XINCHAO_TOKEN = os.environ.get("XINCHAO_TOKEN", "")
+# --- 阿贝贝触觉/视觉（ESP32） ------------------------------------------------
+ABEBEI_TOUCH_URL = os.environ.get("ABEBEI_TOUCH_URL", "")
+ABEBEI_EYE_URL = os.environ.get("ABEBEI_EYE_URL", "")
 
 # --- Web Push (VAPID, optional) — push unread replies to the PWA lock screen
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
@@ -500,6 +518,45 @@ def save_upload_bytes(data: bytes, name: str, mime: str, prefix: str = "att") ->
     }
 
 
+def transcribe_with_groq(audio_path: Path, mime: str) -> str:
+    """Groq Whisper ASR（免费额度）。返回转写文本，失败返回空串。"""
+    if not GROQ_API_KEY:
+        return ""
+    boundary = "----moonlight" + secrets.token_hex(8)
+    filename = audio_path.name or "voice.webm"
+    try:
+        audio_bytes = audio_path.read_bytes()
+    except Exception:
+        return ""
+    parts = []
+    parts.append(f"--{boundary}\r\n".encode())
+    parts.append(b'Content-Disposition: form-data; name="model"\r\n\r\n')
+    parts.append(GROQ_ASR_MODEL.encode() + b"\r\n")
+    parts.append(f"--{boundary}\r\n".encode())
+    parts.append(b'Content-Disposition: form-data; name="language"\r\n\r\n')
+    parts.append(b"zh\r\n")
+    parts.append(f"--{boundary}\r\n".encode())
+    parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode())
+    parts.append(f"Content-Type: {mime or 'audio/webm'}\r\n\r\n".encode())
+    parts.append(audio_bytes + b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode())
+    body = b"".join(parts)
+    req = urllib.request.Request(
+        f"{GROQ_API_BASE.rstrip('/')}/v1/audio/transcriptions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=GROQ_ASR_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return ""
+    return (data.get("text") or "").strip()
+
 def transcribe_with_command(audio_path: Path, mime: str) -> str:
     """Optional local ASR hook. The command receives <audio_path> <mime> and prints a transcript."""
     if not VOICE_TRANSCRIBE_CMD:
@@ -569,7 +626,116 @@ def minimax_tts_mp3(text: str) -> bytes:
         return bytes.fromhex(audio_hex)
     except ValueError:
         raise HTTPException(status_code=502, detail="bad minimax audio payload")
+def moss_tts_mp3(text: str) -> bytes:
+    if not MOSS_API_KEY or not MOSS_VOICE_ID:
+        raise HTTPException(status_code=503, detail="moss tts not configured")
+    clean = (text or "").strip()
+    if not clean:
+        raise HTTPException(status_code=400, detail="empty text")
+    clean = clean[:900]
+    url = f"{MOSS_API_BASE.rstrip('/')}/v1/audio/speech"
+    payload = {
+        "model": MOSS_MODEL,
+        "voice": MOSS_VOICE_ID,
+        "input": clean,
+        "response_format": "mp3",
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {MOSS_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=MOSS_TTS_TIMEOUT) as resp:
+            raw = resp.read()
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"moss tts failed: {exc}")
+    # 情况1：直接返回音频二进制
+    if "audio" in ctype or raw[:3] == b"ID3" or raw[:2] == b"\xff\xfb":
+        return raw
+    # 情况2：返回 JSON（含 url 或 hex/base64 音频）
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=502, detail="bad moss tts response")
+    audio_url = data.get("url") or (data.get("data") or {}).get("url")
+    if audio_url:
+        try:
+            with urllib.request.urlopen(audio_url, timeout=MOSS_TTS_TIMEOUT) as ar:
+                return ar.read()
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"moss audio fetch failed: {exc}")
+    audio_hex = (data.get("data") or {}).get("audio")
+    if audio_hex:
+        try:
+            return bytes.fromhex(audio_hex)
+        except ValueError:
+            pass
+    raise HTTPException(status_code=502, detail="moss tts returned no audio")
 
+
+@app.get("/app/xinchao")
+async def app_xinchao(request: Request):
+    """心潮实时状态：安念对安涵的思念/渴望/占有欲等维度。"""
+    check_auth(request)
+    if not XINCHAO_ENABLED or not XINCHAO_API_BASE:
+        raise HTTPException(status_code=503, detail="xinchao not configured")
+    try:
+        req = urllib.request.Request(
+            f"{XINCHAO_API_BASE.rstrip('/')}/v1/state",
+            headers={"Authorization": f"Bearer {XINCHAO_TOKEN}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"xinchao fetch failed: {exc}")
+    return data
+
+@app.get("/app/abebei/touch")
+async def abebei_touch(request: Request):
+    """阿贝贝触觉：8 通道 FSR 实时力道。"""
+    check_auth(request)
+    if not ABEBEI_TOUCH_URL:
+        raise HTTPException(status_code=503, detail="abebei touch not configured")
+    try:
+        with urllib.request.urlopen(f"{ABEBEI_TOUCH_URL.rstrip('/')}/latest", timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"abebei touch failed: {exc}")
+    return data
+
+@app.get("/app/abebei/eye/latest")
+async def abebei_eye_latest(request: Request):
+    """阿贝贝摄像头状态。"""
+    check_auth(request)
+    if not ABEBEI_EYE_URL:
+        raise HTTPException(status_code=503, detail="abebei eye not configured")
+    try:
+        with urllib.request.urlopen(f"{ABEBEI_EYE_URL.rstrip('/')}/latest", timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"abebei eye failed: {exc}")
+    return data
+
+@app.get("/app/abebei/eye/frame")
+async def abebei_eye_frame(request: Request):
+    """抓取阿贝贝摄像头当前画面（JPEG）。"""
+    check_auth(request)
+    if not ABEBEI_EYE_URL:
+        raise HTTPException(status_code=503, detail="abebei eye not configured")
+    try:
+        with urllib.request.urlopen(f"{ABEBEI_EYE_URL.rstrip('/')}/frame", timeout=10) as resp:
+            data = resp.read()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"abebei frame failed: {exc}")
+    return Response(content=data, media_type="image/jpeg")
 
 def sse_data(payload: dict) -> str:
     lines: list[str] = []
@@ -775,7 +941,7 @@ async def app_voice(request: Request):
     upload = save_upload_bytes(data, request.query_params.get("name", "voice.webm"), mime, "voice")
     stored = Path(upload["url"]).name
     local_audio = UPLOAD_DIR / stored
-    transcript = transcribe_with_command(local_audio, mime)
+    transcript = transcribe_with_groq(local_audio, mime) or transcribe_with_command(local_audio, mime)
     text = ("🎤 " + transcript) if transcript else f"🎤 [语音] {HUMAN_NAME}发来一段语音；当前 relay 未配置 ASR，音频已作为附件送达。"
     meta = {
         "user": "human",
@@ -817,7 +983,11 @@ async def app_tts(request: Request):
     """Generate MiniMax speech for an AI reply. The frontend falls back if unavailable."""
     check_auth(request)
     body = await request.json()
-    audio = minimax_tts_mp3(body.get("text") or "")
+    text = body.get("text") or ""
+    if MOSS_API_KEY and MOSS_VOICE_ID:
+        audio = moss_tts_mp3(text)
+    else:
+        audio = minimax_tts_mp3(text)
     return Response(
         content=audio,
         media_type="audio/mpeg",
