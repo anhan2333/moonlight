@@ -1884,6 +1884,15 @@
 .toy-channel input[type=range]{ width:100%; accent-color:#FF6363; height:28px; }
 .toy-stop-btn{ width:100%; padding:14px; border:1px solid rgba(255,99,99,.4); border-radius:14px; background:rgba(255,99,99,.08); color:#FF6363; font-size:15px; font-weight:600; cursor:pointer; }
 
+
+/* 插件面板（月光 v0.5）*/
+.plugin-item{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; }
+.plugin-name{ font-size:15px; font-weight:500; color:var(--text); }
+.plugin-sub{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+.plugin-actions{ display:flex; gap:8px; }
+.plugin-actions button{ padding:6px 12px; border:1px solid var(--card-line); background:var(--field-bg); color:var(--text-soft); border-radius:10px; font-size:13px; cursor:pointer; }
+.plugin-actions button.danger{ color:#FF6363; border-color:rgba(255,99,99,.35); }
+
 </style>
 </head>
 <body>
@@ -2150,10 +2159,10 @@
           <span class="menu-copy"><span class="menu-name">Album</span><span class="menu-sub">Collect what matters.</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
-        <button class="menu-item" type="button" data-menu="memory">
+        <button class="menu-item" type="button" data-menu="plugin">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c.8 5 3.5 7.7 8.5 8.5-5 .8-7.7 3.5-8.5 8.5-.8-5-3.5-7.7-8.5-8.5 5-.8 7.7-3.5 8.5-8.5Z"/></svg></span>
           <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">Memory</span><span class="menu-sub">The echoes we keep.</span></span>
+          <span class="menu-copy"><span class="menu-name">插件</span><span class="menu-sub">给月光装上翅膀。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="toy">
@@ -2505,6 +2514,7 @@ if (menuPanel){
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "toy") openToyPanel();           // 啵啵贝面板
+    else if (item.dataset.menu === "plugin") openPluginManager();   // 插件管理
     else showToast("即将开放");                           // placeholder items
   });
 }
@@ -6023,6 +6033,148 @@ async function toyStopAll(){
 }
 /* ═══════════ 玩具面板结束 ═══════════ */
 
+
+/* ═══════════ 月光插件系统（v0.5）═══════════ */
+const PLUGIN_DB = "moonlight_plugins";
+const moonlight = {  // 插件可用的全局 API
+  ui: {
+    addPanel(id, title, html){
+      const div = document.createElement("div");
+      div.className = "side-panel hidden"; div.id = id; div.setAttribute("aria-hidden","true");
+      div.innerHTML = `<div class="side-panel-backdrop" onclick="closePluginPanel('${id}')"></div><div class="side-panel-content"><div class="side-panel-head"><button class="side-panel-close" onclick="closePluginPanel('${id}')" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button><h2 class="side-panel-title">${title}</h2></div><div class="side-panel-body">${html}</div></div>`;
+      document.body.appendChild(div);
+    },
+    toast: (t) => showToast(t),
+  },
+  toy: { set: toySet, stop: toyStop, isConnected: () => toyState.connected },
+  chat: {
+    hooks: {},
+    onMessage(fn){ (this.hooks.msg = this.hooks.msg || []).push(fn); },
+    send(text){ const el = document.getElementById("composerInput"); if (el){ el.value = text; el.dispatchEvent(new Event("input")); } },
+  },
+  storage: {
+    get: (k) => { try{ return JSON.parse(localStorage.getItem("ml_plugin_"+k)); }catch(e){ return null; } },
+    set: (k,v) => localStorage.setItem("ml_plugin_"+k, JSON.stringify(v)),
+  },
+  http: (url, opt) => fetch(url, opt),
+};
+function closePluginPanel(id){
+  const p = document.getElementById(id); if (!p) return;
+  p.classList.add("hidden"); p.setAttribute("aria-hidden","true");
+}
+function openPluginPanel(id){
+  closeMenu();
+  const p = document.getElementById(id); if (!p) return;
+  p.classList.remove("hidden"); p.setAttribute("aria-hidden","false");
+}
+function idbOpen(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(PLUGIN_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("plugins", { keyPath: "name" });
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function pluginSave(rec){
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("plugins", "readwrite");
+    tx.objectStore("plugins").put(rec);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+async function pluginListAll(){
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const req = db.transaction("plugins").objectStore("plugins").getAll();
+    req.onsuccess = () => res(req.result || []); req.onerror = () => rej(req.error);
+  });
+}
+async function pluginDelete(name){
+  const db = await idbOpen();
+  return new Promise((res) => {
+    const tx = db.transaction("plugins", "readwrite");
+    tx.objectStore("plugins").delete(name); tx.oncomplete = res;
+  });
+}
+async function pluginImportFile(file){
+  try{
+    let code = "", name = file.name.replace(/\.(toolpkg|js|zip)$/i, ""), manifest = null;
+    if (/\.(toolpkg|zip)$/i.test(file.name)){
+      // toolpkg = zip；用浏览器解压（fflate 轻量库），失败则提示
+      const buf = await file.arrayBuffer();
+      try{
+        if (!window.fflate) {
+          await new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+        }
+        const files = window.fflate.unzipSync(new Uint8Array(buf));
+        // 找主 JS 与 manifest.json
+        for (const [path, data] of Object.entries(files)){
+          if (/manifest\.json$/i.test(path)){ try{ manifest = JSON.parse(new TextDecoder().decode(data)); }catch(e){} }
+          else if (/\.js$/i.test(path) && !code){ code = new TextDecoder().decode(data); }
+        }
+        if (manifest && manifest.name) name = manifest.name;
+      }catch(e){
+        showToast("toolpkg 解压失败：" + e.message); return;
+      }
+    } else {
+      code = await file.text();
+    }
+    if (!code){ showToast("包里没有可执行的 JS"); return; }
+    await pluginSave({ name, code, manifest, enabled: true, addedAt: Date.now() });
+    pluginRun({ name, code, manifest });
+    renderPluginList();
+    showToast("插件已导入并启用：" + name);
+  }catch(e){ showToast("导入失败：" + e.message); }
+}
+function pluginRun(rec){
+  try{
+    const fn = new Function("moonlight", "plugin", rec.code + "
+//# sourceURL=moonlight-plugin-" + rec.name);
+    fn(moonlight, { name: rec.name, manifest: rec.manifest });
+    rec._ran = true;
+  }catch(e){ showToast("插件运行出错（" + rec.name + "）：" + e.message); }
+}
+async function renderPluginList(){
+  const list = document.getElementById("pluginList"); if (!list) return;
+  const plugins = await pluginListAll();
+  if (!plugins.length){ list.innerHTML = '<div class="panel-loading">还没有插件。点上方按钮导入 .toolpkg 或 .js 文件。</div>'; return; }
+  list.innerHTML = plugins.map(p => `
+    <div class="plugin-item">
+      <div class="plugin-info"><div class="plugin-name">${p.name}</div><div class="plugin-sub">${p.enabled ? "已启用" : "已停用"} · ${(p.code.length/1024).toFixed(1)}KB</div></div>
+      <div class="plugin-actions">
+        <button onclick="pluginToggle('${p.name.replace(/'/g, "")}')">${p.enabled ? "停用" : "启用"}</button>
+        <button class="danger" onclick="pluginRemove('${p.name.replace(/'/g, "")}')">删除</button>
+      </div>
+    </div>`).join("");
+}
+async function pluginToggle(name){
+  const plugins = await pluginListAll();
+  const p = plugins.find(x => x.name === name); if (!p) return;
+  p.enabled = !p.enabled; await pluginSave(p);
+  if (p.enabled) pluginRun(p);
+  renderPluginList();
+}
+async function pluginRemove(name){
+  await pluginDelete(name); renderPluginList(); showToast("已删除：" + name);
+}
+function openPluginManager(){
+  closeMenu();
+  const panel = document.getElementById("pluginPanel"); if (!panel) return;
+  panel.classList.remove("hidden"); panel.setAttribute("aria-hidden","false");
+  renderPluginList();
+}
+function closePluginManager(){
+  const panel = document.getElementById("pluginPanel"); if (!panel) return;
+  panel.classList.add("hidden"); panel.setAttribute("aria-hidden","true");
+}
+async function pluginBoot(){
+  const plugins = await pluginListAll();
+  plugins.filter(p => p.enabled).forEach(pluginRun);
+}
+/* ═══════════ 插件系统结束 ═══════════ */
+
+pluginBoot();
 init();
 </script>
 
@@ -6090,6 +6242,28 @@ init();
         </div>
       </div>
       <button class="toy-stop-btn" onclick="toyStopAll()">■ 全部停止</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ 插件管理面板（月光 v0.5）═══════════ -->
+<div class="side-panel hidden" id="pluginPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closePluginManager()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closePluginManager()" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 class="side-panel-title">插件</h2>
+      <p class="side-panel-sub">导入 .toolpkg 或 .js，像 Operit 一样扩展月光</p>
+    </div>
+    <div class="side-panel-body">
+      <label class="toy-connect-btn" style="display:block;text-align:center;cursor:pointer;">
+        ＋ 导入插件（.toolpkg / .js）
+        <input type="file" accept=".toolpkg,.zip,.js" style="display:none" onchange="pluginImportFile(this.files[0]); this.value='';">
+      </label>
+      <div id="pluginList"></div>
     </div>
   </div>
 </div>
