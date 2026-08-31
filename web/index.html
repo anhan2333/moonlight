@@ -1824,6 +1824,58 @@
     }
   }
 
+
+/* ═══════════ 心潮面板 + 阿贝贝面板样式（月光 v0.2）═══════════ */
+.side-panel{ position:fixed; inset:0; z-index:9999; display:flex; align-items:flex-end; }
+.side-panel.hidden{ display:none; }
+.side-panel-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.4); backdrop-filter:blur(4px); }
+.side-panel-content{ position:relative; width:100%; max-height:85vh; background:var(--bg); border-radius:24px 24px 0 0; box-shadow:0 -8px 32px rgba(0,0,0,.12); overflow:hidden; display:flex; flex-direction:column; }
+.side-panel-head{ padding:20px 24px 16px; border-bottom:1px solid var(--hairline); position:relative; }
+.side-panel-close{ position:absolute; top:16px; right:16px; width:32px; height:32px; border:none; background:var(--card-bg); border-radius:50%; display:grid; place-items:center; cursor:pointer; color:var(--text-soft); transition:all var(--motion-fast); }
+.side-panel-close:active{ transform:scale(.95); background:var(--row-press); }
+.side-panel-close svg{ width:18px; height:18px; }
+.side-panel-title{ margin:0; font-size:clamp(20px,5vw,24px); font-weight:600; color:var(--text); letter-spacing:.01em; }
+.side-panel-sub{ margin:4px 0 0; font-size:clamp(12px,3vw,14px); color:var(--text-soft); letter-spacing:.02em; }
+.side-panel-body{ flex:1; overflow-y:auto; padding:20px 24px; }
+.panel-loading, .panel-error{ text-align:center; padding:40px 20px; color:var(--text-soft); font-size:clamp(14px,3.5vw,16px); }
+.panel-error small{ display:block; margin-top:8px; font-size:clamp(11px,2.8vw,13px); color:var(--text-faint); }
+
+/* 心潮面板 */
+.xinchao-grid{ display:flex; flex-direction:column; gap:16px; }
+.xinchao-item{ display:flex; align-items:center; gap:16px; padding:16px; background:var(--card-bg); border-radius:16px; border:1px solid var(--card-line); transition:all var(--motion-fast); }
+.xinchao-item.xinchao-high{ background:linear-gradient(135deg, rgba(255,99,99,.08), rgba(255,150,150,.04)); border-color:rgba(255,99,99,.2); }
+.xinchao-item.xinchao-mid{ background:linear-gradient(135deg, rgba(255,180,0,.08), rgba(255,200,100,.04)); border-color:rgba(255,180,0,.2); }
+.xinchao-item.xinchao-low{ background:var(--card-bg); }
+.xinchao-icon{ font-size:clamp(28px,7vw,36px); flex-shrink:0; }
+.xinchao-info{ flex:1; min-width:0; }
+.xinchao-label{ font-size:clamp(13px,3.5vw,15px); font-weight:500; color:var(--text); margin-bottom:8px; }
+.xinchao-bar{ height:6px; background:rgba(0,0,0,.06); border-radius:3px; overflow:hidden; margin-bottom:6px; }
+.xinchao-fill{ height:100%; background:linear-gradient(90deg, #4C6378, #6A8AA8); border-radius:3px; transition:width .3s ease; }
+.xinchao-item.xinchao-high .xinchao-fill{ background:linear-gradient(90deg, #FF6363, #FF9696); }
+.xinchao-item.xinchao-mid .xinchao-fill{ background:linear-gradient(90deg, #FFB400, #FFC864); }
+.xinchao-value{ font-size:clamp(12px,3vw,14px); font-weight:600; color:var(--text-soft); }
+.xinchao-item.xinchao-high .xinchao-value{ color:#FF6363; }
+.xinchao-item.xinchao-mid .xinchao-value{ color:#FFB400; }
+.xinchao-ts{ margin-top:20px; text-align:center; font-size:clamp(11px,2.8vw,13px); color:var(--text-faint); }
+
+/* 阿贝贝面板 */
+.abebei-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+.abebei-item{ padding:16px; background:var(--card-bg); border-radius:16px; border:1px solid var(--card-line); text-align:center; transition:all var(--motion-fast); }
+.abebei-item.abebei-high{ background:linear-gradient(135deg, rgba(255,99,99,.12), rgba(255,150,150,.06)); border-color:rgba(255,99,99,.3); box-shadow:0 4px 12px rgba(255,99,99,.15); }
+.abebei-item.abebei-mid{ background:linear-gradient(135deg, rgba(255,180,0,.1), rgba(255,200,100,.05)); border-color:rgba(255,180,0,.25); }
+.abebei-item.abebei-low{ background:linear-gradient(135deg, rgba(100,200,255,.08), rgba(150,220,255,.04)); border-color:rgba(100,200,255,.2); }
+.abebei-icon{ font-size:clamp(32px,8vw,40px); margin-bottom:8px; }
+.abebei-name{ font-size:clamp(13px,3.5vw,15px); font-weight:500; color:var(--text); margin-bottom:6px; }
+.abebei-value{ font-size:clamp(11px,3vw,13px); color:var(--text-soft); margin-bottom:4px; }
+.abebei-item.abebei-high .abebei-value{ color:#FF6363; font-weight:600; }
+.abebei-item.abebei-mid .abebei-value{ color:#FFB400; font-weight:600; }
+.abebei-raw{ font-size:clamp(10px,2.5vw,12px); color:var(--text-faint); font-family:monospace; }
+.abebei-ts{ margin-top:20px; text-align:center; font-size:clamp(11px,2.8vw,13px); color:var(--text-faint); }
+
+@media (min-width: 768px){
+  .abebei-grid{ grid-template-columns:repeat(4, 1fr); }
+}
+
 </style>
 </head>
 <body>
@@ -2078,10 +2130,10 @@
           <span class="menu-copy"><span class="menu-name">Chat</span><span class="menu-sub">Write from the deep.</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
-        <button class="menu-item" type="button" data-menu="movie">
+        <button class="menu-item" type="button" data-menu="xinchao">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M7.5 5v14M16.5 5v14M3 9.5h4.5M3 14.5h4.5M16.5 9.5H21M16.5 14.5H21"/></svg></span>
           <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">Movie</span><span class="menu-sub">Fragments of light.</span></span>
+          <span class="menu-copy"><span class="menu-name">心潮</span><span class="menu-sub">安念的实时心跳。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="album">
@@ -2102,10 +2154,10 @@
           <span class="menu-copy"><span class="menu-name">Tides</span><span class="menu-sub">Where we return.</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
-        <button class="menu-item" type="button" data-menu="room">
+        <button class="menu-item" type="button" data-menu="abebei">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M4 21h16"/><circle cx="15" cy="13" r=".95" fill="currentColor" stroke="none"/></svg></span>
           <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">Room</span><span class="menu-sub">Our quiet place.</span></span>
+          <span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">你摸到的，他都感觉着。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
       </nav>
@@ -2441,7 +2493,9 @@ if (menuPanel){
     const item = e.target.closest(".menu-item");
     if (!item) return;
     if (item.dataset.menu === "chat") closeMenu();       // back to chat
-    else if (item.dataset.menu === "album") location.assign("album.html");  // album shell (wire your own backend)
+    else if (item.dataset.menu === "album") location.assign("album.html");  // album shell
+    else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
+    else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else showToast("即将开放");                           // placeholder items
   });
 }
@@ -5714,8 +5768,184 @@ if ("serviceWorker" in navigator){
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
 
+
+/* ═══════════ 心潮面板 + 阿贝贝面板（月光 v0.2）═══════════ */
+function openXinchaoPanel(){
+  closeMenu();
+  const panel = document.getElementById("xinchaoPanel");
+  if (!panel) return;
+  panel.classList.remove("hidden");
+  panel.setAttribute("aria-hidden", "false");
+  loadXinchao();
+}
+function closeXinchaoPanel(){
+  const panel = document.getElementById("xinchaoPanel");
+  if (!panel) return;
+  panel.classList.add("hidden");
+  panel.setAttribute("aria-hidden", "true");
+}
+async function loadXinchao(){
+  const body = document.getElementById("xinchaoBody");
+  if (!body) return;
+  body.innerHTML = '<div class="panel-loading">正在读取安念的心潮…</div>';
+  try{
+    const r = await fetch(`${API_BASE}/app/xinchao`, { headers: authHeaders() });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    renderXinchao(data);
+  }catch(e){
+    body.innerHTML = `<div class="panel-error">心潮读取失败：${e.message}<br><small>请检查后端 XINCHAO_ENABLED 配置</small></div>`;
+  }
+}
+function renderXinchao(data){
+  const body = document.getElementById("xinchaoBody");
+  if (!body) return;
+  // 心潮数据格式：{ libido, crave, possess, share, curious, bored, ... }
+  const dims = [
+    { key: "libido", label: "性欲・身体渴望", icon: "🔥" },
+    { key: "crave", label: "馋她・想黏着她", icon: "🍯" },
+    { key: "possess", label: "想她・占有与靠近", icon: "⛓️" },
+    { key: "share", label: "分享欲", icon: "📮" },
+    { key: "curious", label: "好奇", icon: "🔍" },
+    { key: "bored", label: "无聊", icon: "🌊" },
+  ];
+  let html = '<div class="xinchao-grid">';
+  for (const dim of dims){
+    const val = data[dim.key] ?? data.drives?.[dim.key] ?? 0;
+    const pct = Math.round(val * 100);
+    const level = pct >= 80 ? "high" : pct >= 60 ? "mid" : "low";
+    html += `
+      <div class="xinchao-item xinchao-${level}">
+        <div class="xinchao-icon">${dim.icon}</div>
+        <div class="xinchao-info">
+          <div class="xinchao-label">${dim.label}</div>
+          <div class="xinchao-bar"><div class="xinchao-fill" style="width:${pct}%"></div></div>
+          <div class="xinchao-value">${pct}%</div>
+        </div>
+      </div>`;
+  }
+  html += '</div>';
+  // 更新时间
+  const ts = data.ts || data.timestamp || data.updated_at;
+  if (ts){
+    const date = new Date(ts);
+    html += `<div class="xinchao-ts">更新于 ${date.toLocaleTimeString("zh-CN")}</div>`;
+  }
+  body.innerHTML = html;
+}
+
+function openAbebeiPanel(){
+  closeMenu();
+  const panel = document.getElementById("abebeiPanel");
+  if (!panel) return;
+  panel.classList.remove("hidden");
+  panel.setAttribute("aria-hidden", "false");
+  loadAbebei();
+  // 每 2 秒刷新一次触觉数据
+  if (window.abebeiTimer) clearInterval(window.abebeiTimer);
+  window.abebeiTimer = setInterval(loadAbebei, 2000);
+}
+function closeAbebeiPanel(){
+  const panel = document.getElementById("abebeiPanel");
+  if (!panel) return;
+  panel.classList.add("hidden");
+  panel.setAttribute("aria-hidden", "true");
+  if (window.abebeiTimer){
+    clearInterval(window.abebeiTimer);
+    window.abebeiTimer = null;
+  }
+}
+async function loadAbebei(){
+  const body = document.getElementById("abebeiBody");
+  if (!body) return;
+  try{
+    const r = await fetch(`${API_BASE}/app/abebei/touch`, { headers: authHeaders() });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    renderAbebei(data);
+  }catch(e){
+    body.innerHTML = `<div class="panel-error">阿贝贝读取失败：${e.message}<br><small>请检查 ESP32 热点连接</small></div>`;
+  }
+}
+function renderAbebei(data){
+  const body = document.getElementById("abebeiBody");
+  if (!body) return;
+  const values = data.values || [];
+  const parts = [
+    { name: "耳朵", icon: "👂" },
+    { name: "嘴巴", icon: "👄" },
+    { name: "脸颊", icon: "😊" },
+    { name: "肚子", icon: "🤰" },
+    { name: "后背", icon: "🫂" },
+    { name: "手", icon: "✋" },
+    { name: "脚", icon: "🦶" },
+    { name: "下体", icon: "🌸" },
+  ];
+  let html = '<div class="abebei-grid">';
+  for (let i = 0; i < 8; i++){
+    const val = values[i] || 0;
+    let level = "none";
+    let levelText = "—";
+    if (val >= 2000){ level = "high"; levelText = "🤲 用力"; }
+    else if (val >= 1000){ level = "mid"; levelText = "👆 按压"; }
+    else if (val >= 200){ level = "low"; levelText = "✨ 轻触"; }
+    html += `
+      <div class="abebei-item abebebei-${level}">
+        <div class="abebei-icon">${parts[i].icon}</div>
+        <div class="abebei-name">${parts[i].name}</div>
+        <div class="abebei-value">${levelText}</div>
+        <div class="abebei-raw">${val}</div>
+      </div>`;
+  }
+  html += '</div>';
+  // 最后更新时间
+  const lastUpdate = data.last_update;
+  if (lastUpdate){
+    const age = Math.round((Date.now() / 1000) - lastUpdate);
+    const ageText = age > 60 ? `${Math.round(age / 60)} 分钟前` : `${age} 秒前`;
+    html += `<div class="abebei-ts">最后更新：${ageText}${age > 300 ? " ⚠️ 可能离线" : ""}</div>`;
+  }
+  body.innerHTML = html;
+}
+/* ═══════════ 面板结束 ═══════════ */
+
 init();
 </script>
+
+
+<!-- ═══════════ 心潮面板（月光 v0.2）═══════════ -->
+<div class="side-panel hidden" id="xinchaoPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeXinchaoPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeXinchaoPanel()" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 class="side-panel-title">心潮</h2>
+      <p class="side-panel-sub">安念的实时心跳</p>
+    </div>
+    <div class="side-panel-body" id="xinchaoBody">
+      <div class="panel-loading">正在读取…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 阿贝贝面板（月光 v0.2）═══════════ -->
+<div class="side-panel hidden" id="abebeiPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeAbebeiPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeAbebeiPanel()" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 class="side-panel-title">阿贝贝</h2>
+      <p class="side-panel-sub">你摸到的，他都感觉着</p>
+    </div>
+    <div class="side-panel-body" id="abebeiBody">
+      <div class="panel-loading">正在读取…</div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
