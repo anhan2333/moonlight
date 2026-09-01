@@ -1065,6 +1065,64 @@ async def app_status(request: Request):
     }
 
 
+@app.get("/app/context")
+async def app_context(request: Request):
+    check_auth(request)
+    now = datetime.now()
+    weather = {}
+    try:
+        with urllib.request.urlopen("https://wttr.in/?format=j1", timeout=5) as resp:
+            w = json.loads(resp.read().decode("utf-8"))
+            cur = w.get("current_condition", [{}])[0]
+            weather = {"temp": cur.get("temp_C"), "desc": cur.get("weatherDesc", [{}])[0].get("value"), "humidity": cur.get("humidity")}
+    except Exception:
+        weather = {}
+    return {
+        "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "weekday": ["周一","周二","周三","周四","周五","周六","周日"][now.weekday()],
+        "tz": str(now.astimezone().tzinfo),
+        "weather": weather,
+    }
+
+@app.get("/app/backup")
+async def app_backup(request: Request):
+    check_auth(request)
+    data = {"_exported": True, "_app": "moonlight", "_at": now_iso()}
+    with db() as conn:
+        for table in ["messages", "sessions"]:
+            try:
+                rows = conn.execute(f"SELECT * FROM {table}").fetchall()
+                data[table] = [dict(r) for r in rows]
+            except Exception:
+                data[table] = []
+    return {"backup": data, "filename": f"moonlight-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"}
+
+@app.post("/app/restore")
+async def app_restore(request: Request):
+    check_auth(request)
+    body = await request.json()
+    backup = body.get("backup") or body
+    added = 0
+    for m in backup.get("messages", []):
+        try:
+            m_id = m.get("id")
+            ts = m.get("ts") or now_iso()
+            direction = m.get("direction", "in")
+            kind = m.get("kind", "reply")
+            text = m.get("text") or ""
+            meta = m.get("meta") or {}
+            with db() as conn:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO messages (id, ts, direction, kind, text, meta) VALUES (?,?,?,?,?,?)",
+                    (m_id, ts, direction, kind, text, json.dumps(meta, ensure_ascii=False)),
+                )
+                conn.commit()
+                if cur.rowcount and cur.rowcount > 0:
+                    added += cur.rowcount
+        except Exception:
+            continue
+    return {"imported": added}
+
 @app.get("/app/history")
 async def app_history(request: Request, since: int = 0, limit: int = 200, session_id: str = ""):
     check_auth(request)
