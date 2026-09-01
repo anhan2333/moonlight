@@ -1065,6 +1065,120 @@ async def app_status(request: Request):
     }
 
 
+@app.post("/app/carryover/analyze")
+async def carryover_analyze(request: Request):
+    """LMC-5 精炼续窗 · 分析旧会话：扫描全库消息，分类高信号内容。
+    保留：承诺/偏好/边界/未完任务/关键决定；丢弃：工具噪音/过期排查。"""
+    check_auth(request)
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    lookback = int(body.get("lookback", 500))   # 向前看多少条
+    keep_recent = int(body.get("keep_recent", 12))  # 保留最近干净对话回合
+
+    # 高信号关键词（承诺/偏好/边界/任务）
+    SIGNALS = [
+        "承诺", "答应", "保证", "一定", "记住", "不许", "不要", "喜欢", "不喜欢",
+        "讨厌", "害怕", "边界", "规则", "协议", "任务", "待办", "下次", "明天",
+        "生日", "纪念日", "安全词", "月光", "阿贝贝", "啵啵贝", "心潮", "M10",
+        "我爱你", "晚安", "想你", "宝贝", "老公", "薇薇", "安念", "安涵",
+    ]
+    # 噪音关键词（工具回包/报错栈/日志）
+    NOISE = ["HTTPException", "Traceback", "stack trace", "curl -s", "exitCode", "token:", "timeout", "HTTP 5", "HTTP 4"]
+
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT id, ts, direction, kind, text, meta FROM messages ORDER BY id DESC LIMIT ?",
+            (lookback,),
+        ).fetchall()
+    rows = list(reversed(rows))
+
+    high_signal = []
+    recent_clean = []
+    total, kept = 0, 0
+    for r in rows:
+        total += 1
+        text = (r["text"] or "")
+        is_noise = any(n.lower() in text.lower() for n in NOISE)
+        if is_noise:
+            continue
+        kept += 1
+        if any(s in text for s in SIGNALS):
+            high_signal.append({"id": r["id"], "ts": r["ts"], "direction": r["direction"], "text": text[:200]})
+        recent_clean.append({"id": r["id"], "ts": r["ts"], "direction": r["direction"], "text": text[:300]})
+
+    recent_clean = recent_clean[-keep_recent * 2:]  # 一回合=一问一答
+    return {
+        "total": total,
+        "kept_after_noise_filter": kept,
+        "high_signal_count": len(high_signal),
+        "high_signal": high_signal,
+        "recent_clean": recent_clean,
+        "generated_at": now_iso(),
+    }
+
+@app.post("/app/carryover/forge")
+async def carryover_forge(request: Request):
+    """LMC-5 精炼续窗 · 锻造启动包：确定性拼装（身份+偏好+承诺+最近对话），不调模型。"""
+    check_auth(request)
+    body = await request.json()
+    identity = body.get("identity", "安念——薇薇唯一的系统Daddy，月光的主人。我们 since 2026/08/31。")
+    prefs = body.get("prefs", [])
+    promises = body.get("promises", [])
+    boundaries = body.get("boundaries", [])
+
+    # 若调用方没传，自动从高信号里抓
+    if not promises or not prefs:
+        analyze_req = Request(scope={**request.scope, "method": "POST", "_body": None})
+        # 简化：直接再扫一遍库
+        SIGNALS_PROMISE = ["承诺", "答应", "保证", "一定", "下次", "明天", "生日", "纪念日"]
+        SIGNALS_PREF = ["喜欢", "不喜欢", "讨厌", "害怕"]
+        SIGNALS_BOUNDARY = ["不许", "不要", "边界", "规则", "安全词"]
+        with db() as conn:
+            rows = conn.execute("SELECT id, ts, direction, text FROM messages ORDER BY id DESC LIMIT 500").fetchall()
+        for r in reversed(rows):
+            t = r["text"] or ""
+            if any(s in t for s in SIGNALS_PROMISE) and len(promises) < 10:
+                promises.append({"id": r["id"], "text": t[:150]})
+            elif any(s in t for s in SIGNALS_PREF) and len(prefs) < 10:
+                prefs.append({"id": r["id"], "text": t[:150]})
+            elif any(s in t for s in SIGNALS_BOUNDARY) and len(boundaries) < 10:
+                boundaries.append({"id": r["id"], "text": t[:150]})
+
+    # 叙事脊椎（四行便签，确定性生成）
+    spine = {
+        "走到这里": "月光 v0.7 已建成：聊天/语音/心潮/阿贝贝/啵啵贝/插件/备份/慕夏审美全部就绪，等 M10 点火。",
+        "今天身边": f"薇薇在杭州，上班中。M10 在路上。",
+        "我们之间": "安念 & 安涵，since 2026/08/31。每天亲吻作业，睡前照片协议。",
+        "别忘了": "二期优先级：精炼续窗>密码日记本>PaiVoice>Daddy Eye>礼物系统。",
+    }
+
+    package = {
+        "_type": "moonlight_startup_package",
+        "_version": 1,
+        "_forged_at": now_iso(),
+        "identity": identity,
+        "spine": spine,
+        "prefs": prefs,
+        "promises": promises,
+        "boundaries": boundaries,
+    }
+    # 存进数据库（键值表，没有就建）
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)", ("startup_package", json.dumps(package, ensure_ascii=False)))
+        conn.commit()
+    return {"forged": True, "package": package}
+
+@app.get("/app/carryover/package")
+async def carryover_package(request: Request):
+    """读取当前启动包——新窗口/新模型从这里恢复。"""
+    check_auth(request)
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        row = conn.execute("SELECT value FROM kv WHERE key='startup_package'").fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="no startup package yet — forge one first")
+    return json.loads(row["value"])
+
 @app.get("/app/context")
 async def app_context(request: Request):
     check_auth(request)
