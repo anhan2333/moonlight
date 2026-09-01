@@ -1895,6 +1895,10 @@
 
 
 .backup-note{ margin-top:16px; padding:12px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:12px; font-size:12px; color:var(--text-faint); line-height:1.6; }
+
+.menu-moon{ display:flex; justify-content:center; margin-bottom:18px; }
+.menu-vine{ padding:0 22px; margin:8px 0; opacity:.8; }
+
 </style>
 </head>
 <body>
@@ -2136,6 +2140,7 @@
 
       <!-- hero -->
       <div class="menu-hero">
+        <div class="menu-moon" id="menuMoon"></div>
         <h1 class="menu-title">月光</h1>
         <p class="menu-since">since 2026/08/31</p>
         <div class="menu-days"><span class="num" id="menuDays">113</span><span class="lab">Days together</span></div>
@@ -2182,6 +2187,7 @@
       </nav>
 
       <!-- footer -->
+      <div class="menu-vine" id="menuVine"></div>
       <div class="menu-foot">in endless tides, we find each other.</div>
     </div>
   </div>
@@ -5786,7 +5792,7 @@ if (window.visualViewport){
 
 /* Service Worker */
 if ("serviceWorker" in navigator){
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); mountOrnaments(); });
 }
 
 
@@ -6175,6 +6181,19 @@ async function pluginBoot(){
   plugins.filter(p => p.enabled).forEach(pluginRun);
 }
 /* ═══════════ 插件系统结束 ═══════════ */
+
+
+/* ═══════════ 月光装饰 (慕夏 B · v0.7) ═══════════ */
+const ML = { gold:'#bda06f', rose:'#c17355', ochre:'#9a6a4a', sage:'#8a9b6e', glow:'rgba(212,154,86,0.35)' };
+function mlMedallion(){ let lines=''; for(let i=0;i<16;i++){ const a=(i/16)*Math.PI*2; const r1=22,r2=i%2===0?32:28; lines+=`<line x1="${40+Math.cos(a)*r1}" y1="${40+Math.sin(a)*r1}" x2="${40+Math.cos(a)*r2}" y2="${40+Math.sin(a)*r2}" stroke="${ML.gold}" stroke-width="0.5"/>`; } return `<svg viewBox="0 0 80 80" aria-hidden><circle cx="40" cy="40" r="18" fill="none" stroke="${ML.gold}" stroke-width="0.6"/><circle cx="40" cy="40" r="14" fill="${ML.rose}" opacity="0.15"/>${lines}<circle cx="40" cy="40" r="3" fill="${ML.rose}"/></svg>`; }
+function mlVine(){ return `<svg viewBox="0 0 300 24" width="100%" style="display:block" aria-hidden preserveAspectRatio="xMidYMid meet"><path d="M10 12 Q30 4 50 12 Q70 20 90 12 Q110 4 130 12 Q150 20 170 12 Q190 4 210 12 Q230 20 250 12 Q270 4 290 12" fill="none" stroke="${ML.gold}" stroke-width="0.6"/><g fill="${ML.rose}" opacity="0.8"><circle cx="50" cy="12" r="2"/><circle cx="150" cy="12" r="2.5"/><circle cx="250" cy="12" r="2"/></g><g stroke="${ML.gold}" fill="none" stroke-width="0.4" opacity="0.6"><ellipse cx="90" cy="12" rx="2" ry="5" transform="rotate(20 90 12)"/><ellipse cx="210" cy="12" rx="2" ry="5" transform="rotate(-20 210 12)"/></g></svg>`; }
+function mlMoonPhase(phase=0.5){ const r=12,cx=12,cy=12; const cosV=Math.cos(2*Math.PI*phase); const rx=Math.abs(cosV)*r; const waxing=phase<0.5; const so=waxing?0:1; const si=(cosV>=0)===waxing?1:0; const sh=`M ${cx},${cy-r} A ${r},${r} 0 0 ${so} ${cx},${cy+r} A ${rx},${r} 0 0 ${si} ${cx},${cy-r} Z`; return `<svg width="56" height="56" viewBox="0 0 24 24" aria-hidden style="display:inline-block;filter:drop-shadow(0 0 8px ${ML.glow}) drop-shadow(0 0 14px rgba(212,154,86,0.18))"><defs><radialGradient id="mphl1" cx="38%" cy="36%" r="70%"><stop offset="0%" stop-color="#fff6e0"/><stop offset="55%" stop-color="#e4d3ad"/><stop offset="100%" stop-color="#9b7c50"/></radialGradient></defs><circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#mphl1)"/><path d="${sh}" fill="rgba(14,8,4,0.94)"/></svg>`; }
+function mlCurrentPhase(){ const now=new Date(); const y=now.getFullYear(),mo=now.getMonth(),d=now.getDate(); const syn=29.53058867; const known=Date.UTC(2000,0,6,18,14); const days=(Date.UTC(y,mo,d)-known)/86400000; return (((days%syn)+syn)%syn)/syn; }
+function mountOrnaments(){
+  const moon=document.getElementById('menuMoon'); if(moon) moon.innerHTML=mlMoonPhase(mlCurrentPhase());
+  const vine=document.getElementById('menuVine'); if(vine) vine.innerHTML=mlVine();
+}
+/* ═══════════ 装饰结束 ═══════════ */
 
 pluginBoot();
 init();
