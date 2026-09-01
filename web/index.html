@@ -1909,6 +1909,10 @@
 .theme-chip.active{ border-color:var(--c); box-shadow:0 0 0 1px var(--c); background:color-mix(in srgb, var(--c) 12%, transparent); }
 .set-note{ font-size:12px; color:var(--text-faint); margin-top:12px; line-height:1.6; }
 
+
+.ctx-toggle{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text-soft); }
+.ctx-toggle input{ width:18px; height:18px; }
+
 </style>
 </head>
 <body>
@@ -5509,8 +5513,10 @@ function triggerSendPress(){
 }
 
 async function doSend(){
+  if (!inputEl) return;
   const text = inputEl.value.trim();
   if (!text) return;
+  if (window.ctxEnabled && !window.ctxCache && !window.ctxLoading){ window.ctxLoading = true; try{ await refreshContext(); }catch(e){} window.ctxLoading = false; }
   triggerSendPress();            // 发送键:轻按回弹的小反馈
   ensureAudio();                 // 手势内解锁/预热音频
   inputEl.value = "";
@@ -5531,7 +5537,7 @@ async function doSend(){
   scheduleRender({ stickToBottom:true });
 
   try{
-    const { id } = await apiSend(text);
+    const { id } = await apiSend(buildContextBlock() + text);
     const key = msgKey(id);
     confirmOptimistic(tempKey, key);
     dropPendingOutgoing(tempKey);
@@ -6212,6 +6218,7 @@ function mountOrnaments(){
 }
 /* ═══════════ 装饰结束 ═══════════ */
 
+refreshContext();
 pluginBoot();
 init();
 </script>
@@ -6367,6 +6374,10 @@ init();
           <button class="theme-chip" data-theme="green" style="--c:#8a9b6e">柔和绿</button>
           <button class="theme-chip" data-theme="blue" style="--c:#6a8aa8">珍珠蓝</button>
         </div>
+      </div>
+      <div class="set-group">
+        <label class="set-label">上下文注入（自动携带时间/天气）</label>
+        <label class="ctx-toggle"><input type="checkbox" id="setCtx" onchange="toggleCtx(this.checked)"> <span>发送消息时自动附加环境信息</span></label>
       </div>
       <div class="set-group">
         <label class="set-label">保存</label>
