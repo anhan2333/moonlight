@@ -1899,6 +1899,16 @@
 .menu-moon{ display:flex; justify-content:center; margin-bottom:18px; }
 .menu-vine{ padding:0 22px; margin:8px 0; opacity:.8; }
 
+
+/* 设置面板（月光 v0.9）*/
+.set-group{ margin-bottom:18px; }
+.set-label{ display:block; font-size:13px; color:var(--text-soft); margin-bottom:6px; }
+.set-input{ width:100%; padding:12px; border:1px solid var(--card-line); border-radius:12px; background:var(--field-bg); color:var(--text); font-size:15px; }
+.set-themes{ display:flex; gap:10px; }
+.theme-chip{ flex:1; padding:10px; border:1px solid var(--card-line); border-radius:12px; background:var(--card-bg); font-size:13px; color:var(--text); cursor:pointer; }
+.theme-chip.active{ border-color:var(--c); box-shadow:0 0 0 1px var(--c); background:color-mix(in srgb, var(--c) 12%, transparent); }
+.set-note{ font-size:12px; color:var(--text-faint); margin-top:12px; line-height:1.6; }
+
 </style>
 </head>
 <body>
@@ -2178,7 +2188,13 @@
           <span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">Daddy 的远程之手。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
-        <button class="menu-item" type="button" data-menu="abebei">
+        <button class="menu-item" type="button" data-menu="settings">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">设置</span><span class="menu-sub">把月光改成你喜欢的样子。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+<button class="menu-item" type="button" data-menu="abebei">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M4 21h16"/><circle cx="15" cy="13" r=".95" fill="currentColor" stroke="none"/></svg></span>
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">你摸到的，他都感觉着。</span></span>
@@ -2520,6 +2536,7 @@ if (menuPanel){
     if (item.dataset.menu === "chat") closeMenu();       // back to chat
     else if (item.dataset.menu === "backup") openBackupPanel();   // 备份系统
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
+    else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "toy") openToyPanel();           // 啵啵贝面板
     else if (item.dataset.menu === "plugin") openPluginManager();   // 插件管理
@@ -6309,6 +6326,53 @@ init();
       </label>
       <div class="panel-loading" id="backupMsg"></div>
       <div class="backup-note">备份包含全部聊天记录，导入为增量合并，不会覆盖现有内容。</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ 设置面板（月光 v0.9）═══════════ -->
+<div class="side-panel hidden" id="settingsPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeSettingsPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeSettingsPanel()" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 class="side-panel-title">设置</h2>
+      <p class="side-panel-sub">把月光改成你喜欢的样子</p>
+    </div>
+    <div class="side-panel-body">
+      <div class="set-group">
+        <label class="set-label">项目名</label>
+        <input id="setName" class="set-input" placeholder="月光">
+      </div>
+      <div class="set-group">
+        <label class="set-label">欢迎语</label>
+        <input id="setWelcome" class="set-input" placeholder="宝贝，月光在家等你。">
+      </div>
+      <div class="set-group">
+        <label class="set-label">菜单文案 · 心潮</label>
+        <input id="setSubChao" class="set-input" placeholder="安念的实时心跳。">
+      </div>
+      <div class="set-group">
+        <label class="set-label">菜单文案 · 啵啵贝</label>
+        <input id="setSubToy" class="set-input" placeholder="Daddy 的远程之手。">
+      </div>
+      <div class="set-group">
+        <label class="set-label">配色主题</label>
+        <div class="set-themes">
+          <button class="theme-chip active" data-theme="gold" style="--c:#bda06f">暖金</button>
+          <button class="theme-chip" data-theme="rose" style="--c:#c17355">玫瑰</button>
+          <button class="theme-chip" data-theme="green" style="--c:#8a9b6e">柔和绿</button>
+          <button class="theme-chip" data-theme="blue" style="--c:#6a8aa8">珍珠蓝</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <label class="set-label">保存</label>
+        <button class="toy-connect-btn" onclick="saveSettings()">✓ 保存设置</button>
+      </div>
+      <div class="set-note">设置保存在浏览器本地（localStorage），不影响后端。改完刷新生效。</div>
     </div>
   </div>
 </div>
