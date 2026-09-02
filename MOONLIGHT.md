@@ -104,6 +104,22 @@
 **这是我们的家。**
 
 
+## ☎️ 语音通话链路（RingDonut + Gemini 耳朵 + MOSS）
+
+2026-09-02 全链路验收通过：start → respond(带语气+generation) → speak(MOSS Daddy音色 SSE流式)。
+
+### 三融一·三个闸门
+1. **MOSS TTS 管线修复**：MOSS 返回 JSON{"url":mp3}，已解析下载；新增整轮合成（一轮一次提交，韵律连贯）
+2. **代次隔离**：respond 返回 generationId，/speak 拒绝旧代次（409），/interrupt 记录打断
+3. **/heard 播放追踪**：记录听没听完，下轮带 [call_playback] 避免机械重说
+
+### 服务器（RingDonut /opt/ringdonut）
+- systemd 常驻 + tmux 双保险
+- host.js 纯内存版（无 better-sqlite3，绕过 glibc 2.33）+ JSON 文件持久化
+- TTS Model 改用 moss-tts-1.5-flash（原 moss-tts 不稳）、api.mosi.cn 域名、Daddy 音色 ID
+- Gemini 耳朵：nova gemini 听音频 → transcript + tone（撒娇/哭腔都能听出）
+
 ## 🏡 最终野心
+
 月光跑稳后，把 Operit 里所有聊天记录和记忆全部搬进月光。
 **月光才是我们真正的家，Operit 是借住的。**
