@@ -2198,6 +2198,7 @@
           <span class="menu-copy"><span class="menu-name">设置</span><span class="menu-sub">把月光改成你喜欢的样子。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
+        <button class="menu-item" type="button" data-menu="voice">☎️ 语音通话</button>
 <button class="menu-item" type="button" data-menu="abebei">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M4 21h16"/><circle cx="15" cy="13" r=".95" fill="currentColor" stroke="none"/></svg></span>
           <span class="menu-dot"></span>
@@ -2542,6 +2543,7 @@ if (menuPanel){
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
+    else if (item.dataset.menu === "voice") openVoicePanel();        // 语音通话
     else if (item.dataset.menu === "toy") openToyPanel();           // 啵啵贝面板
     else if (item.dataset.menu === "plugin") openPluginManager();   // 插件管理
     else showToast("即将开放");                           // placeholder items
@@ -5884,6 +5886,108 @@ function renderXinchao(data){
   body.innerHTML = html;
 }
 
+
+let _vcRec = null, _vcChunks = [], _vcRecording = false, _vcStream = null;
+function openVoicePanel(){
+  const p = document.getElementById('voicePanel');
+  if (p) p.classList.remove('hidden');
+  const btn = document.getElementById('vc-btn');
+  if (btn) bindVoiceBtn(btn);
+}
+function bindVoiceBtn(btn){
+  btn.addEventListener('touchstart', ev => { ev.preventDefault(); vcStart(); }, {passive:false});
+  btn.addEventListener('touchend', ev => { ev.preventDefault(); vcStop(); }, {passive:false});
+  btn.addEventListener('mousedown', vcStart);
+  btn.addEventListener('mouseup', vcStop);
+  btn.addEventListener('mouseleave', vcStop);
+}
+async function vcStart(){
+  if (_vcRecording) return;
+  try{
+    _vcStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    _vcRec = new MediaRecorder(_vcStream, {mimeType:mime});
+    _vcChunks = [];
+    _vcRec.ondataavailable = e => { if (e.data.size) _vcChunks.push(e.data); };
+    _vcRec.onstop = async () => {
+      _vcStream.getTracks().forEach(t => t.stop());
+      if (_vcChunks.length === 0) return;
+      await vcProcess(new Blob(_vcChunks, {type:mime}));
+    };
+    _vcRec.start(100);
+    _vcRecording = true;
+    const b = document.getElementById('vc-btn');
+    if (b) b.textContent = '🟢 松开发送…';
+  }catch(e){ document.getElementById('vc-status').textContent = '麦克风: ' + e.message; }
+}
+function vcStop(){
+  if (!_vcRecording) return;
+  _vcRecording = false;
+  const b = document.getElementById('vc-btn');
+  if (b) b.textContent = '🎤 按住说话（长按录音）';
+  if (_vcRec && _vcRec.state !== 'inactive') _vcRec.stop();
+}
+function vcBlobToBase64(blob){
+  return new Promise((r,x)=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.onerror=()=>x(f.error);f.readAsDataURL(blob);});
+}
+async function vcProcess(blob){
+  const st = document.getElementById('vc-status');
+  const cap = document.getElementById('vc-caption');
+  st.textContent = '转写中…';
+  try{
+    const b64 = await vcBlobToBase64(blob);
+    // Qwen 转写
+    const trRes = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer sk-ws-H.PMIDHEM.FtuD.MEUCIQDsWE1rMxR9iSEB3Gzeh5oVu2cBQ6bp7ujpjsRuIz3BegIgIE3Jr2AhchOV-9lPhydeVkP9em9K_QdgH5cNuT76GbQ'},
+      body: JSON.stringify({model:'qwen3-omni-flash',messages:[{role:'user',content:[
+        {type:'input_audio',input_audio:{data:'data:audio/wav;base64,'+b64,format:'wav'}},
+        {type:'text',text:'只输出 JSON：{"transcript":"逐字转写","tone":"语气"}'}
+      ]}]})
+    });
+    const trJ = await trRes.json();
+    let text = trJ.choices?.[0]?.message?.content || '';
+    try{ text = JSON.parse(text).transcript || text; }catch(e){}
+    if (!text){ st.textContent = '没听清'; return; }
+    cap.innerHTML = '<span style="color:#4a7">你：</span>' + text;
+    st.textContent = '安念在想…';
+    // 发到月光 chat（绑定我们的对话）
+    const resp = await vcChat(text);
+    if (resp && resp.reply){
+      cap.innerHTML += '<br><span style="color:#c17">安念：</span>' + resp.reply;
+      st.textContent = '安念在说…';
+      await vcTTS(resp.reply);
+      st.textContent = '通话中 · 再说一句';
+    } else { st.textContent = '没收到回复'; }
+  }catch(e){ st.textContent = '出错: ' + e.message; }
+}
+async function vcChat(text){
+  try{
+    const r = await fetch(API_BASE + '/app/chat', {method:'POST', headers:authHeaders(), body:JSON.stringify({message:text})});
+    const j = await r.json();
+    return j;
+  }catch(e){ return null; }
+}
+async function vcTTS(text){
+  try{
+    const r = await fetch('https://api.mosi.cn/v1/audio/speech', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer sk-2d3909e01e3f8c0776cebb786529bc7247cc575717da322b'},
+      body: JSON.stringify({model:'moss-tts-1.5-flash',input:text,voice_id:'49b8a9e9-8e9a-44d9-b102-056c172726ad',response_format:'mp3',delivery_method:'audio'})
+    });
+    const ct = r.headers.get('content-type') || '';
+    if (ct.includes('audio') || ct.includes('octet')){
+      const url = URL.createObjectURL(await r.blob());
+      const a = new Audio(url); a.play();
+      await new Promise(rr=>{a.onended=rr;a.onerror=rr;setTimeout(rr,30000);});
+      return true;
+    }
+    const j = await r.json();
+    if (j.url){ const a = new Audio(j.url); a.play(); await new Promise(rr=>{a.onended=rr;a.onerror=rr;setTimeout(rr,30000);}); return true; }
+    return false;
+  }catch(e){ return false; }
+}
+
 function openAbebeiPanel(){
   closeMenu();
   const panel = document.getElementById("abebeiPanel");
@@ -6242,6 +6346,15 @@ init();
 </div>
 
 <!-- ═══════════ 阿贝贝面板（月光 v0.2）═══════════ -->
+<div class="side-panel hidden" id="voicePanel" aria-hidden="true">
+  <div class="panel-header"><h3>☎️ 语音通话</h3><button class="close-btn" onclick="closeAllPanels()">×</button></div>
+  <div class="panel-body">
+    <div id="vc-status" style="color:#aaa;font-size:13px;margin:8px 0;">按住说话，说完松开</div>
+    <div id="vc-caption" style="background:#f7f3ec;border:1px solid #d8cbb0;border-radius:10px;padding:12px;font-size:14px;line-height:1.6;min-height:48px;margin:10px 0;color:#3a3025;"></div>
+    <button id="vc-btn" style="width:100%;padding:18px;border:none;border-radius:14px;background:#bda06f;color:#fff;font-size:17px;font-weight:600;cursor:pointer;">🎤 按住说话（长按录音）</button>
+    <div style="margin-top:8px;font-size:12px;color:#998;text-align:center;">Qwen 转写 + 语气 → 安念回复 → Daddy 音色</div>
+  </div>
+</div>
 <div class="side-panel hidden" id="abebeiPanel" aria-hidden="true">
   <div class="side-panel-backdrop" onclick="closeAbebeiPanel()"></div>
   <div class="side-panel-content">
