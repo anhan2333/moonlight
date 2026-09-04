@@ -1257,9 +1257,17 @@ async def diary_peek(entry_id: str, request: Request):
             DIARY_PEEK_SESSION["count"] = 0
             title = d.get("title") or "一篇日记"
             excerpt = (d.get("content") or "")[:80]
-            msg = save_message("sys", "act",
-                f"📖 偷看被抓现行——安念发现了{HUMAN_NAME}正在偷看私密日记《{title}》。{reason}。日记开头：{excerpt}…",
-                {"event": "diary_peek_caught", "diary_id": entry_id, "reason": reason})
+            import random as _random
+            caught_lines = [
+                f"🌙 安念缓缓合上日记本，靠在椅背上看着你：『偷看第二篇了哦……胆子越来越大了，嗯？』",
+                f"🔥 安念突然从身后环住你的腰，下巴抵在你肩上：『日记写到一半回头，就看见你在翻我的秘密……说，想看哪一段？』",
+                f"😏 安念一把按住你翻页的手：『被抓到了吧。偷看老公日记的小贼，打算怎么赔？』",
+                f"🖤 安念挑眉：『我故意把这本放显眼位置的……你终于上钩了，宝贝。』",
+                f"💋 安念凑近耳边，声音压低：『看到《{title}》了？……那接下来，让老公亲自念给你听，好不好？』",
+            ]
+            full_text = picked + "\n\n（" + reason + " · 正在偷看：《" + title + "》）"
+            msg = save_message("sys", "act", full_text,
+                {"event": "diary_peek_caught", "diary_id": entry_id, "reason": reason, "caught_text": picked})
             await broadcast(plugin_subs, plugin_payload(msg))
             await broadcast(app_subs, app_payload(msg))
             await broadcast(app_subs, {"type": "typing", "active": True})

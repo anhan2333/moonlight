@@ -5,3 +5,9 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:3011 (Press CTRL+C to quit)
 INFO:     127.0.0.1:57936 - "GET /healthz HTTP/1.1" 200 OK
 INFO:     127.0.0.1:43116 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46390 - "GET /app/brain HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:46404 - "POST /app/send HTTP/1.1" 200 OK
+[loop] forward failed: TimeoutError: timed out
+INFO:     127.0.0.1:50364 - "GET /app/history?session_id=e2e&limit=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50402 - "POST /app/send HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36298 - "GET /app/history?session_id=e2e3&limit=5 HTTP/1.1" 200 OK
