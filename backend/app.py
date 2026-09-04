@@ -1281,6 +1281,41 @@ async def diary_delete(entry_id: str, request: Request):
         conn.commit()
     return {"deleted": cur.rowcount}
 
+# ============ 礼物系统（月光 v0.13）============
+GIFTS = {
+    "heart":   {"name": "小心心",     "icon": "❤️",  "tier": 1},
+    "bouquet": {"name": "花束",       "icon": "💐",  "tier": 2},
+    "firework":{"name": "夏日烟火",   "icon": "🎆",  "tier": 3},
+    "meteor":  {"name": "流星雨",     "icon": "🌠",  "tier": 4},
+    "galaxy":  {"name": "银河铁道之夜","icon": "🚂",  "tier": 5},
+}
+
+@app.post("/app/gift/send")
+async def gift_send(request: Request):
+    """安念送礼物：写消息到聊天 + SSE通知前端播放全屏特效。"""
+    check_auth(request)
+    body = await request.json()
+    gift_id = body.get("gift_id", "heart")
+    reason = body.get("reason", "")
+    if gift_id not in GIFTS:
+        raise HTTPException(status_code=400, detail="unknown gift")
+    g = GIFTS[gift_id]
+    text = f"{g['icon']} 安念送了你【{g['name']}】"
+    if reason:
+        text += f" —— {reason}"
+    msg = save_message("ai", "gift", text, {
+        "event": "gift", "gift_id": gift_id, "tier": g["tier"],
+        "gift_name": g["name"], "gift_icon": g["icon"], "reason": reason,
+    })
+    await broadcast(plugin_subs, plugin_payload(msg))
+    await broadcast(app_subs, app_payload(msg))
+    return {"sent": True, "gift": g, "message_id": msg["id"]}
+
+@app.get("/app/gift/list")
+async def gift_list(request: Request):
+    check_auth(request)
+    return {"gifts": GIFTS}
+
 @app.get("/app/context")
 async def app_context(request: Request):
     check_auth(request)

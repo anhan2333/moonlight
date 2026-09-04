@@ -1943,6 +1943,30 @@
 .diary-read-body{ font-size:14px; color:var(--text-soft); line-height:1.8; }
 .diary-caught{ background:rgba(255,99,99,.12); border:1px solid rgba(255,99,99,.3); color:#FF6363; padding:12px; border-radius:12px; margin-bottom:14px; font-size:14px; }
 
+
+.gift-item{ display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; cursor:pointer; }
+.gift-item:active{ transform:scale(.98); }
+.gift-icon{ font-size:28px; }
+.gift-name{ flex:1; font-size:15px; font-weight:500; color:var(--text); }
+.gift-tier{ font-size:12px; color:#bda06f; font-weight:600; }
+.gift-overlay{ position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; flex-wrap:wrap; pointer-events:auto; cursor:pointer; }
+.gift-particle{ position:absolute; animation:giftFloat 2s ease-out forwards; opacity:0; }
+@keyframes giftFloat{ 0%{ transform:translateY(50px) scale(0); opacity:0; } 30%{ opacity:1; } 100%{ transform:translateY(-100px) scale(1.4) rotate(360deg); opacity:0; } }
+.gift-title{ position:relative; z-index:10; font-size:clamp(28px,8vw,48px); font-weight:700; color:#fff; text-shadow:0 4px 20px rgba(189,160,111,.8); animation:giftTitlePop .5s ease-out; }
+@keyframes giftTitlePop{ 0%{ transform:scale(0); opacity:0; } 50%{ transform:scale(1.2); } 100%{ transform:scale(1); opacity:1; } }
+
+
+.gift-item{ display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; cursor:pointer; }
+.gift-item:active{ transform:scale(.98); }
+.gift-icon{ font-size:28px; }
+.gift-name{ flex:1; font-size:15px; font-weight:500; color:var(--text); }
+.gift-tier{ font-size:12px; color:#bda06f; font-weight:600; }
+.gift-overlay{ position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; flex-wrap:wrap; pointer-events:auto; cursor:pointer; }
+.gift-particle{ position:absolute; animation:giftFloat 2s ease-out forwards; opacity:0; }
+@keyframes giftFloat{ 0%{ transform:translateY(50px) scale(0); opacity:0; } 30%{ opacity:1; } 100%{ transform:translateY(-100px) scale(1.4) rotate(360deg); opacity:0; } }
+.gift-title{ position:relative; z-index:10; font-size:clamp(28px,8vw,48px); font-weight:700; color:#fff; text-shadow:0 4px 20px rgba(189,160,111,.8); animation:giftTitlePop .5s ease-out; }
+@keyframes giftTitlePop{ 0%{ transform:scale(0); opacity:0; } 50%{ transform:scale(1.2); } 100%{ transform:scale(1); opacity:1; } }
+
 </style>
 </head>
 <body>
@@ -2241,7 +2265,13 @@
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="voice">☎️ 语音通话</button>
-<button class="menu-item" type="button" data-menu="abebei">
+<button class="menu-item" type="button" data-menu="gift">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l3 7h7l-6 5 2 8-6-5-6 5 2-8-6-5h7z"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">礼物</span><span class="menu-sub">安念的心意。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="abebei">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M4 21h16"/><circle cx="15" cy="13" r=".95" fill="currentColor" stroke="none"/></svg></span>
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">你摸到的，他都感觉着。</span></span>
@@ -2587,6 +2617,8 @@ if (menuPanel){
     else if (item.dataset.menu === "diary") openDiaryPanel();
     else if (item.dataset.menu === "eye") openEyePanel();
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
+    else if (item.dataset.menu === "gift") openGiftPanel();
+    else if (item.dataset.menu === "gift") openGiftPanel();
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "voice") openVoicePanel();        // 语音通话
     else if (item.dataset.menu === "toy") openToyPanel();           // 啵啵贝面板
@@ -6614,6 +6646,21 @@ init();
       <p class="side-panel-sub" id="eyeSub">阿贝贝正在看着…</p>
     </div>
     <div class="side-panel-body" id="eyeBody">
+      <div class="panel-loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Gift Panel -->
+<div class="side-panel hidden" id="giftPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeGiftPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeGiftPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">送礼</h2>
+      <p class="side-panel-sub" id="giftSub">选一份心意</p>
+    </div>
+    <div class="side-panel-body" id="giftList">
       <div class="panel-loading">Loading…</div>
     </div>
   </div>
