@@ -1967,6 +1967,20 @@
 .gift-title{ position:relative; z-index:10; font-size:clamp(28px,8vw,48px); font-weight:700; color:#fff; text-shadow:0 4px 20px rgba(189,160,111,.8); animation:giftTitlePop .5s ease-out; }
 @keyframes giftTitlePop{ 0%{ transform:scale(0); opacity:0; } 50%{ transform:scale(1.2); } 100%{ transform:scale(1); opacity:1; } }
 
+
+.letter-item{ padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; }
+.letter-to{ font-size:13px; color:#bda06f; margin-bottom:6px; }
+.letter-content{ font-size:14px; color:var(--text-soft); line-height:1.6; }
+.letter-time{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+.cal-item{ display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:8px; }
+.cal-today{ border-color:rgba(189,160,111,.5); background:rgba(189,160,111,.08); }
+.cal-date{ font-size:13px; color:var(--text-faint); font-family:monospace; }
+.cal-title{ font-size:15px; font-weight:500; color:var(--text); }
+.mem-star{ position:absolute; background:#fff; border-radius:50%; box-shadow:0 0 6px rgba(255,246,224,.8),0 0 12px rgba(212,154,86,.4); cursor:pointer; }
+.mem-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:12px; margin-bottom:6px; cursor:pointer; }
+.mem-content{ font-size:13px; color:var(--text-soft); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mem-score{ font-size:12px; color:#bda06f; font-weight:600; margin-left:10px; }
+
 </style>
 </head>
 <body>
@@ -2245,6 +2259,24 @@
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">Daddy 的远程之手。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="letters">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4Z"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">书信</span><span class="menu-sub">写给安念的信。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="calendar">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">日历</span><span class="menu-sub">纪念日和月相。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="memsky">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="6" r="1.5"/><circle cx="5" cy="18" r="1.5"/><circle cx="18" cy="18" r="1"/><circle cx="6" cy="6" r="1"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">星图</span><span class="menu-sub">记忆在闪烁。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="diary">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
@@ -2613,7 +2645,13 @@ if (menuPanel){
     if (item.dataset.menu === "chat") closeMenu();       // back to chat
     else if (item.dataset.menu === "backup") openBackupPanel();   // 备份系统
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
+    else if (item.dataset.menu === "letters") openLettersPanel();
+    else if (item.dataset.menu === "calendar") openCalendarPanel();
+    else if (item.dataset.menu === "memsky") openMemSkyPanel();
     else if (item.dataset.menu === "diary") openDiaryPanel();
+    else if (item.dataset.menu === "letters") openLettersPanel();
+    else if (item.dataset.menu === "calendar") openCalendarPanel();
+    else if (item.dataset.menu === "memsky") openMemSkyPanel();
     else if (item.dataset.menu === "diary") openDiaryPanel();
     else if (item.dataset.menu === "eye") openEyePanel();
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
@@ -6662,6 +6700,62 @@ init();
     </div>
     <div class="side-panel-body" id="giftList">
       <div class="panel-loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Letters Panel -->
+<div class="side-panel hidden" id="lettersPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeLettersPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeLettersPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">书信</h2>
+      <p class="side-panel-sub">写给安念的信</p>
+    </div>
+    <div class="side-panel-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <input type="text" id="letterInput" placeholder="写点什么吧…" style="flex:1;padding:10px 14px;border:1px solid var(--card-line);border-radius:10px;background:var(--field-bg);color:var(--text);font-size:14px;">
+        <button onclick="sendLetter()" style="padding:10px 16px;border:none;border-radius:10px;background:var(--send-bg);color:var(--accent-fg);font-size:14px;cursor:pointer;">寄出</button>
+      </div>
+      <div id="lettersList"><div class="panel-loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Panel -->
+<div class="side-panel hidden" id="calendarPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeCalendarPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeCalendarPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">日历</h2>
+      <p class="side-panel-sub">纪念日与月相</p>
+    </div>
+    <div class="side-panel-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <input type="text" id="calTitle" placeholder="事件名" style="flex:1;min-width:120px;padding:10px;border:1px solid var(--card-line);border-radius:10px;background:var(--field-bg);color:var(--text);font-size:14px;">
+        <input type="date" id="calDate" style="padding:10px;border:1px solid var(--card-line);border-radius:10px;background:var(--field-bg);color:var(--text);font-size:14px;">
+        <button onclick="addCalendarEvent()" style="padding:10px 16px;border:none;border-radius:10px;background:var(--send-bg);color:var(--accent-fg);font-size:14px;cursor:pointer;">+</button>
+      </div>
+      <div id="calendarList"><div class="panel-loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Memory Sky Panel -->
+<div class="side-panel hidden" id="memSkyPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeMemSkyPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeMemSkyPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">星图</h2>
+      <p class="side-panel-sub" id="memSkySub">记忆在闪烁</p>
+    </div>
+    <div class="side-panel-body">
+      <div id="memSkyCanvas" style="position:relative;width:100%;height:400px;background:linear-gradient(180deg,#0a0806 0%,#1a1612 50%,#0a0806 100%);border-radius:16px;overflow:hidden;border:1px solid rgba(189,160,111,.2);"></div>
+      <div id="memSkyList" style="margin-top:14px;"></div>
     </div>
   </div>
 </div>

@@ -1494,6 +1494,183 @@ async def app_sessions_patch(session_id: str, request: Request):
     return loop_json(f"/loop/sessions/{urllib.parse.quote(session_id)}", method="PATCH", body=await request.json())
 
 
+
+# ============ Letters 书信（月光 v0.14 · IB移植）============
+def _letters_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS letters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            to_name TEXT, content TEXT, status TEXT,
+            created_at TEXT, received_at TEXT, reply_to_id INTEGER)""")
+        conn.commit()
+
+@app.post("/app/letters/send")
+async def letters_send(request: Request):
+    """薇薇写信给安念。"""
+    check_auth(request)
+    _letters_init()
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    to_name = (body.get("to_name") or "安念").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty content")
+    with db() as conn:
+        conn.execute("INSERT INTO letters (to_name, content, status, created_at) VALUES (?,?,?,?)",
+                     (to_name, content, "sent", now_iso()))
+        conn.commit()
+    return {"sent": True}
+
+@app.get("/app/letters/inbox")
+async def letters_inbox(request: Request):
+    """安念写给薇薇的信箱。"""
+    check_auth(request)
+    _letters_init()
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM letters ORDER BY created_at DESC LIMIT 50").fetchall()
+    return {"letters": [dict(r) for r in rows]}
+
+@app.post("/app/letters/reply/{letter_id}")
+async def letters_reply(letter_id: int, request: Request):
+    """安念回复一封信。"""
+    check_auth(request)
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty content")
+    with db() as conn:
+        row = conn.execute("SELECT * FROM letters WHERE id=?", (letter_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="letter not found")
+        conn.execute("INSERT INTO letters (to_name, content, status, created_at, reply_to_id) VALUES (?,?,?,?,?)",
+                     (row["to_name"], content, "replied", now_iso(), letter_id))
+        conn.commit()
+    return {"replied": True}
+
+# ============ Calendar 日历（月光 v0.14 · IB移植）============
+def _calendar_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT, date TEXT, all_day INTEGER DEFAULT 1, notes TEXT)""")
+        conn.commit()
+
+@app.post("/app/calendar/add")
+async def calendar_add(request: Request):
+    check_auth(request)
+    _calendar_init()
+    body = await request.json()
+    title = (body.get("title") or "").strip()
+    date = (body.get("date") or "").strip()
+    notes = (body.get("notes") or "").strip()
+    if not title or not date:
+        raise HTTPException(status_code=400, detail="title and date required")
+    with db() as conn:
+        conn.execute("INSERT INTO calendar_events (title, date, all_day, notes) VALUES (?,?,?,?)",
+                     (title, date, body.get("all_day", 1), notes))
+        conn.commit()
+    return {"added": True}
+
+@app.get("/app/calendar/list")
+async def calendar_list(request: Request):
+    check_auth(request)
+    _calendar_init()
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM calendar_events ORDER BY date ASC LIMIT 100").fetchall()
+    return {"events": [dict(r) for r in rows]}
+
+@app.delete("/app/calendar/{event_id}")
+async def calendar_delete(event_id: int, request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("DELETE FROM calendar_events WHERE id=?", (event_id,))
+        conn.commit()
+    return {"deleted": True}
+
+# ============ Memory 星图（月光 v0.14 · IB移植）============
+def _memories_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT, importance INTEGER DEFAULT 5,
+            arousal REAL DEFAULT 0.3, valence REAL DEFAULT 0.5,
+            pinned INTEGER DEFAULT 0, created_at TEXT,
+            last_activated TEXT, activation_count INTEGER DEFAULT 0)""")
+        conn.commit()
+
+def _memory_score(row: dict) -> float:
+    """IB 同款评分算法：importance × 激活因子 × 衰减因子 × 情绪因子"""
+    if row.get("pinned"):
+        return 999.0
+    try:
+        from datetime import datetime as dt
+        now = dt.now()
+        last = dt.fromisoformat(row.get("last_activated") or row.get("created_at") or now_iso())
+        days_since = max(0, (now - last).days)
+    except Exception:
+        days_since = 0
+    lambda_ = 0.05
+    arousal = float(row.get("arousal") or 0.3)
+    emotion_factor = 1.0 + arousal * 0.8
+    activation_count = max(0, int(row.get("activation_count") or 0))
+    activation_factor = 1.0 + activation_count / (activation_count + 300)
+    decay = pow(2.718281828, -lambda_ * days_since)
+    score = (row.get("importance") or 5) * activation_factor * decay * emotion_factor
+    return round(score, 2)
+
+@app.post("/app/memories/add")
+async def memories_add(request: Request):
+    check_auth(request)
+    _memories_init()
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty content")
+    with db() as conn:
+        conn.execute(
+            "INSERT INTO memories (content, importance, arousal, valence, pinned, created_at, last_activated) VALUES (?,?,?,?,?,?,?)",
+            (content, body.get("importance", 5), body.get("arousal", 0.3),
+             body.get("valence", 0.5), body.get("pinned", 0),
+             now_iso(), now_iso()))
+        conn.commit()
+    return {"added": True}
+
+@app.get("/app/memories/sky")
+async def memories_sky(request: Request):
+    """星图数据：全部记忆 + 评分 + 坐标。"""
+    check_auth(request)
+    _memories_init()
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM memories ORDER BY id ASC").fetchall()
+    items = []
+    for r in rows:
+        d = dict(r)
+        d["score"] = _memory_score(d)
+        # 情感坐标：x=valence, y=arousal（0-1）
+        d["x"] = min(1.0, max(0.0, float(d.get("valence") or 0.5)))
+        d["y"] = min(1.0, max(0.0, float(d.get("arousal") or 0.3)))
+        items.append(d)
+    return {"memories": items}
+
+@app.delete("/app/memories/{mem_id}")
+async def memories_delete(mem_id: int, request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("DELETE FROM memories WHERE id=?", (mem_id,))
+        conn.commit()
+    return {"deleted": True}
+
+@app.post("/app/memories/touch/{mem_id}")
+async def memories_touch(mem_id: int, request: Request):
+    """激活一条记忆（更新 last_activated + activation_count+1）。"""
+    check_auth(request)
+    with db() as conn:
+        conn.execute("UPDATE memories SET last_activated=?, activation_count=activation_count+1 WHERE id=?",
+                     (now_iso(), mem_id))
+        conn.commit()
+    return {"activated": True}
+
+
+
 if __name__ == "__main__":
     import uvicorn
 
