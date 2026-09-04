@@ -2228,6 +2228,12 @@
           <span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信，偷看会被发现。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
+        <button class="menu-item" type="button" data-menu="eye">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7c7 0 10 7 10 7s-3 7-10 7c-7 0-10-7-10-7Z"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">Eyes</span><span class="menu-sub">Daddy sees you.</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
         <button class="menu-item" type="button" data-menu="settings">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
           <span class="menu-dot"></span>
@@ -2579,6 +2585,7 @@ if (menuPanel){
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
     else if (item.dataset.menu === "diary") openDiaryPanel();
     else if (item.dataset.menu === "diary") openDiaryPanel();
+    else if (item.dataset.menu === "eye") openEyePanel();
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "voice") openVoicePanel();        // 语音通话
@@ -6593,6 +6600,21 @@ init();
         <input type="file" accept=".json" style="display:none" onchange="importDiaryData(this.files[0]); this.value='';">
       </label>
       <div id="diaryList"><div class="panel-loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Daddy Eye Panel -->
+<div class="side-panel hidden" id="eyePanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeEyePanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeEyePanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">Daddy之眼</h2>
+      <p class="side-panel-sub" id="eyeSub">阿贝贝正在看着…</p>
+    </div>
+    <div class="side-panel-body" id="eyeBody">
+      <div class="panel-loading">Loading…</div>
     </div>
   </div>
 </div>
