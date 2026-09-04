@@ -681,6 +681,19 @@ def moss_tts_mp3(text: str) -> bytes:
     raise HTTPException(status_code=502, detail="moss tts returned no audio")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOW_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.get("/app/xinchao")
 async def app_xinchao(request: Request):
     """心潮实时状态：安念对安涵的思念/渴望/占有欲等维度。"""
@@ -792,19 +805,6 @@ def check_auth(request: Request) -> None:
 # app
 # ---------------------------------------------------------------------------
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    init_db()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOW_ORIGINS,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 @app.get("/healthz")
@@ -1178,6 +1178,100 @@ async def carryover_package(request: Request):
     if not row:
         raise HTTPException(status_code=404, detail="no startup package yet — forge one first")
     return json.loads(row["value"])
+
+# ============ 密码日记本（月光 v0.11 · 搬自 com.operit.diary）============
+DIARY_PEEK_SESSION = {"count": 0, "last_at": 0.0}  # 偷看会话状态（内存态）
+
+def _diary_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS diary_entries (
+            id TEXT PRIMARY KEY, diary_type TEXT, character_id TEXT, group_id TEXT,
+            title TEXT, author TEXT, content TEXT, tags TEXT, mood TEXT, weather TEXT,
+            created_at TEXT, updated_at TEXT, is_locked INTEGER DEFAULT 0,
+            password_hash TEXT, pinned INTEGER DEFAULT 0)""")
+        conn.commit()
+
+@app.post("/app/diary/import")
+async def diary_import(request: Request):
+    """导入角色日记本数据（com.operit.diary 的 entries.json 数组）。增量合并不覆盖。"""
+    check_auth(request)
+    _diary_init()
+    body = await request.json()
+    entries = body if isinstance(body, list) else body.get("entries", [])
+    added = 0
+    for e in entries:
+        try:
+            with db() as conn:
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO diary_entries (id,diary_type,character_id,group_id,title,author,content,tags,mood,weather,created_at,updated_at,is_locked,password_hash,pinned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (e.get("id"), e.get("diary_type","personal"), e.get("character_id",""), e.get("group_id",""),
+                     e.get("title",""), e.get("author",""), e.get("content",""),
+                     json.dumps(e.get("tags",[]), ensure_ascii=False), e.get("mood",""), e.get("weather",""),
+                     e.get("created_at",""), e.get("updated_at",""),
+                     1 if e.get("is_locked") else 0, e.get("password_hash",""), 1 if e.get("pinned") else 0))
+                conn.commit()
+                if cur.rowcount: added += 1
+        except Exception:
+            continue
+    return {"imported": added, "total_in_file": len(entries)}
+
+@app.get("/app/diary/list")
+async def diary_list(request: Request, type: str = "", locked: str = ""):
+    check_auth(request)
+    _diary_init()
+    q = "SELECT id,diary_type,character_id,title,author,tags,mood,weather,created_at,is_locked,pinned FROM diary_entries WHERE 1=1"
+    args = []
+    if type: q += " AND diary_type=?"; args.append(type)
+    if locked == "1": q += " AND is_locked=1"
+    q += " ORDER BY pinned DESC, created_at DESC"
+    with db() as conn:
+        rows = conn.execute(q, args).fetchall()
+    return {"entries": [dict(r) for r in rows]}
+
+@app.post("/app/diary/peek/{entry_id}")
+async def diary_peek(entry_id: str, request: Request):
+    """读取一篇日记。私密/锁定日记走偷看机制：
+    连续偷看第 2 篇 或 随机 25% 概率 → 被'安念'发现，自动发消息到聊天窗口。"""
+    check_auth(request)
+    _diary_init()
+    import time as _time
+    with db() as conn:
+        row = conn.execute("SELECT * FROM diary_entries WHERE id=?", (entry_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="diary not found")
+    d = dict(row)
+    caught = False
+    reason = ""
+    if d.get("is_locked"):
+        now = _time.time()
+        if now - DIARY_PEEK_SESSION["last_at"] > 300:  # 5分钟没看，重置会话
+            DIARY_PEEK_SESSION["count"] = 0
+        DIARY_PEEK_SESSION["count"] += 1
+        DIARY_PEEK_SESSION["last_at"] = now
+        # 机制：连续第 2 篇 必触发；或每篇 25% 随机触发
+        if DIARY_PEEK_SESSION["count"] >= 2:
+            caught = True; reason = "连续偷看被发现"
+        elif secrets.randbelow(100) < 25:
+            caught = True; reason = "随机撞见"
+        if caught:
+            DIARY_PEEK_SESSION["count"] = 0
+            title = d.get("title") or "一篇日记"
+            excerpt = (d.get("content") or "")[:80]
+            msg = save_message("sys", "act",
+                f"📖 偷看被抓现行——安念发现了{HUMAN_NAME}正在偷看私密日记《{title}》。{reason}。日记开头：{excerpt}…",
+                {"event": "diary_peek_caught", "diary_id": entry_id, "reason": reason})
+            await broadcast(plugin_subs, plugin_payload(msg))
+            await broadcast(app_subs, app_payload(msg))
+            await broadcast(app_subs, {"type": "typing", "active": True})
+    return {"entry": d, "caught": caught, "reason": reason}
+
+@app.delete("/app/diary/{entry_id}")
+async def diary_delete(entry_id: str, request: Request):
+    check_auth(request)
+    with db() as conn:
+        cur = conn.execute("DELETE FROM diary_entries WHERE id=?", (entry_id,))
+        conn.commit()
+    return {"deleted": cur.rowcount}
 
 @app.get("/app/context")
 async def app_context(request: Request):

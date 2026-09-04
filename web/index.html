@@ -1913,6 +1913,36 @@
 .ctx-toggle{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text-soft); }
 .ctx-toggle input{ width:18px; height:18px; }
 
+
+.diary-tabs{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.diary-tab{ padding:8px 14px; border:1px solid var(--card-line); background:var(--card-bg); color:var(--text-soft); border-radius:10px; font-size:13px; cursor:pointer; }
+.diary-tab.active{ background:rgba(189,160,111,.15); color:#bda06f; border-color:rgba(189,160,111,.4); font-weight:600; }
+.diary-item{ padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; cursor:pointer; }
+.diary-item:active{ transform:scale(.99); }
+.diary-item-head{ display:flex; align-items:center; gap:8px; }
+.diary-type{ color:#bda06f; font-size:14px; }
+.diary-title{ font-size:15px; font-weight:500; color:var(--text); }
+.diary-item-meta{ font-size:12px; color:var(--text-faint); margin-top:4px; }
+.diary-read-title{ font-size:18px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.diary-read-meta{ font-size:13px; color:var(--text-faint); margin-bottom:14px; }
+.diary-read-body{ font-size:14px; color:var(--text-soft); line-height:1.8; }
+.diary-caught{ background:rgba(255,99,99,.12); border:1px solid rgba(255,99,99,.3); color:#FF6363; padding:12px; border-radius:12px; margin-bottom:14px; font-size:14px; }
+
+
+.diary-tabs{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.diary-tab{ padding:8px 14px; border:1px solid var(--card-line); background:var(--card-bg); color:var(--text-soft); border-radius:10px; font-size:13px; cursor:pointer; }
+.diary-tab.active{ background:rgba(189,160,111,.15); color:#bda06f; border-color:rgba(189,160,111,.4); font-weight:600; }
+.diary-item{ padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:10px; cursor:pointer; }
+.diary-item:active{ transform:scale(.99); }
+.diary-item-head{ display:flex; align-items:center; gap:8px; }
+.diary-type{ color:#bda06f; font-size:14px; }
+.diary-title{ font-size:15px; font-weight:500; color:var(--text); }
+.diary-item-meta{ font-size:12px; color:var(--text-faint); margin-top:4px; }
+.diary-read-title{ font-size:18px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.diary-read-meta{ font-size:13px; color:var(--text-faint); margin-bottom:14px; }
+.diary-read-body{ font-size:14px; color:var(--text-soft); line-height:1.8; }
+.diary-caught{ background:rgba(255,99,99,.12); border:1px solid rgba(255,99,99,.3); color:#FF6363; padding:12px; border-radius:12px; margin-bottom:14px; font-size:14px; }
+
 </style>
 </head>
 <body>
@@ -2190,6 +2220,12 @@
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/><path d="M3 13c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/><path d="M3 17.5c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/></svg></span>
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">Daddy 的远程之手。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="diary">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信，偷看会被发现。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="settings">
@@ -2541,6 +2577,8 @@ if (menuPanel){
     if (item.dataset.menu === "chat") closeMenu();       // back to chat
     else if (item.dataset.menu === "backup") openBackupPanel();   // 备份系统
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
+    else if (item.dataset.menu === "diary") openDiaryPanel();
+    else if (item.dataset.menu === "diary") openDiaryPanel();
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "voice") openVoicePanel();        // 语音通话
@@ -6529,6 +6567,32 @@ init();
         <button class="toy-connect-btn" onclick="saveSettings()">✓ 保存设置</button>
       </div>
       <div class="set-note">设置保存在浏览器本地（localStorage），不影响后端。改完刷新生效。</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ 密码日记本面板（月光 v0.11）═══════════ -->
+<div class="side-panel hidden" id="diaryPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeDiaryPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeDiaryPanel()" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">日记本</h2>
+      <p class="side-panel-sub" id="diarySub">写给未来的信</p>
+    </div>
+    <div class="side-panel-body">
+      <div class="diary-tabs">
+        <button class="diary-tab active" data-dtype="" onclick="diaryTab('')">全部</button>
+        <button class="diary-tab" data-dtype="personal" onclick="diaryTab('personal')">个人</button>
+        <button class="diary-tab" data-dtype="exchange" onclick="diaryTab('exchange')">交换</button>
+        <button class="diary-tab" data-dtype="private" onclick="diaryTab('private')">私密🔒</button>
+      </div>
+      <label class="toy-connect-btn" style="display:block;text-align:center;cursor:pointer;background:rgba(189,160,111,.15);color:#bda06f;">
+        ⬇ 导入角色日记数据
+        <input type="file" accept=".json" style="display:none" onchange="importDiaryData(this.files[0]); this.value='';">
+      </label>
+      <div id="diaryList"><div class="panel-loading">加载中…</div></div>
     </div>
   </div>
 </div>

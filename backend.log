@@ -1,0 +1,7 @@
+nohup: ignoring input
+INFO:     Started server process [26627]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:3011 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57936 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43116 - "GET /healthz HTTP/1.1" 200 OK
