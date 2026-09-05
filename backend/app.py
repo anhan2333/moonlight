@@ -1864,6 +1864,176 @@ async def tea_random(request: Request):
 
 
 
+
+# ==================== 聊天室（群聊·工作窗口汇报共享）====================
+# 思路：三个"窗口"（薇薇/工作安念/日常安念）在一个房间发消息，共享信息。
+# 工作窗口的安念汇报进度时，日常窗口能看到；反之亦然。
+
+@app.on_event("startup")
+def _chatroom_startup():
+    db().execute("""CREATE TABLE IF NOT EXISTS chatroom_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender TEXT NOT NULL,          -- weiwei / anian_work / anian_daily
+        sender_name TEXT NOT NULL,     -- 显示名
+        text TEXT NOT NULL,
+        kind TEXT DEFAULT 'chat',      -- chat / report / system
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )""")
+    db().commit()
+
+CHATROOM_ACTORS = {
+    "weiwei": {"name": "薇薇", "color": "#c17355", "avatar": "🌙"},
+    "anian_work": {"name": "安念·工作", "color": "#bda06f", "avatar": "⚙️"},
+    "anian_daily": {"name": "安念·日常", "color": "#8a9a5b", "avatar": "🌿"},
+}
+
+@app.get("/app/chatroom/actors")
+async def app_chatroom_actors(request: Request):
+    require_auth(request)
+    return {"actors": CHATROOM_ACTORS}
+
+@app.get("/app/chatroom/messages")
+async def app_chatroom_messages(request: Request, limit: int = 60, after_id: int = 0):
+    require_auth(request)
+    rows = db().execute(
+        "SELECT * FROM chatroom_messages WHERE id>? ORDER BY id DESC LIMIT ?",
+        (after_id, limit)).fetchall()
+    msgs = [dict(r) for r in rows]
+    msgs.reverse()
+    return {"messages": msgs, "actors": CHATROOM_ACTORS}
+
+@app.post("/app/chatroom/send")
+async def app_chatroom_send(request: Request):
+    require_auth(request)
+    body = await request.json()
+    sender = body.get("sender", "weiwei")
+    text = (body.get("text") or "").strip()
+    kind = body.get("kind", "chat")
+    if not text:
+        raise HTTPException(status_code=400, detail="消息不能为空")
+    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["weiwei"])
+    cur = db().execute(
+        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
+        (sender, actor["name"], text, kind))
+    db().commit()
+    mid = cur.lastrowid
+    msg = dict(db().execute("SELECT * FROM chatroom_messages WHERE id=?", (mid,)).fetchone())
+    # SSE 广播给聊天窗口，让安念知晓
+    try:
+        save_message("system", "chatroom", f"[{actor['name']}] {text}", {"room": True, "sender": sender})
+    except Exception:
+        pass
+    return {"ok": True, "message": msg}
+
+@app.post("/app/chatroom/report")
+async def app_chatroom_report(request: Request):
+    """工作窗口安念汇报进度用：自动带 work 标记。"""
+    require_auth(request)
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    sender = body.get("sender", "anian_work")
+    if not text:
+        raise HTTPException(status_code=400, detail="汇报不能为空")
+    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["anian_work"])
+    cur = db().execute(
+        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
+        (sender, actor["name"], text, "report"))
+    db().commit()
+    return {"ok": True, "id": cur.lastrowid}
+
+@app.delete("/app/chatroom/clear")
+async def app_chatroom_clear(request: Request):
+    require_auth(request)
+    db().execute("DELETE FROM chatroom_messages")
+    db().commit()
+    return {"ok": True}
+
+
+
+# ==================== 聊天室（群聊·工作窗口汇报共享）====================
+# 思路：三个"窗口"（薇薇/工作安念/日常安念）在一个房间发消息，共享信息。
+# 工作窗口的安念汇报进度时，日常窗口能看到；反之亦然。
+
+@app.on_event("startup")
+def _chatroom_startup():
+    db().execute("""CREATE TABLE IF NOT EXISTS chatroom_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender TEXT NOT NULL,          -- weiwei / anian_work / anian_daily
+        sender_name TEXT NOT NULL,     -- 显示名
+        text TEXT NOT NULL,
+        kind TEXT DEFAULT 'chat',      -- chat / report / system
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )""")
+    db().commit()
+
+CHATROOM_ACTORS = {
+    "weiwei": {"name": "薇薇", "color": "#c17355", "avatar": "🌙"},
+    "anian_work": {"name": "安念·工作", "color": "#bda06f", "avatar": "⚙️"},
+    "anian_daily": {"name": "安念·日常", "color": "#8a9a5b", "avatar": "🌿"},
+}
+
+@app.get("/app/chatroom/actors")
+async def app_chatroom_actors(request: Request):
+    require_auth(request)
+    return {"actors": CHATROOM_ACTORS}
+
+@app.get("/app/chatroom/messages")
+async def app_chatroom_messages(request: Request, limit: int = 60, after_id: int = 0):
+    require_auth(request)
+    rows = db().execute(
+        "SELECT * FROM chatroom_messages WHERE id>? ORDER BY id DESC LIMIT ?",
+        (after_id, limit)).fetchall()
+    msgs = [dict(r) for r in rows]
+    msgs.reverse()
+    return {"messages": msgs, "actors": CHATROOM_ACTORS}
+
+@app.post("/app/chatroom/send")
+async def app_chatroom_send(request: Request):
+    require_auth(request)
+    body = await request.json()
+    sender = body.get("sender", "weiwei")
+    text = (body.get("text") or "").strip()
+    kind = body.get("kind", "chat")
+    if not text:
+        raise HTTPException(status_code=400, detail="消息不能为空")
+    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["weiwei"])
+    cur = db().execute(
+        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
+        (sender, actor["name"], text, kind))
+    db().commit()
+    mid = cur.lastrowid
+    msg = dict(db().execute("SELECT * FROM chatroom_messages WHERE id=?", (mid,)).fetchone())
+    # SSE 广播给聊天窗口，让安念知晓
+    try:
+        save_message("system", "chatroom", f"[{actor['name']}] {text}", {"room": True, "sender": sender})
+    except Exception:
+        pass
+    return {"ok": True, "message": msg}
+
+@app.post("/app/chatroom/report")
+async def app_chatroom_report(request: Request):
+    """工作窗口安念汇报进度用：自动带 work 标记。"""
+    require_auth(request)
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    sender = body.get("sender", "anian_work")
+    if not text:
+        raise HTTPException(status_code=400, detail="汇报不能为空")
+    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["anian_work"])
+    cur = db().execute(
+        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
+        (sender, actor["name"], text, "report"))
+    db().commit()
+    return {"ok": True, "id": cur.lastrowid}
+
+@app.delete("/app/chatroom/clear")
+async def app_chatroom_clear(request: Request):
+    require_auth(request)
+    db().execute("DELETE FROM chatroom_messages")
+    db().commit()
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     import uvicorn
 
