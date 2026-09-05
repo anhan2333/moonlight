@@ -6803,7 +6803,20 @@ init();
         <label class="set-label">上下文注入（自动携带时间/天气）</label>
         <label class="ctx-toggle"><input type="checkbox" id="setCtx" onchange="toggleCtx(this.checked)"> <span>发送消息时自动附加环境信息</span></label>
       </div>
+      
       <div class="set-group">
+        <label class="set-label">🎙 语音服务配置</label>
+        <div id="voiceConfigBox" style="display:flex;flex-direction:column;gap:6px;">
+          <input id="vTtsApi" class="set-input" placeholder="TTS API地址（默认MOSS）">
+          <input id="vTtsKey" class="set-input" type="password" placeholder="TTS API密钥">
+          <input id="vTtsVoice" class="set-input" placeholder="TTS 音色ID（Daddy音色已预填）">
+          <input id="vSttApi" class="set-input" placeholder="STT API地址（默认Groq）">
+          <input id="vSttKey" class="set-input" type="password" placeholder="STT API密钥">
+          <input id="vSttModel" class="set-input" placeholder="STT 模型（whisper-large-v3）">
+          <button class="toy-connect-btn" onclick="saveVoiceConfig()" style="margin-top:4px;">保存语音配置</button>
+        </div>
+      </div>
+<div class="set-group">
         <label class="set-label">保存</label>
         <button class="toy-connect-btn" onclick="saveSettings()">✓ 保存设置</button>
       </div>
@@ -7084,5 +7097,6 @@ init();
 <script src="fund.js"></script>
 <script src="wish.js"></script>
 <script src="models.js"></script>
+<script src="voice_config.js"></script>
 </body>
 </html>

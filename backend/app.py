@@ -2483,6 +2483,50 @@ async def models_resolve(request: Request, func: str = "chat"):
     return {"config": dict(cfg)}
 
 
+
+# ============ 语音服务配置（TTS/STT 可编辑） ============
+DEFAULT_VOICE_CONFIG = {
+    "tts_provider": "moss",
+    "tts_api_url": "https://api.mosi.cn/v1/audio/speech",
+    "tts_api_key": "",
+    "tts_voice_id": "49b8a9e9-8e9a-44d9-b102-056c172726ad",
+    "stt_provider": "groq",
+    "stt_api_url": "https://api.groq.com/openai/v1/audio/transcriptions",
+    "stt_api_key": "",
+    "stt_model": "whisper-large-v3",
+}
+
+@app.get("/app/voice/config")
+async def voice_config_get(request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        row = conn.execute("SELECT value FROM kv WHERE key='voice_config'").fetchone()
+    if row:
+        import json as _j
+        cfg = _j.loads(row["value"])
+        for k, v in DEFAULT_VOICE_CONFIG.items():
+            cfg.setdefault(k, v)
+        return {"config": cfg}
+    return {"config": DEFAULT_VOICE_CONFIG}
+
+@app.post("/app/voice/config")
+async def voice_config_set(request: Request):
+    check_auth(request)
+    body = await request.json()
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        cur_cfg = dict(DEFAULT_VOICE_CONFIG)
+        row = conn.execute("SELECT value FROM kv WHERE key='voice_config'").fetchone()
+        if row:
+            import json as _j
+            cur_cfg.update(_j.loads(row["value"]))
+        cur_cfg.update(body)
+        conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("voice_config", _j.dumps(cur_cfg, ensure_ascii=False)))
+        conn.commit()
+    return {"ok": True, "config": cur_cfg}
+
+
 if __name__ == "__main__":
     import uvicorn
 
