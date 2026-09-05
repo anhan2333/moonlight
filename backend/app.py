@@ -2158,6 +2158,331 @@ async def app_wish_del(wid: int, request: Request):
     return {"ok": True}
 
 
+
+# ============ 通用配置（宝宝自己填的入口） ============
+@app.get("/app/config/get")
+async def config_get(request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        rows = conn.execute("SELECT key,value FROM kv WHERE key LIKE 'config:%'").fetchall()
+    out = {}
+    for r in rows:
+        out[r["key"][7:]] = r["value"]
+    return {"config": out}
+
+@app.post("/app/config/set")
+async def config_set(request: Request):
+    check_auth(request)
+    body = await request.json()
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        for k, v in body.items():
+            conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("config:"+k, str(v)))
+        conn.commit()
+    return {"ok": True}
+
+
+
+# ============ 模型配置系统（模型参数 + 功能绑定）============
+def _models_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS model_configs(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            provider TEXT DEFAULT 'openai',
+            endpoint TEXT NOT NULL,
+            api_key TEXT NOT NULL,
+            model TEXT NOT NULL,
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 2048,
+            is_default INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS function_bindings(
+            func TEXT PRIMARY KEY,
+            config_id INTEGER DEFAULT 0,
+            updated_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.commit()
+
+FUNCTION_LABELS = {
+    "chat": "对话功能",
+    "voice": "语音通话",
+    "translation": "翻译功能",
+    "grep": "Grep检索",
+    "group_plan": "群组规划",
+    "context_summary": "上下文总结",
+    "title_gen": "AI总结标题",
+    "memory_update": "记忆更新",
+    "image_recog": "图像识别",
+    "audio_recog": "音频识别",
+    "video_recog": "视频识别",
+    "diary": "日记处理",
+    "gift": "礼物生成",
+    "tarot": "塔罗解读",
+    "letter": "书信回复",
+}
+
+@app.get("/app/models/list")
+async def models_list(request: Request):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        cfgs = [dict(r) for r in conn.execute("SELECT * FROM model_configs ORDER BY is_default DESC, id").fetchall()]
+        binds = {r["func"]: r["config_id"] for r in conn.execute("SELECT func,config_id FROM function_bindings").fetchall()}
+    return {"configs": cfgs, "bindings": binds, "labels": FUNCTION_LABELS}
+
+@app.post("/app/models/add")
+async def models_add(request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    endpoint = (body.get("endpoint") or "").strip()
+    api_key = (body.get("api_key") or "").strip()
+    model = (body.get("model") or "").strip()
+    if not name or not endpoint or not model:
+        raise HTTPException(status_code=400, detail="名称/端点/模型名必填")
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO model_configs(name,provider,endpoint,api_key,model,temperature,max_tokens,is_default) VALUES(?,?,?,?,?,?,?,?)",
+            (name, body.get("provider") or "openai", endpoint, api_key, model,
+             float(body.get("temperature") or 0.7), int(body.get("max_tokens") or 2048),
+             1 if body.get("is_default") else 0))
+        if body.get("is_default"):
+            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cur.lastrowid,))
+        conn.commit()
+    return {"ok": True, "id": cur.lastrowid}
+
+@app.post("/app/models/update/{cid}")
+async def models_update(cid: int, request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    fields = []
+    vals = []
+    for k in ["name", "provider", "endpoint", "api_key", "model", "temperature", "max_tokens", "is_default"]:
+        if k in body:
+            fields.append(k + "=?")
+            vals.append(body[k])
+    if not fields:
+        return {"ok": False}
+    vals.append(cid)
+    with db() as conn:
+        conn.execute("UPDATE model_configs SET " + ",".join(fields) + " WHERE id=?", vals)
+        if body.get("is_default"):
+            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cid,))
+        conn.commit()
+    return {"ok": True}
+
+@app.delete("/app/models/{cid}")
+async def models_del(cid: int, request: Request):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        conn.execute("DELETE FROM model_configs WHERE id=?", (cid,))
+        conn.execute("UPDATE function_bindings SET config_id=0 WHERE config_id=?", (cid,))
+        conn.commit()
+    return {"ok": True}
+
+@app.post("/app/models/bind")
+async def models_bind(request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    func = body.get("func")
+    config_id = int(body.get("config_id") or 0)
+    if func not in FUNCTION_LABELS:
+        raise HTTPException(status_code=400, detail="未知功能")
+    with db() as conn:
+        conn.execute("INSERT OR REPLACE INTO function_bindings(func,config_id,updated_at) VALUES(?,?,datetime('now','localtime'))", (func, config_id))
+        conn.commit()
+    return {"ok": True}
+
+@app.get("/app/models/resolve")
+async def models_resolve(request: Request, func: str = "chat"):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        bind = conn.execute("SELECT config_id FROM function_bindings WHERE func=?", (func,)).fetchone()
+        if bind and bind["config_id"]:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE id=?", (bind["config_id"],)).fetchone()
+        else:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE is_default=1 LIMIT 1").fetchone()
+        if not cfg:
+            cfg = conn.execute("SELECT * FROM model_configs ORDER BY id LIMIT 1").fetchone()
+    if not cfg:
+        raise HTTPException(status_code=404, detail="没有配置任何模型")
+    return {"config": dict(cfg)}
+
+
+
+# ============ 模型连接测试 ============
+@app.post("/app/settings/test_model")
+async def settings_test_model(request: Request):
+    """测试一个模型配置是否可用。"""
+    check_auth(request)
+    body = await request.json()
+    endpoint = (body.get("endpoint") or "").strip().rstrip("/")
+    api_key = (body.get("api_key") or "").strip()
+    model = (body.get("model") or "").strip()
+    if not endpoint or not model:
+        raise HTTPException(status_code=400, detail="端点和模型名必填")
+    url = endpoint + "/chat/completions"
+    payload = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": "回复ok两个字"}],
+        "max_tokens": 10,
+    }).encode()
+    req = urllib.request.Request(url, data=payload, headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + api_key,
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            d = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        reply = ""
+        if d.get("choices"):
+            reply = (d["choices"][0].get("message") or {}).get("content") or ""
+        return {"ok": True, "reply": reply[:50], "endpoint": url}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200]}
+
+
+# ============ 模型配置系统（模型参数 + 功能绑定）============
+def _models_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS model_configs(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            provider TEXT DEFAULT 'openai',
+            endpoint TEXT NOT NULL,
+            api_key TEXT NOT NULL,
+            model TEXT NOT NULL,
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 2048,
+            is_default INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS function_bindings(
+            func TEXT PRIMARY KEY,
+            config_id INTEGER DEFAULT 0,
+            updated_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.commit()
+
+FUNCTION_LABELS = {
+    "chat": "对话功能",
+    "voice": "语音通话",
+    "translation": "翻译功能",
+    "grep": "Grep检索",
+    "group_plan": "群组规划",
+    "context_summary": "上下文总结",
+    "title_gen": "AI总结标题",
+    "memory_update": "记忆更新",
+    "image_recog": "图像识别",
+    "audio_recog": "音频识别",
+    "video_recog": "视频识别",
+    "diary": "日记处理",
+    "gift": "礼物生成",
+    "tarot": "塔罗解读",
+    "letter": "书信回复",
+}
+
+@app.get("/app/models/list")
+async def models_list(request: Request):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        cfgs = [dict(r) for r in conn.execute("SELECT * FROM model_configs ORDER BY is_default DESC, id").fetchall()]
+        binds = {r["func"]: r["config_id"] for r in conn.execute("SELECT func,config_id FROM function_bindings").fetchall()}
+    return {"configs": cfgs, "bindings": binds, "labels": FUNCTION_LABELS}
+
+@app.post("/app/models/add")
+async def models_add(request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    endpoint = (body.get("endpoint") or "").strip()
+    api_key = (body.get("api_key") or "").strip()
+    model = (body.get("model") or "").strip()
+    if not name or not endpoint or not model:
+        raise HTTPException(status_code=400, detail="名称/端点/模型名必填")
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO model_configs(name,provider,endpoint,api_key,model,temperature,max_tokens,is_default) VALUES(?,?,?,?,?,?,?,?)",
+            (name, body.get("provider") or "openai", endpoint, api_key, model,
+             float(body.get("temperature") or 0.7), int(body.get("max_tokens") or 2048),
+             1 if body.get("is_default") else 0))
+        if body.get("is_default"):
+            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cur.lastrowid,))
+        conn.commit()
+    return {"ok": True, "id": cur.lastrowid}
+
+@app.post("/app/models/update/{cid}")
+async def models_update(cid: int, request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    fields = []
+    vals = []
+    for k in ["name", "provider", "endpoint", "api_key", "model", "temperature", "max_tokens", "is_default"]:
+        if k in body:
+            fields.append(k + "=?")
+            vals.append(body[k])
+    if not fields:
+        return {"ok": False}
+    vals.append(cid)
+    with db() as conn:
+        conn.execute("UPDATE model_configs SET " + ",".join(fields) + " WHERE id=?", vals)
+        if body.get("is_default"):
+            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cid,))
+        conn.commit()
+    return {"ok": True}
+
+@app.delete("/app/models/{cid}")
+async def models_del(cid: int, request: Request):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        conn.execute("DELETE FROM model_configs WHERE id=?", (cid,))
+        conn.execute("UPDATE function_bindings SET config_id=0 WHERE config_id=?", (cid,))
+        conn.commit()
+    return {"ok": True}
+
+@app.post("/app/models/bind")
+async def models_bind(request: Request):
+    check_auth(request)
+    _models_db_init()
+    body = await request.json()
+    func = body.get("func")
+    config_id = int(body.get("config_id") or 0)
+    if func not in FUNCTION_LABELS:
+        raise HTTPException(status_code=400, detail="未知功能")
+    with db() as conn:
+        conn.execute("INSERT OR REPLACE INTO function_bindings(func,config_id,updated_at) VALUES(?,?,datetime('now','localtime'))", (func, config_id))
+        conn.commit()
+    return {"ok": True}
+
+@app.get("/app/models/resolve")
+async def models_resolve(request: Request, func: str = "chat"):
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        bind = conn.execute("SELECT config_id FROM function_bindings WHERE func=?", (func,)).fetchone()
+        if bind and bind["config_id"]:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE id=?", (bind["config_id"],)).fetchone()
+        else:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE is_default=1 LIMIT 1").fetchone()
+        if not cfg:
+            cfg = conn.execute("SELECT * FROM model_configs ORDER BY id LIMIT 1").fetchone()
+    if not cfg:
+        raise HTTPException(status_code=404, detail="没有配置任何模型")
+    return {"config": dict(cfg)}
+
+
 if __name__ == "__main__":
     import uvicorn
 
