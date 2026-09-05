@@ -2350,181 +2350,83 @@ async def settings_test_model(request: Request):
         return {"ok": False, "error": str(e)[:200]}
 
 
-# ============ 模型配置系统（模型参数 + 功能绑定）============
-def _models_db_init():
-    with db() as conn:
-        conn.execute("""CREATE TABLE IF NOT EXISTS model_configs(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            provider TEXT DEFAULT 'openai',
-            endpoint TEXT NOT NULL,
-            api_key TEXT NOT NULL,
-            model TEXT NOT NULL,
-            temperature REAL DEFAULT 0.7,
-            max_tokens INTEGER DEFAULT 2048,
-            is_default INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now','localtime'))
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS function_bindings(
-            func TEXT PRIMARY KEY,
-            config_id INTEGER DEFAULT 0,
-            updated_at TEXT DEFAULT (datetime('now','localtime'))
-        )""")
-        conn.commit()
 
-FUNCTION_LABELS = {
-    "chat": "对话功能",
-    "voice": "语音通话",
-    "translation": "翻译功能",
-    "grep": "Grep检索",
-    "group_plan": "群组规划",
-    "context_summary": "上下文总结",
-    "title_gen": "AI总结标题",
-    "memory_update": "记忆更新",
-    "image_recog": "图像识别",
-    "audio_recog": "音频识别",
-    "video_recog": "视频识别",
-    "diary": "日记处理",
-    "gift": "礼物生成",
-    "tarot": "塔罗解读",
-    "letter": "书信回复",
-}
 
-@app.get("/app/models/list")
-async def models_list(request: Request):
+# ============ AI生图礼物（通用生图端点，兼容OpenAI格式） ============
+import base64 as _b64
+import os as _os
+GIFT_IMG_DIR = Path(os.environ.get("MOONLIGHT_DATA_DIR", "data")) / "gift_images"
+
+def _gift_img_dir():
+    GIFT_IMG_DIR.mkdir(parents=True, exist_ok=True)
+    return GIFT_IMG_DIR
+
+@app.post("/app/gift/draw")
+async def gift_draw(request: Request):
+    """AI生图：从模型配置里找 is_default=1 且 image 能力，或走通用 config 里的生图端点。"""
     check_auth(request)
-    _models_db_init()
-    with db() as conn:
-        cfgs = [dict(r) for r in conn.execute("SELECT * FROM model_configs ORDER BY is_default DESC, id").fetchall()]
-        binds = {r["func"]: r["config_id"] for r in conn.execute("SELECT func,config_id FROM function_bindings").fetchall()}
-    return {"configs": cfgs, "bindings": binds, "labels": FUNCTION_LABELS}
-
-@app.post("/app/models/add")
-async def models_add(request: Request):
-    check_auth(request)
-    _models_db_init()
     body = await request.json()
-    name = (body.get("name") or "").strip()
-    endpoint = (body.get("endpoint") or "").strip()
-    api_key = (body.get("api_key") or "").strip()
-    model = (body.get("model") or "").strip()
-    if not name or not endpoint or not model:
-        raise HTTPException(status_code=400, detail="名称/端点/模型名必填")
-    with db() as conn:
-        cur = conn.execute(
-            "INSERT INTO model_configs(name,provider,endpoint,api_key,model,temperature,max_tokens,is_default) VALUES(?,?,?,?,?,?,?,?)",
-            (name, body.get("provider") or "openai", endpoint, api_key, model,
-             float(body.get("temperature") or 0.7), int(body.get("max_tokens") or 2048),
-             1 if body.get("is_default") else 0))
-        if body.get("is_default"):
-            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cur.lastrowid,))
-        conn.commit()
-    return {"ok": True, "id": cur.lastrowid}
-
-@app.post("/app/models/update/{cid}")
-async def models_update(cid: int, request: Request):
-    check_auth(request)
-    _models_db_init()
-    body = await request.json()
-    fields = []
-    vals = []
-    for k in ["name", "provider", "endpoint", "api_key", "model", "temperature", "max_tokens", "is_default"]:
-        if k in body:
-            fields.append(k + "=?")
-            vals.append(body[k])
-    if not fields:
-        return {"ok": False}
-    vals.append(cid)
-    with db() as conn:
-        conn.execute("UPDATE model_configs SET " + ",".join(fields) + " WHERE id=?", vals)
-        if body.get("is_default"):
-            conn.execute("UPDATE model_configs SET is_default=0 WHERE id!=?", (cid,))
-        conn.commit()
-    return {"ok": True}
-
-@app.delete("/app/models/{cid}")
-async def models_del(cid: int, request: Request):
-    check_auth(request)
-    _models_db_init()
-    with db() as conn:
-        conn.execute("DELETE FROM model_configs WHERE id=?", (cid,))
-        conn.execute("UPDATE function_bindings SET config_id=0 WHERE config_id=?", (cid,))
-        conn.commit()
-    return {"ok": True}
-
-@app.post("/app/models/bind")
-async def models_bind(request: Request):
-    check_auth(request)
-    _models_db_init()
-    body = await request.json()
-    func = body.get("func")
-    config_id = int(body.get("config_id") or 0)
-    if func not in FUNCTION_LABELS:
-        raise HTTPException(status_code=400, detail="未知功能")
-    with db() as conn:
-        conn.execute("INSERT OR REPLACE INTO function_bindings(func,config_id,updated_at) VALUES(?,?,datetime('now','localtime'))", (func, config_id))
-        conn.commit()
-    return {"ok": True}
-
-@app.get("/app/models/resolve")
-async def models_resolve(request: Request, func: str = "chat"):
-    check_auth(request)
-    _models_db_init()
-    with db() as conn:
-        bind = conn.execute("SELECT config_id FROM function_bindings WHERE func=?", (func,)).fetchone()
-        if bind and bind["config_id"]:
-            cfg = conn.execute("SELECT * FROM model_configs WHERE id=?", (bind["config_id"],)).fetchone()
-        else:
-            cfg = conn.execute("SELECT * FROM model_configs WHERE is_default=1 LIMIT 1").fetchone()
-        if not cfg:
-            cfg = conn.execute("SELECT * FROM model_configs ORDER BY id LIMIT 1").fetchone()
-    if not cfg:
-        raise HTTPException(status_code=404, detail="没有配置任何模型")
-    return {"config": dict(cfg)}
-
-
-
-# ============ 语音服务配置（TTS/STT 可编辑） ============
-DEFAULT_VOICE_CONFIG = {
-    "tts_provider": "moss",
-    "tts_api_url": "https://api.mosi.cn/v1/audio/speech",
-    "tts_api_key": "",
-    "tts_voice_id": "49b8a9e9-8e9a-44d9-b102-056c172726ad",
-    "stt_provider": "groq",
-    "stt_api_url": "https://api.groq.com/openai/v1/audio/transcriptions",
-    "stt_api_key": "",
-    "stt_model": "whisper-large-v3",
-}
-
-@app.get("/app/voice/config")
-async def voice_config_get(request: Request):
-    check_auth(request)
+    prompt = (body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt不能为空")
+    # 先尝试通用配置里的生图端点
     with db() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
-        row = conn.execute("SELECT value FROM kv WHERE key='voice_config'").fetchone()
-    if row:
-        import json as _j
-        cfg = _j.loads(row["value"])
-        for k, v in DEFAULT_VOICE_CONFIG.items():
-            cfg.setdefault(k, v)
-        return {"config": cfg}
-    return {"config": DEFAULT_VOICE_CONFIG}
+        row = conn.execute("SELECT value FROM kv WHERE key='config:draw_endpoint'").fetchone()
+        row_key = conn.execute("SELECT value FROM kv WHERE key='config:draw_api_key'").fetchone()
+        row_model = conn.execute("SELECT value FROM kv WHERE key='config:draw_model'").fetchone()
+    endpoint = (row["value"] if row else "") or (body.get("endpoint") or "")
+    api_key = (row_key["value"] if row_key else "") or (body.get("api_key") or "")
+    model = (row_model["value"] if row_model else "") or (body.get("model") or "")
+    if not endpoint or not api_key:
+        return {"ok": False, "error": "请先在设置里配置生图API（端点+密钥）"}
+    # 兼容两种端点格式
+    if not endpoint.endswith("/images/generations"):
+        endpoint = endpoint.rstrip("/") + "/images/generations"
+    payload = {"prompt": prompt, "n": 1, "size": body.get("size", "1024x1024")}
+    if model:
+        payload["model"] = model
+    req = urllib.request.Request(endpoint, data=json.dumps(payload).encode("utf-8"), headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + api_key,
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            data = json.loads(r.read().decode("utf-8", errors="ignore"))
+    except Exception as e:
+        return {"ok": False, "error": "生图请求失败: %s" % e}
+    b64 = None
+    if data.get("data") and data["data"][0].get("b64_json"):
+        b64 = data["data"][0]["b64_json"]
+        img_bytes = _b64.b64decode(b64)
+    elif data.get("data") and data["data"][0].get("url"):
+        img_url = data["data"][0]["url"]
+        try:
+            with urllib.request.urlopen(img_url, timeout=60) as r2:
+                img_bytes = r2.read()
+        except Exception:
+            return {"ok": True, "image_url": img_url}
+    else:
+        return {"ok": False, "error": "生图响应格式异常"}
+    fname = f"gift_{int(time.time())}.png"
+    fpath = _gift_img_dir() / fname
+    fpath.write_bytes(img_bytes)
+    return {"ok": True, "image_url": f"/app/gift/image/{fname}"}
 
-@app.post("/app/voice/config")
-async def voice_config_set(request: Request):
+@app.get("/app/gift/image/{fname}")
+async def gift_image(fname: str, request: Request):
     check_auth(request)
-    body = await request.json()
-    with db() as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
-        cur_cfg = dict(DEFAULT_VOICE_CONFIG)
-        row = conn.execute("SELECT value FROM kv WHERE key='voice_config'").fetchone()
-        if row:
-            import json as _j
-            cur_cfg.update(_j.loads(row["value"]))
-        cur_cfg.update(body)
-        conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("voice_config", _j.dumps(cur_cfg, ensure_ascii=False)))
-        conn.commit()
-    return {"ok": True, "config": cur_cfg}
+    fpath = _gift_img_dir() / fname
+    if not fpath.exists():
+        raise HTTPException(status_code=404, detail="image not found")
+    return FileResponse(str(fpath), media_type="image/png")
+
+@app.get("/app/gift/gallery")
+async def gift_gallery(request: Request):
+    check_auth(request)
+    d = _gift_img_dir()
+    imgs = sorted([f"/app/gift/image/{p.name}" for p in d.glob("*.png")], reverse=True)
+    return {"images": imgs[:30]}
 
 
 if __name__ == "__main__":

@@ -2083,6 +2083,14 @@
 .model-test-ok{font-size:13px;color:#5a8a5a;padding:8px;border-radius:8px;background:rgba(90,138,90,.08);margin-top:8px;}
 .model-test-err{font-size:13px;color:#c05640;padding:8px;border-radius:8px;background:rgba(192,86,64,.08);margin-top:8px;}
 
+
+.gift-draw-row{display:flex;gap:8px;margin-top:14px;}
+.gift-draw-row input{flex:1;padding:10px 14px;border:1px solid var(--card-line,#e5e0d8);border-radius:10px;background:var(--field-bg,#faf8f4);color:var(--text,#2a2622);font-size:13px;}
+.gift-draw-row button{padding:10px 14px;border:none;border-radius:10px;background:linear-gradient(135deg,#bda06f,#c17355);color:#fff;font-size:13px;white-space:nowrap;}
+.gift-gallery{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;}
+.gift-gallery-title{width:100%;font-size:12px;color:#bda06f;margin-bottom:4px;}
+#giftDrawResult{margin-top:10px;}
+
 </style>
 </head>
 <body>
@@ -7020,7 +7028,15 @@ init();
       </div>
       <div class="models-section-title">🔧 功能模型绑定</div>
       <div id="modelsBindList"></div>
-      <div class="models-section-title">🧪 测试</div>
+      
+      <div class="models-section-title">🎨 生图API配置（礼物AI生图用）</div>
+      <div class="models-add-form">
+        <input id="drawEndpoint" type="text" placeholder="生图端点（如 https://api.xxx.com/v1）">
+        <input id="drawApiKey" type="password" placeholder="生图API密钥">
+        <input id="drawModel" type="text" placeholder="生图模型名（可选）">
+        <button class="toy-connect-btn" onclick="saveDrawConfig()">保存生图配置</button>
+      </div>
+<div class="models-section-title">🧪 测试</div>
       <button class="toy-connect-btn" onclick="testModel()">测试当前绑定</button>
       <div id="mTestResult"></div>
     </div>
@@ -7098,5 +7114,6 @@ init();
 <script src="wish.js"></script>
 <script src="models.js"></script>
 <script src="voice_config.js"></script>
+<script src="gift.js"></script>
 </body>
 </html>

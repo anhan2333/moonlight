@@ -125,3 +125,19 @@ async function testModel(){
     box.innerHTML = '<div class="model-test-err">测试失败</div>';
   }
 }
+
+async function saveDrawConfig(){
+  const g = id => (document.getElementById(id)||{}).value || '';
+  try {
+    await fetch(API_BASE + '/app/config/set', {
+      method: 'POST',
+      headers: Object.assign({}, authHeaders(), {'Content-Type': 'application/json'}),
+      body: JSON.stringify({
+        draw_endpoint: g('drawEndpoint'),
+        draw_api_key: g('drawApiKey'),
+        draw_model: g('drawModel')
+      })
+    });
+    alert('生图配置已保存');
+  } catch(e){ alert('保存失败'); }
+}
