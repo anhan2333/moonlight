@@ -2091,6 +2091,11 @@
 .gift-gallery-title{width:100%;font-size:12px;color:#bda06f;margin-bottom:4px;}
 #giftDrawResult{margin-top:10px;}
 
+
+/* 通用配置行 */
+.gc-row{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+.gc-row label{font-size:11px;opacity:.6;}
+.gc-row input{padding:9px 12px;border:1px solid var(--card-line,#e5e0d8);border-radius:8px;background:var(--field-bg,#faf8f4);color:var(--text,#2a2622);font-size:13px;}
 </style>
 </head>
 <body>
@@ -6833,6 +6838,25 @@ init();
         </div>
       </div>
 <div class="set-group">
+        <label class="set-label">通用配置（生图API/推送目标，自己填）</label>
+        <div id="gcList"><div class="panel-loading">点下面的加载按钮</div></div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="wish-draw-btn" style="flex:1" onclick="loadGeneralConfig()">加载</button>
+          <button class="wish-draw-btn" style="flex:1" onclick="saveGeneralConfig()">保存</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <label class="set-label">语音配置（TTS/STT）</label>
+        <input id="vc_tts_key" class="set-input" placeholder="TTS API密钥（留空=当前值）">
+        <input id="vc_tts_voice" class="set-input" placeholder="TTS 音色ID（留空=当前值）">
+        <input id="vc_stt_key" class="set-input" placeholder="STT API密钥（留空=当前值）">
+        <input id="vc_stt_model" class="set-input" placeholder="STT 模型名（留空=当前值）">
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="wish-draw-btn" style="flex:1" onclick="loadVoiceConfig()">加载当前值</button>
+          <button class="wish-draw-btn" style="flex:1" onclick="saveVoiceConfig()">保存</button>
+        </div>
+      </div>
+      <div class="set-group">
         <label class="set-label">保存</label>
         <button class="toy-connect-btn" onclick="saveSettings()">✓ 保存设置</button>
       </div>
@@ -7166,6 +7190,7 @@ async function memSearch(){
 }
 </script>
 <script src="wish.js"></script>
+<script src="settings.js"></script>
 <script src="models.js"></script>
 <script src="voice_config.js"></script>
 <script src="gift.js"></script>
