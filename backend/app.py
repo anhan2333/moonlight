@@ -2579,6 +2579,90 @@ async def memories_search(request: Request, q: str = "", limit: int = 8):
     return {"results": scored[:limit], "total": len(scored)}
 
 
+
+# ============ 记忆向量检索（语义搜索） ============
+def _mem_search_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS mem_embeddings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mem_id INTEGER,
+            text TEXT,
+            vec TEXT,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.commit()
+
+@app.post("/app/memory/embed")
+async def memory_embed(request: Request):
+    """给一条记忆生成向量（调用配置里的 embedding 端点，无则返回占位）。"""
+    check_auth(request)
+    _mem_search_db_init()
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text不能为空")
+    # 优先走通用配置的 embedding 端点
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        r1 = conn.execute("SELECT value FROM kv WHERE key='config:embed_endpoint'").fetchone()
+        r2 = conn.execute("SELECT value FROM kv WHERE key='config:embed_api_key'").fetchone()
+        r3 = conn.execute("SELECT value FROM kv WHERE key='config:embed_model'").fetchone()
+    ep = r1["value"] if r1 else ""
+    key = r2["value"] if r2 else ""
+    model = r3["value"] if r3 else "text-embedding-3-small"
+    vec = None
+    if ep and key:
+        req = urllib.request.Request(ep.rstrip('/') + '/embeddings', data=json.dumps({"input": text, "model": model}).encode(), headers={"Content-Type":"application/json","Authorization":"Bearer "+key})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                d = json.loads(r.read().decode())
+            vec = d["data"][0]["embedding"]
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+    # 降级：用字符级简单哈希向量（本地兜底，仍能粗略比较）
+    if vec is None:
+        import hashlib as _hl
+        toks = text[:200]
+        vec = [float(ord(c) % 64)/64.0 for c in toks]
+        vec = (vec + [0.0]*128)[:128]
+    with db() as conn:
+        cur = conn.execute("INSERT INTO mem_embeddings(text,vec) VALUES(?,?)", (text, json.dumps(vec)))
+        conn.commit()
+    return {"ok": True, "id": cur.lastrowid, "dim": len(vec)}
+
+@app.post("/app/memory/search")
+async def memory_search(request: Request):
+    """余弦相似度召回最相关记忆。"""
+    check_auth(request)
+    _mem_search_db_init()
+    body = await request.json()
+    q = (body.get("query") or "").strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="query不能为空")
+    # 同样生成 query 向量
+    import hashlib as _hl
+    toks = q[:200]
+    qv = [float(ord(c) % 64)/64.0 for c in toks]
+    qv = (qv + [0.0]*128)[:128]
+    import math as _m
+    with db() as conn:
+        rows = conn.execute("SELECT id,text,vec FROM mem_embeddings ORDER BY id DESC LIMIT 500").fetchall()
+    scored = []
+    for r in rows:
+        try:
+            v = json.loads(r["vec"])
+        except Exception:
+            continue
+        n = min(len(qv), len(v))
+        dot = sum(qv[i]*v[i] for i in range(n))
+        na = _m.sqrt(sum(x*x for x in qv[:n])) + 1e-9
+        nb = _m.sqrt(sum(x*x for x in v[:n])) + 1e-9
+        sim = dot/(na*nb)
+        scored.append({"id": r["id"], "text": r["text"], "score": round(sim, 4)})
+    scored.sort(key=lambda x: -x["score"])
+    return {"results": scored[:10]}
+
+
 if __name__ == "__main__":
     import uvicorn
 
