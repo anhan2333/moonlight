@@ -1671,6 +1671,82 @@ async def memories_touch(mem_id: int, request: Request):
 
 
 
+
+# ============ Tarot 塔罗（月光 v0.15 · 简化IB版）============
+import random as _random
+
+TAROT_MAJOR = [
+    "愚者","魔术师","女祭司","女皇","皇帝","教皇","恋人","战车","力量","隐士",
+    "命运之轮","正义","倒吊人","死神","节制","恶魔","高塔","星星","月亮","太阳",
+    "审判","世界"
+]
+TAROT_SUITS = {"权杖":"火","圣杯":"水","宝剑":"风","星币":"土"}
+TAROT_RANKS = ["王牌","二","三","四","五","六","七","八","九","十",
+               "侍从","骑士","王后","国王"]
+
+def _tarot_full_deck():
+    deck = [(c, "major") for c in TAROT_MAJOR]
+    for suit, elem in TAROT_SUITS.items():
+        for rank in TAROT_RANKS:
+            deck.append((f"{suit}·{rank}", f"minor-{elem}"))
+    return deck
+
+TAROT_SPREADS = {
+    "none":      {"name": "无牌阵",   "count": 0},
+    "single":    {"name": "单牌",     "count": 1},
+    "timeline":  {"name": "时间之流", "count": 3},
+    "cross":     {"name": "十字",     "count": 5},
+    "star":      {"name": "命运之星", "count": 7},
+}
+
+@app.get("/app/tarot/deck")
+async def tarot_deck(request: Request):
+    """返回全部 78 张牌名和分档。"""
+    check_auth(request)
+    deck = _tarot_full_deck()
+    return {"total": len(deck), "cards": deck}
+
+@app.get("/app/tarot/spreads")
+async def tarot_spreads(request: Request):
+    check_auth(request)
+    return {"spreads": TAROT_SPREADS}
+
+@app.post("/app/tarot/draw")
+async def tarot_draw(request: Request):
+    """抽牌：随机抽 N 张，含正/逆位。返回牌名+方位+含义提示。"""
+    check_auth(request)
+    body = await request.json()
+    spread = body.get("spread", "single")
+    if spread not in TAROT_SPREADS:
+        raise HTTPException(status_code=400, detail="unknown spread")
+    count = TAROT_SPREADS[spread]["count"]
+    if count == 0:
+        return {"spread": spread, "cards": [], "message": "无牌阵：纯聊天解读"}
+    deck = _tarot_full_deck()
+    drawn = _random.sample(deck, count)
+    cards = []
+    for name, typ in drawn:
+        reversed_ = _random.random() < 0.3  # 30% 逆位
+        cards.append({
+            "name": name,
+            "reversed": reversed_,
+            "type": typ,
+            "position_hint": "逆位·能量受阻或内化" if reversed_ else "正位·能量顺畅",
+        })
+    # 位置说明
+    positions = {
+        "single":    ["当下"],
+        "timeline":  ["过去","现在","未来"],
+        "cross":     ["核心","挑战","过去","未来","建议"],
+        "star":      ["核心","影响","障碍","过去","现在","未来","建议"],
+    }
+    pos = positions.get(spread, [f"第{i+1}张" for i in range(count)])
+    for i, c in enumerate(cards):
+        c["position"] = pos[i] if i < len(pos) else f"第{i+1}张"
+    return {"spread": spread, "spread_name": TAROT_SPREADS[spread]["name"], "cards": cards}
+
+
+
 if __name__ == "__main__":
     import uvicorn
 

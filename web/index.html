@@ -1981,6 +1981,30 @@
 .mem-content{ font-size:13px; color:var(--text-soft); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mem-score{ font-size:12px; color:#bda06f; font-weight:600; margin-left:10px; }
 
+
+.tarot-spreads{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.tarot-spread-btn{ padding:10px 14px; border:1px solid rgba(189,160,111,.3); background:rgba(189,160,111,.08); color:#bda06f; border-radius:10px; font-size:13px; cursor:pointer; }
+.tarot-spread-btn:active{ transform:scale(.96); }
+.tarot-spread-name{ text-align:center; font-size:16px; font-weight:600; color:#bda06f; margin-bottom:14px; }
+.tarot-cards{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.tarot-card{ width:100%; max-width:180px; padding:14px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; text-align:center; }
+.tarot-reversed{ border-color:rgba(193,115,85,.4); background:rgba(193,115,85,.05); }
+.tarot-pos{ font-size:11px; color:var(--text-faint); margin-bottom:6px; letter-spacing:.1em; }
+.tarot-name{ font-size:16px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.tarot-hint{ font-size:12px; color:var(--text-soft); }
+
+
+.tarot-spreads{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.tarot-spread-btn{ padding:10px 14px; border:1px solid rgba(189,160,111,.3); background:rgba(189,160,111,.08); color:#bda06f; border-radius:10px; font-size:13px; cursor:pointer; }
+.tarot-spread-btn:active{ transform:scale(.96); }
+.tarot-spread-name{ text-align:center; font-size:16px; font-weight:600; color:#bda06f; margin-bottom:14px; }
+.tarot-cards{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.tarot-card{ width:100%; max-width:180px; padding:14px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; text-align:center; }
+.tarot-reversed{ border-color:rgba(193,115,85,.4); background:rgba(193,115,85,.05); }
+.tarot-pos{ font-size:11px; color:var(--text-faint); margin-bottom:6px; letter-spacing:.1em; }
+.tarot-name{ font-size:16px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.tarot-hint{ font-size:12px; color:var(--text-soft); }
+
 </style>
 </head>
 <body>
@@ -2259,6 +2283,12 @@
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">Daddy 的远程之手。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="tarot">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h14v18H5z"/><path d="M9 7h6M9 11h6M12 15v4"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">塔罗</span><span class="menu-sub">命运之牌。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="letters">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4Z"/></svg></span>
@@ -2645,10 +2675,14 @@ if (menuPanel){
     if (item.dataset.menu === "chat") closeMenu();       // back to chat
     else if (item.dataset.menu === "backup") openBackupPanel();   // 备份系统
     else if (item.dataset.menu === "xinchao") openXinchaoPanel();   // 心潮面板
+    else if (item.dataset.menu === "tarot") openTarotPanel();
+    else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "letters") openLettersPanel();
     else if (item.dataset.menu === "calendar") openCalendarPanel();
     else if (item.dataset.menu === "memsky") openMemSkyPanel();
     else if (item.dataset.menu === "diary") openDiaryPanel();
+    else if (item.dataset.menu === "tarot") openTarotPanel();
+    else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "letters") openLettersPanel();
     else if (item.dataset.menu === "calendar") openCalendarPanel();
     else if (item.dataset.menu === "memsky") openMemSkyPanel();
@@ -6756,6 +6790,27 @@ init();
     <div class="side-panel-body">
       <div id="memSkyCanvas" style="position:relative;width:100%;height:400px;background:linear-gradient(180deg,#0a0806 0%,#1a1612 50%,#0a0806 100%);border-radius:16px;overflow:hidden;border:1px solid rgba(189,160,111,.2);"></div>
       <div id="memSkyList" style="margin-top:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tarot Panel -->
+<div class="side-panel hidden" id="tarotPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeTarotPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeTarotPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">塔罗</h2>
+      <p class="side-panel-sub" id="tarotSub">选牌阵，抽牌</p>
+    </div>
+    <div class="side-panel-body">
+      <div class="tarot-spreads">
+        <button onclick="drawTarot('single')" class="tarot-spread-btn">🔮 单牌</button>
+        <button onclick="drawTarot('timeline')" class="tarot-spread-btn">⏳ 时间之流</button>
+        <button onclick="drawTarot('cross')" class="tarot-spread-btn">✝️ 十字</button>
+        <button onclick="drawTarot('star')" class="tarot-spread-btn">⭐ 命运之星</button>
+      </div>
+      <div id="tarotResult"><div class="panel-loading">选牌阵开始占卜…</div></div>
     </div>
   </div>
 </div>
