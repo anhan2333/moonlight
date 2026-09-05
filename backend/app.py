@@ -1747,6 +1747,80 @@ async def tarot_draw(request: Request):
 
 
 
+
+# ============ Circle 朋友圈（月光 v0.16 · IB移植）============
+def _circle_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS circle_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            author TEXT, content TEXT,
+            images TEXT, mood TEXT, visibility TEXT DEFAULT 'friends',
+            created_at TEXT, likes INTEGER DEFAULT 0)""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS circle_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER, author TEXT, content TEXT, created_at TEXT)""")
+        conn.commit()
+
+@app.post("/app/circle/post")
+async def circle_post(request: Request):
+    """发朋友圈动态。"""
+    check_auth(request)
+    _circle_init()
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty content")
+    author = body.get("author") or HUMAN_NAME
+    with db() as conn:
+        conn.execute("INSERT INTO circle_posts (author, content, images, mood, visibility, created_at) VALUES (?,?,?,?,?,?)",
+                     (author, content,
+                      body.get("images") or "", body.get("mood") or "",
+                      body.get("visibility") or "friends", now_iso()))
+        conn.commit()
+    return {"posted": True}
+
+@app.get("/app/circle/feed")
+async def circle_feed(request: Request):
+    """朋友圈时间线（含评论）。"""
+    check_auth(request)
+    _circle_init()
+    with db() as conn:
+        posts = conn.execute("SELECT * FROM circle_posts ORDER BY created_at DESC LIMIT 50").fetchall()
+        comments = conn.execute("SELECT * FROM circle_comments ORDER BY created_at ASC").fetchall()
+    # 组合评论
+    feed = []
+    for p in posts:
+        d = dict(p)
+        d["comments"] = [dict(c) for c in comments if c["post_id"] == d["id"]]
+        feed.append(d)
+    return {"feed": feed}
+
+@app.post("/app/circle/{post_id}/like")
+async def circle_like(post_id: int, request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("UPDATE circle_posts SET likes = likes + 1 WHERE id=?", (post_id,))
+        conn.commit()
+    return {"liked": True}
+
+@app.post("/app/circle/{post_id}/comment")
+async def circle_comment(post_id: int, request: Request):
+    check_auth(request)
+    _circle_init()
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    author = body.get("author") or "薇薇"
+    if not content:
+        raise HTTPException(status_code=400, detail="empty comment")
+    with db() as conn:
+        conn.execute("INSERT INTO circle_comments (post_id, author, content, created_at) VALUES (?,?,?,?)",
+                     (post_id, author, content, now_iso()))
+        conn.commit()
+    return {"commented": True}
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
 
