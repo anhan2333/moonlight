@@ -2029,6 +2029,14 @@
 .circle-comment{ font-size:12px; color:var(--text-soft); padding:2px 0; }
 .circle-comment b{ color:var(--text); }
 
+
+.tea-cup{ text-align:center; font-size:64px; margin:20px 0; }
+.tea-desc{ text-align:center; font-size:15px; color:var(--text-soft); line-height:1.8; padding:0 20px; font-style:italic; }
+
+
+.tea-cup{ text-align:center; font-size:64px; margin:20px 0; }
+.tea-desc{ text-align:center; font-size:15px; color:var(--text-soft); line-height:1.8; padding:0 20px; font-style:italic; }
+
 </style>
 </head>
 <body>
@@ -2318,6 +2326,12 @@
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10h8M8 14h5"/><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4Z"/></svg></span>
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">我们的动态。</span></span>
+          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="tea">
+          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8h12v6a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4Z"/><path d="M9 12h2M15 12h2M9 16h2"/></svg></span>
+          <span class="menu-dot"></span>
+          <span class="menu-copy"><span class="menu-name">茶歇</span><span class="menu-sub">安念泡茶。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
         <button class="menu-item" type="button" data-menu="letters">
@@ -2709,6 +2723,8 @@ if (menuPanel){
     else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
+    else if (item.dataset.menu === "tea") openTeaPanel();
+    else if (item.dataset.menu === "tea") openTeaPanel();
     else if (item.dataset.menu === "letters") openLettersPanel();
     else if (item.dataset.menu === "calendar") openCalendarPanel();
     else if (item.dataset.menu === "memsky") openMemSkyPanel();
@@ -2717,6 +2733,8 @@ if (menuPanel){
     else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
+    else if (item.dataset.menu === "tea") openTeaPanel();
+    else if (item.dataset.menu === "tea") openTeaPanel();
     else if (item.dataset.menu === "letters") openLettersPanel();
     else if (item.dataset.menu === "calendar") openCalendarPanel();
     else if (item.dataset.menu === "memsky") openMemSkyPanel();
@@ -6864,6 +6882,22 @@ init();
         <button onclick="postCircle()" style="padding:10px 16px;border:none;border-radius:10px;background:var(--send-bg);color:var(--accent-fg);font-size:14px;cursor:pointer;">发</button>
       </div>
       <div id="circleFeed"><div class="panel-loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tea Panel -->
+<div class="side-panel hidden" id="teaPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeTeaPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeTeaPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">茶歇</h2>
+      <p class="side-panel-sub">安念端茶</p>
+    </div>
+    <div class="side-panel-body">
+      <button class="toy-connect-btn" onclick="randomTea()" style="background:linear-gradient(135deg,rgba(189,160,111,.2),rgba(193,115,85,.15));color:#bda06f;font-size:16px;padding:16px;">🍵 一键随机来一杯</button>
+      <div id="teaResult"><div class="panel-loading">安念说想给你泡点什么…</div></div>
     </div>
   </div>
 </div>

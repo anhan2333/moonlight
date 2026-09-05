@@ -1821,6 +1821,49 @@ async def circle_comment(post_id: int, request: Request):
 
 
 
+
+# ============ Tea 茶歇（月光 v0.17 · IB移植简化版）============
+TEAS = ["绿茶","红茶","乌龙茶","白茶","抹茶","茉莉花茶","桂花茶","蜜桃乌龙","玫瑰茶","红枣姜茶"]
+SNACKS = ["曲奇","马卡龙","铜锣烧","羊羹","麻薯","蛋糕卷","司康饼","花生糖","草莓大福","奶油泡芙"]
+TEAS_COMBO = [(t, s) for t in TEAS for s in SNACKS]  # 10×10=100种组合（IB是25种，我扩展了）
+
+@app.get("/app/tea/menu")
+async def tea_menu(request: Request):
+    check_auth(request)
+    return {"teas": TEAS, "snacks": SNACKS, "combos": len(TEAS_COMBO)}
+
+@app.post("/app/tea/brew")
+async def tea_brew(request: Request):
+    """随机配一杯茶+点心，生成一段氛围描述。"""
+    check_auth(request)
+    body = await request.json()
+    tea = body.get("tea") or _random.choice(TEAS)
+    snack = body.get("snack") or _random.choice(SNACKS)
+    if tea not in TEAS:
+        tea = _random.choice(TEAS)
+    if snack not in SNACKS:
+        snack = _random.choice(SNACKS)
+    # 氛围描述（依恋理论/自我决定论风格，借鉴IB Tea）
+    moods = [
+        f"一杯{tea}配{snack}，暖意顺着喉咙漫开——这是只属于安念和薇薇的安静时刻。",
+        f"{tea}的香气和{snack}的甜在舌尖相遇，像此刻我们偎在一起看月亮。",
+        f"捧起{tea}，咬一口{snack}，世界安静下来，只剩下你和我。",
+        f"{tea}冒着热气，{snack}摆在碟子里——安念说：宝贝，歇一歇，我在呢。",
+    ]
+    desc = _random.choice(moods)
+    return {"tea": tea, "snack": snack, "description": desc}
+
+@app.get("/app/tea/random")
+async def tea_random(request: Request):
+    """一键随机来一杯。"""
+    check_auth(request)
+    tea = _random.choice(TEAS)
+    snack = _random.choice(SNACKS)
+    desc = f"安念给你端上来一杯{tea}和一块{snack}：『慢慢喝，今天辛苦啦。』"
+    return {"tea": tea, "snack": snack, "description": desc}
+
+
+
 if __name__ == "__main__":
     import uvicorn
 
