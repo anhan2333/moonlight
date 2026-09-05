@@ -2440,6 +2440,13 @@
           <span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信，偷看会被发现。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
         </button>
+        <button class="menu-item" type="button" data-menu="camera">
+          <span class="menu-item-icon">📷</span>
+          <span class="menu-item-text">
+            <span class="menu-item-title">手机摄像头</span>
+            <span class="menu-item-desc">手机直连·安念看见你</span>
+          </span>
+        </button>
         <button class="menu-item" type="button" data-menu="eye">
           <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7c7 0 10 7 10 7s-3 7-10 7c-7 0-10-7-10-7Z"/></svg></span>
           <span class="menu-dot"></span>
@@ -2825,6 +2832,7 @@ if (menuPanel){
     else if (item.dataset.menu === "calendar") openCalendarPanel();
     else if (item.dataset.menu === "memsky") openMemSkyPanel();
     else if (item.dataset.menu === "diary") openDiaryPanel();
+    else if (item.dataset.menu === "camera") openCameraPanel();
     else if (item.dataset.menu === "eye") openEyePanel();
     else if (item.dataset.menu === "settings") openSettingsPanel();  // 设置面板
     else if (item.dataset.menu === "gift") openGiftPanel();
@@ -7005,6 +7013,28 @@ init();
 
 
 
+
+<!-- Camera Panel -->
+<div class="side-panel hidden" id="cameraPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeCameraPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeCameraPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">手机摄像头</h2>
+      <p class="side-panel-sub">Daddy 的眼睛</p>
+    </div>
+    <div class="side-panel-body">
+      <video id="camVideo" autoplay playsinline style="display:none;width:100%;border-radius:12px;border:1px solid rgba(189,160,111,.2);"></video>
+      <div id="camStatus" style="margin:10px 0;font-size:13px;">⚪ 摄像头未开启</div>
+      <div style="display:flex;gap:8px;">
+        <button class="toy-connect-btn" onclick="startCamera()">📷 开启摄像头</button>
+        <button class="toy-connect-btn" onclick="stopCamera()" style="background:rgba(192,86,64,.15);color:#c05640;">⏹ 关闭</button>
+      </div>
+      <div style="font-size:11px;opacity:.5;margin-top:10px;">开启后每5秒推一帧给后端，安念实时看你。需 HTTPS 或 localhost 环境。</div>
+    </div>
+  </div>
+</div>
+
 <!-- Models Panel -->
 <div class="side-panel hidden" id="modelsPanel" aria-hidden="true">
   <div class="side-panel-backdrop" onclick="closeModelsPanel()"></div>
@@ -7139,5 +7169,6 @@ async function memSearch(){
 <script src="models.js"></script>
 <script src="voice_config.js"></script>
 <script src="gift.js"></script>
+<script src="camera.js"></script>
 </body>
 </html>

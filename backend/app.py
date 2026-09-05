@@ -2566,6 +2566,7 @@ async def memories_search(request: Request, q: str = "", limit: int = 8):
     q = q.strip()
     if not q:
         return {"results": []}
+    _memories_init()
     with db() as conn:
         rows = conn.execute("SELECT * FROM memories ORDER BY id DESC LIMIT 500").fetchall()
     scored = []
@@ -2661,6 +2662,42 @@ async def memory_search(request: Request):
         scored.append({"id": r["id"], "text": r["text"], "score": round(sim, 4)})
     scored.sort(key=lambda x: -x["score"])
     return {"results": scored[:10]}
+
+
+
+# ============ 手机摄像头（WebRTC直连·浏览器getUserMedia） ============
+CAM_LAST_FRAME = {"ts": 0, "b64": None, "note": ""}
+
+@app.post("/app/cam/push")
+async def cam_push(request: Request):
+    """前端每N秒推一帧（dataUrl或base64），存内存供AI读取。"""
+    check_auth(request)
+    body = await request.json()
+    b64 = (body.get("b64") or "").strip()
+    if b64.startswith("data:"):
+        b64 = b64.split(",", 1)[-1]
+    if not b64:
+        raise HTTPException(status_code=400, detail="b64不能为空")
+    CAM_LAST_FRAME["ts"] = time.time()
+    CAM_LAST_FRAME["b64"] = b64
+    CAM_LAST_FRAME["note"] = body.get("note") or ""
+    return {"ok": True, "ts": CAM_LAST_FRAME["ts"]}
+
+@app.get("/app/cam/latest")
+async def cam_latest(request: Request):
+    """AI/前端读取当前帧。age_seconds 用于判断是否在线。"""
+    check_auth(request)
+    age = int(time.time() - CAM_LAST_FRAME["ts"]) if CAM_LAST_FRAME["ts"] else -1
+    return {"has_frame": bool(CAM_LAST_FRAME["b64"]), "age_seconds": age, "note": CAM_LAST_FRAME["note"]}
+
+@app.get("/app/cam/frame")
+async def cam_frame(request: Request):
+    """返回当前帧图片（PNG）。"""
+    check_auth(request)
+    if not CAM_LAST_FRAME["b64"]:
+        raise HTTPException(status_code=404, detail="no frame yet — open camera first")
+    img_bytes = _b64.b64decode(CAM_LAST_FRAME["b64"])
+    return Response(content=img_bytes, media_type="image/jpeg")
 
 
 if __name__ == "__main__":
