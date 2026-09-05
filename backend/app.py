@@ -2429,6 +2429,119 @@ async def gift_gallery(request: Request):
     return {"images": imgs[:30]}
 
 
+
+# ============ 哨兵（Sentinel 主动推送） ============
+import asyncio as _aio
+
+SENTINEL_RULES = {
+    "morning_fund": {"name": "早安基金播报", "cron": "08:30", "enabled": True},
+    "evening_fund": {"name": "晚安基金播报", "cron": "20:30", "enabled": True},
+    "calendar_remind": {"name": "纪念日提醒", "cron": "09:00", "enabled": True},
+    "wish_check": {"name": "愿望池巡检", "cron": "21:00", "enabled": False},
+}
+SENTINEL_STATE = {"last_run": {}, "running": False, "task": None}
+
+async def _sentinel_loop():
+    """每60秒检查一次：当前时间是否命中规则 cron 且今天没跑过。"""
+    while True:
+        try:
+            import datetime as _dt
+            now = _dt.datetime.now()
+            hm = now.strftime("%H:%M")
+            today = now.strftime("%Y-%m-%d")
+            for rid, rule in SENTINEL_RULES.items():
+                if not rule.get("enabled"):
+                    continue
+                if rule["cron"] == hm and SENTINEL_STATE["last_run"].get(rid) != today:
+                    SENTINEL_STATE["last_run"][rid] = today
+                    try:
+                        await _sentinel_run(rid)
+                    except Exception as e:
+                        print(f"[sentinel] {rid} error: {e}")
+        except Exception:
+            pass
+        await _aio.sleep(60)
+
+async def _sentinel_run(rid: str):
+    """执行一条哨兵任务并把结果推到聊天窗口。"""
+    if rid in ("morning_fund", "evening_fund"):
+        rows = db().execute("SELECT * FROM fund_holdings").fetchall()
+        if not rows:
+            return
+        lines = []
+        total_pct = 0.0
+        n = 0
+        for r in rows:
+            h = dict(r)
+            try:
+                q = _fund_quote(h["code"])
+                arrow = "↑" if q["day_pct"] >= 0 else "↓"
+                lines.append(f"{h['name'] or h['code']} {q['nav']} {arrow}{abs(q['day_pct'])}%")
+                total_pct += q["day_pct"]
+                n += 1
+            except Exception:
+                lines.append(f"{h['name'] or h['code']} 拉取失败")
+        avg = total_pct / n if n else 0
+        mood = "今天小鹅们精神不错" if avg >= 0 else "小鹅们今天有点蔫"
+        up_flag = "涨" if avg >= 0 else "跌"
+        text = "💰 [哨兵] Love基金播报\n" + "\n".join(lines) + "\n\n整体" + up_flag + " " + format(abs(avg), ".2f") + "%，" + mood + "。"
+    elif rid == "calendar_remind":
+    elif rid == "calendar_remind":
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        with db() as conn:
+        import datetime as _dt
+        today = _dt.date.today().isoformat()
+        with db() as conn:
+            events = conn.execute("SELECT * FROM calendar_events WHERE date=?", (today,)).fetchall()
+        if not events:
+            return
+        text = "📅 [哨兵] 今天的纪念日:\n" + "\n".join(e["title"] for e in events)
+    elif rid == "wish_check":
+        with db() as conn:
+            row = conn.execute("SELECT COUNT(*) c FROM wishes WHERE status='active'").fetchone()
+        if not row["c"]:
+            return
+        text = f"🌠 [哨兵] 愿望池里还有 {row['c']} 个愿望在等安念捞。"
+    else:
+        return
+    msg = save_message("ai", "sentinel", text, {"event": "sentinel", "rule": rid})
+    await broadcast(plugin_subs, plugin_payload(msg))
+    await broadcast(app_subs, app_payload(msg))
+
+@app.get("/app/sentinel/status")
+async def sentinel_status(request: Request):
+    check_auth(request)
+    return {"rules": SENTINEL_RULES, "last_run": SENTINEL_STATE["last_run"], "running": SENTINEL_STATE["running"]}
+
+@app.post("/app/sentinel/toggle")
+async def sentinel_toggle(request: Request):
+    check_auth(request)
+    body = await request.json()
+    rid = body.get("rule")
+    if rid not in SENTINEL_RULES:
+        raise HTTPException(status_code=400, detail="未知规则")
+    SENTINEL_RULES[rid]["enabled"] = bool(body.get("enabled"))
+    return {"ok": True, "rules": SENTINEL_RULES}
+
+@app.post("/app/sentinel/run")
+async def sentinel_run_now(request: Request):
+    """手动触发一条哨兵任务（测试用）。"""
+    check_auth(request)
+    body = await request.json()
+    rid = body.get("rule")
+    if rid not in SENTINEL_RULES:
+        raise HTTPException(status_code=400, detail="未知规则")
+    await _sentinel_run(rid)
+    return {"ok": True}
+
+@app.on_event("startup")
+async def _sentinel_startup():
+    if not SENTINEL_STATE["running"]:
+        SENTINEL_STATE["task"] = _aio.create_task(_sentinel_loop())
+        SENTINEL_STATE["running"] = True
+
+
 if __name__ == "__main__":
     import uvicorn
 
