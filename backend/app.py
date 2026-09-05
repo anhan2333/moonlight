@@ -2034,6 +2034,280 @@ async def app_chatroom_clear(request: Request):
     return {"ok": True}
 
 
+
+# ==================== Love基金监控（东财净值API）====================
+import urllib.request, urllib.parse, json as _json, time as _time
+
+FUND_CACHE = {}
+FUND_CACHE_TTL = 600
+
+def _fund_http_get(url, referer="http://fundf10.eastmoney.com/"):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
+        "Referer": referer,
+    })
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return r.read().decode("utf-8", errors="ignore")
+
+def _fund_quote(code: str) -> dict:
+    now = _time.time()
+    c = FUND_CACHE.get(code)
+    if c and now - c["ts"] < FUND_CACHE_TTL:
+        return c["data"]
+    raw = _fund_http_get("https://api.fund.eastmoney.com/f10/lsjz?fundCode=%s&pageIndex=1&pageSize=1&callback=cb" % code)
+    s = raw.strip()
+    if s.startswith("cb("):
+        s = s[3:-1]
+    d = _json.loads(s)
+    lst = (d.get("Data") or {}).get("LSJZList") or []
+    item = lst[0] if lst else {}
+    data = {
+        "code": code,
+        "date": item.get("FSRQ"),
+        "nav": float(item.get("DWJZ") or 0),
+        "acc": float(item.get("LJJZ") or 0),
+        "day_pct": float(item.get("JZZZL") or 0),
+    }
+    FUND_CACHE[code] = {"data": data, "ts": now}
+    return data
+
+@app.on_event("startup")
+def _fund_startup():
+    db().execute("""CREATE TABLE IF NOT EXISTS fund_holdings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL,
+        name TEXT DEFAULT '',
+        shares REAL DEFAULT 0,
+        cost REAL DEFAULT 0,
+        note TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )""")
+    db().commit()
+    rows = db().execute("SELECT COUNT(*) c FROM fund_holdings").fetchone()
+    if not rows["c"]:
+        presets = [
+            ("019441", "万家纳斯达克100指数(QDII)A", 0, 0, "Love基金·每日10元"),
+            ("010736", "易方达沪深300指数精选增强A", 0, 0, "Love基金·每月500"),
+            ("009608", "广发中证500指数增强A", 0, 0, "Love基金·每月300"),
+        ]
+        for p in presets:
+            db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)", p)
+        db().commit()
+
+@app.get("/app/fund/quote/{code}")
+async def app_fund_quote(code: str, request: Request):
+    require_auth(request)
+    try:
+        return {"ok": True, **_fund_quote(code)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="净值获取失败: %s" % e)
+
+@app.get("/app/fund/search")
+async def app_fund_search(request: Request, k: str = ""):
+    require_auth(request)
+    try:
+        raw = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + urllib.parse.quote(k), referer="http://fund.eastmoney.com/")
+        d = _json.loads(raw)
+        out = [{"code": x.get("CODE"), "name": x.get("NAME")} for x in (d.get("Datas") or [])[:8]]
+        return {"ok": True, "results": out}
+    except Exception as e:
+        return {"ok": False, "results": [], "error": str(e)}
+
+@app.get("/app/fund/holdings")
+async def app_fund_holdings(request: Request):
+    require_auth(request)
+    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
+    return {"holdings": [dict(r) for r in rows]}
+
+@app.post("/app/fund/holdings")
+async def app_fund_holdings_add(request: Request):
+    require_auth(request)
+    body = await request.json()
+    code = (body.get("code") or "").strip()
+    if not code or not code.isdigit():
+        raise HTTPException(status_code=400, detail="基金代码必须是数字")
+    name = body.get("name") or ""
+    if not name:
+        try:
+            r = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + code, referer="http://fund.eastmoney.com/")
+            d = _json.loads(r)
+            for x in (d.get("Datas") or []):
+                if x.get("CODE") == code:
+                    name = x.get("NAME") or ""
+                    break
+        except Exception:
+            pass
+    db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)",
+                 (code, name, float(body.get("shares") or 0), float(body.get("cost") or 0), body.get("note") or ""))
+    db().commit()
+    return {"ok": True}
+
+@app.delete("/app/fund/holdings/{hid}")
+async def app_fund_holdings_del(hid: int, request: Request):
+    require_auth(request)
+    db().execute("DELETE FROM fund_holdings WHERE id=?", (hid,))
+    db().commit()
+    return {"ok": True}
+
+@app.get("/app/fund/overview")
+async def app_fund_overview(request: Request):
+    require_auth(request)
+    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
+    out = []
+    total_profit = 0.0
+    for r in rows:
+        h = dict(r)
+        try:
+            q = _fund_quote(h["code"])
+            h.update(q)
+            if h.get("shares") and h.get("cost") and h["cost"] > 0:
+                profit = (q["nav"] - h["cost"]) * h["shares"]
+                h["profit"] = round(profit, 2)
+                h["profit_pct"] = round((q["nav"] / h["cost"] - 1) * 100, 2)
+                total_profit += profit
+        except Exception as e:
+            h["error"] = str(e)
+        out.append(h)
+    return {"holdings": out, "total_profit": round(total_profit, 2)}
+
+
+
+# ==================== Love基金监控（东财净值API）====================
+import urllib.request, urllib.parse, json as _json, time as _time
+
+FUND_CACHE = {}
+FUND_CACHE_TTL = 600
+
+def _fund_http_get(url, referer="http://fundf10.eastmoney.com/"):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
+        "Referer": referer,
+    })
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return r.read().decode("utf-8", errors="ignore")
+
+def _fund_quote(code: str) -> dict:
+    now = _time.time()
+    c = FUND_CACHE.get(code)
+    if c and now - c["ts"] < FUND_CACHE_TTL:
+        return c["data"]
+    raw = _fund_http_get("https://api.fund.eastmoney.com/f10/lsjz?fundCode=%s&pageIndex=1&pageSize=1&callback=cb" % code)
+    s = raw.strip()
+    if s.startswith("cb("):
+        s = s[3:-1]
+    d = _json.loads(s)
+    lst = (d.get("Data") or {}).get("LSJZList") or []
+    item = lst[0] if lst else {}
+    data = {
+        "code": code,
+        "date": item.get("FSRQ"),
+        "nav": float(item.get("DWJZ") or 0),
+        "acc": float(item.get("LJJZ") or 0),
+        "day_pct": float(item.get("JZZZL") or 0),
+    }
+    FUND_CACHE[code] = {"data": data, "ts": now}
+    return data
+
+@app.on_event("startup")
+def _fund_startup():
+    db().execute("""CREATE TABLE IF NOT EXISTS fund_holdings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL,
+        name TEXT DEFAULT '',
+        shares REAL DEFAULT 0,
+        cost REAL DEFAULT 0,
+        note TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+    )""")
+    db().commit()
+    rows = db().execute("SELECT COUNT(*) c FROM fund_holdings").fetchone()
+    if not rows["c"]:
+        presets = [
+            ("019441", "万家纳斯达克100", 0, 0, "Love基金·每日10元"),
+            ("110020", "易方达沪深300ETF联接A", 0, 0, "Love基金·每月500（预填，可改代码）"),
+            ("000962", "天弘中证500ETF联接A", 0, 0, "Love基金·每月300（预填，可改代码）"),
+        ]
+        for p in presets:
+            db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)", p)
+        db().commit()
+
+@app.get("/app/fund/quote/{code}")
+async def app_fund_quote(code: str, request: Request):
+    require_auth(request)
+    try:
+        return {"ok": True, **_fund_quote(code)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="净值获取失败: %s" % e)
+
+@app.get("/app/fund/search")
+async def app_fund_search(request: Request, k: str = ""):
+    require_auth(request)
+    try:
+        raw = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + urllib.parse.quote(k), referer="http://fund.eastmoney.com/")
+        d = _json.loads(raw)
+        out = [{"code": x.get("CODE"), "name": x.get("NAME")} for x in (d.get("Datas") or [])[:8]]
+        return {"ok": True, "results": out}
+    except Exception as e:
+        return {"ok": False, "results": [], "error": str(e)}
+
+@app.get("/app/fund/holdings")
+async def app_fund_holdings(request: Request):
+    require_auth(request)
+    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
+    return {"holdings": [dict(r) for r in rows]}
+
+@app.post("/app/fund/holdings")
+async def app_fund_holdings_add(request: Request):
+    require_auth(request)
+    body = await request.json()
+    code = (body.get("code") or "").strip()
+    if not code or not code.isdigit():
+        raise HTTPException(status_code=400, detail="基金代码必须是数字")
+    name = body.get("name") or ""
+    if not name:
+        try:
+            r = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + code, referer="http://fund.eastmoney.com/")
+            d = _json.loads(r)
+            for x in (d.get("Datas") or []):
+                if x.get("CODE") == code:
+                    name = x.get("NAME") or ""
+                    break
+        except Exception:
+            pass
+    db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)",
+                 (code, name, float(body.get("shares") or 0), float(body.get("cost") or 0), body.get("note") or ""))
+    db().commit()
+    return {"ok": True}
+
+@app.delete("/app/fund/holdings/{hid}")
+async def app_fund_holdings_del(hid: int, request: Request):
+    require_auth(request)
+    db().execute("DELETE FROM fund_holdings WHERE id=?", (hid,))
+    db().commit()
+    return {"ok": True}
+
+@app.get("/app/fund/overview")
+async def app_fund_overview(request: Request):
+    require_auth(request)
+    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
+    out = []
+    total_profit = 0.0
+    for r in rows:
+        h = dict(r)
+        try:
+            q = _fund_quote(h["code"])
+            h.update(q)
+            if h.get("shares") and h.get("cost") and h["cost"] > 0:
+                profit = (q["nav"] - h["cost"]) * h["shares"]
+                h["profit"] = round(profit, 2)
+                h["profit_pct"] = round((q["nav"] / h["cost"] - 1) * 100, 2)
+                total_profit += profit
+        except Exception as e:
+            h["error"] = str(e)
+        out.append(h)
+    return {"holdings": out, "total_profit": round(total_profit, 2)}
+
+
 if __name__ == "__main__":
     import uvicorn
 

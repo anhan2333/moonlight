@@ -2037,6 +2037,21 @@
 .tea-cup{ text-align:center; font-size:64px; margin:20px 0; }
 .tea-desc{ text-align:center; font-size:15px; color:var(--text-soft); line-height:1.8; padding:0 20px; font-style:italic; }
 
+
+/* ═══════ Love基金 ═══════ */
+.fund-total{font-size:18px;font-weight:700;text-align:center;padding:12px 0;border-bottom:1px solid var(--card-line,#e5e0d8);margin-bottom:10px;}
+.fund-card{background:rgba(189,160,111,.06);border:1px solid rgba(189,160,111,.15);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;}
+.fund-name{font-size:14px;font-weight:600;}
+.fund-code{font-size:11px;opacity:.5;font-weight:400;}
+.fund-nav{font-size:20px;font-weight:700;margin:4px 0;}
+.fund-date{font-size:11px;opacity:.55;}
+.fund-profit{font-size:14px;font-weight:600;margin-top:2px;}
+.fund-del{position:absolute;top:12px;right:12px;font-size:11px;border:none;background:none;color:#c05640;opacity:.6;cursor:pointer;padding:2px;}
+.fund-add{margin-top:14px;padding-top:14px;border-top:1px solid var(--card-line,#e5e0d8);display:flex;flex-direction:column;gap:8px;}
+.fund-add-title{font-size:12px;opacity:.6;}
+.fund-add input{padding:10px 14px;border:1px solid var(--card-line,#e5e0d8);border-radius:10px;background:var(--field-bg,#faf8f4);color:var(--text,#2a2622);font-size:13px;}
+.fund-search-item{font-size:12px;padding:8px 10px;border-radius:8px;background:rgba(189,160,111,.08);cursor:pointer;}
+
 </style>
 </head>
 <body>
@@ -2327,6 +2342,13 @@
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">我们的动态。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="fund">
+          <span class="menu-item-icon">💰</span>
+          <span class="menu-item-text">
+            <span class="menu-item-title">Love基金</span>
+            <span class="menu-item-desc">三只鹅的涨跌</span>
+          </span>
         </button>
         <button class="menu-item" type="button" data-menu="chatroom">
           <span class="menu-item-icon">💬</span>
@@ -2730,6 +2752,7 @@ if (menuPanel){
     else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
+    else if (item.dataset.menu === "fund") openFundPanel();
     else if (item.dataset.menu === "chatroom") openChatroomPanel();
     else if (item.dataset.menu === "tea") openTeaPanel();
     else if (item.dataset.menu === "tea") openTeaPanel();
@@ -6911,6 +6934,32 @@ init();
 </div>
 
 
+
+<!-- Fund Panel -->
+<div class="side-panel hidden" id="fundPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeFundPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeFundPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">Love基金</h2>
+      <p class="side-panel-sub">我们的三只鹅</p>
+    </div>
+    <div class="side-panel-body">
+      <div id="fundList"><div class="panel-loading">拉取净值中…</div></div>
+      <div class="fund-add">
+        <div class="fund-add-title">添加持仓</div>
+        <input id="fundSearchInput" type="text" placeholder="搜索基金名/代码" oninput="searchFund()">
+        <div id="fundSearchResult"></div>
+        <input id="fundCodeInput" type="text" placeholder="基金代码">
+        <input id="fundSharesInput" type="number" placeholder="持有份额（可选）">
+        <input id="fundCostInput" type="number" placeholder="成本净值（可选）">
+        <input id="fundNoteInput" type="text" placeholder="备注（如：每月500）">
+        <button class="toy-connect-btn" onclick="addFund()">添加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Chatroom Panel -->
 <div class="side-panel hidden" id="chatroomPanel" aria-hidden="true">
   <div class="side-panel-backdrop" onclick="closeChatroomPanel()"></div>
@@ -6932,5 +6981,6 @@ init();
 </div>
 
 <script src="chatroom.js"></script>
+<script src="fund.js"></script>
 </body>
 </html>
