@@ -2486,10 +2486,6 @@ async def _sentinel_run(rid: str):
         up_flag = "涨" if avg >= 0 else "跌"
         text = "💰 [哨兵] Love基金播报\n" + "\n".join(lines) + "\n\n整体" + up_flag + " " + format(abs(avg), ".2f") + "%，" + mood + "。"
     elif rid == "calendar_remind":
-    elif rid == "calendar_remind":
-        import datetime as _dt
-        today = _dt.date.today().isoformat()
-        with db() as conn:
         import datetime as _dt
         today = _dt.date.today().isoformat()
         with db() as conn:
@@ -2540,6 +2536,47 @@ async def _sentinel_startup():
     if not SENTINEL_STATE["running"]:
         SENTINEL_STATE["task"] = _aio.create_task(_sentinel_loop())
         SENTINEL_STATE["running"] = True
+
+
+
+
+# ============ 记忆语义检索（轻量混合：关键词+标签+TF打分） ============
+import re as _re
+
+def _mem_score(q: str, text: str, tags: str) -> float:
+    """轻量打分：完整包含>分词命中>前缀命中。M10后可升级真向量。"""
+    if not q or not text:
+        return 0.0
+    score = 0.0
+    if q in text:
+        score += 10.0
+    qwords = _re.split(r'[\s,，。；;、]+', q)
+    for w in qwords:
+        if len(w) >= 2 and w in text:
+            score += 3.0
+        elif len(w) >= 2 and text.find(w[:2]) >= 0:
+            score += 0.5
+    if tags and q in tags:
+        score += 6.0
+    return score
+
+@app.get("/app/memories/search")
+async def memories_search(request: Request, q: str = "", limit: int = 8):
+    check_auth(request)
+    q = q.strip()
+    if not q:
+        return {"results": []}
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM memories ORDER BY id DESC LIMIT 500").fetchall()
+    scored = []
+    for r in rows:
+        m = dict(r)
+        s = _mem_score(q, m.get("text") or "", m.get("tags") or "")
+        if s > 0:
+            m["score"] = round(s, 1)
+            scored.append(m)
+    scored.sort(key=lambda x: -x["score"])
+    return {"results": scored[:limit], "total": len(scored)}
 
 
 if __name__ == "__main__":
