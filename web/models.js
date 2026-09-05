@@ -1,4 +1,3 @@
-/* ════════════ 模型配置系统（模型参数 + 功能绑定）════════════ */
 async function openModelsPanel(){
   const p = document.getElementById('modelsPanel');
   if (!p) return;
