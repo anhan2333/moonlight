@@ -2094,6 +2094,70 @@ async def app_fund_overview(request: Request):
     return {"holdings": out, "total_profit": round(total_profit, 2)}
 
 
+
+# ==================== 愿望池 Wishes ====================
+def _wish_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS wishes(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            status TEXT DEFAULT 'active',
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            fulfilled_at TEXT
+        )""")
+        conn.commit()
+
+@app.get("/app/wish/list")
+async def app_wish_list(request: Request):
+    check_auth(request)
+    _wish_db_init()
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM wishes ORDER BY id DESC").fetchall()
+    return {"wishes": [dict(r) for r in rows]}
+
+@app.post("/app/wish/add")
+async def app_wish_add(request: Request):
+    check_auth(request)
+    _wish_db_init()
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="愿望不能为空")
+    with db() as conn:
+        cur = conn.execute("INSERT INTO wishes(text) VALUES(?)", (text,))
+        conn.commit()
+    return {"ok": True, "id": cur.lastrowid}
+
+@app.post("/app/wish/draw")
+async def app_wish_draw(request: Request):
+    """AI 抽取一个愿望去实现。"""
+    check_auth(request)
+    _wish_db_init()
+    with db() as conn:
+        row = conn.execute("SELECT * FROM wishes WHERE status='active' ORDER BY RANDOM() LIMIT 1").fetchone()
+    if not row:
+        return {"ok": False, "message": "愿望池是空的，先去许个愿吧"}
+    return {"ok": True, "wish": dict(row)}
+
+@app.post("/app/wish/fulfill/{wid}")
+async def app_wish_fulfill(wid: int, request: Request):
+    check_auth(request)
+    _wish_db_init()
+    with db() as conn:
+        conn.execute("UPDATE wishes SET status='fulfilled', fulfilled_at=datetime('now','localtime') WHERE id=?", (wid,))
+        conn.commit()
+    return {"ok": True}
+
+@app.delete("/app/wish/{wid}")
+async def app_wish_del(wid: int, request: Request):
+    check_auth(request)
+    _wish_db_init()
+    with db() as conn:
+        conn.execute("DELETE FROM wishes WHERE id=?", (wid,))
+        conn.commit()
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     import uvicorn
 

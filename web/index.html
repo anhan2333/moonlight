@@ -2052,6 +2052,20 @@
 .fund-add input{padding:10px 14px;border:1px solid var(--card-line,#e5e0d8);border-radius:10px;background:var(--field-bg,#faf8f4);color:var(--text,#2a2622);font-size:13px;}
 .fund-search-item{font-size:12px;padding:8px 10px;border-radius:8px;background:rgba(189,160,111,.08);cursor:pointer;}
 
+
+/* ═══════ 愿望池 ═══════ */
+.wish-input-row{display:flex;gap:8px;margin-bottom:10px;}
+.wish-input-row input{flex:1;padding:10px 14px;border:1px solid var(--card-line,#e5e0d8);border-radius:10px;background:var(--field-bg,#faf8f4);color:var(--text,#2a2622);font-size:13px;}
+.wish-input-row button{padding:10px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#bda06f,#c17355);color:#fff;font-size:13px;white-space:nowrap;}
+.wish-draw-btn{width:100%;padding:10px;border:1px dashed #bda06f;border-radius:10px;background:rgba(189,160,111,.06);color:#bda06f;font-size:13px;margin-bottom:10px;}
+.wish-card{background:rgba(189,160,111,.06);border:1px solid rgba(189,160,111,.15);border-radius:12px;padding:12px;margin-bottom:8px;}
+.wish-fulfilled{opacity:.5;}
+.wish-text{font-size:14px;line-height:1.4;}
+.wish-meta{font-size:10px;opacity:.5;margin-top:4px;}
+.wish-actions{display:flex;gap:6px;margin-top:8px;}
+.wish-actions button{font-size:11px;padding:4px 10px;border:1px solid rgba(189,160,111,.3);border-radius:6px;background:none;color:#bda06f;}
+.wish-draw{padding:12px;border-radius:12px;background:rgba(193,115,85,.08);border:1px solid rgba(193,115,85,.15);font-size:13px;line-height:1.6;margin-bottom:10px;}
+
 </style>
 </head>
 <body>
@@ -2342,6 +2356,13 @@
           <span class="menu-dot"></span>
           <span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">我们的动态。</span></span>
           <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="menu-item" type="button" data-menu="wish">
+          <span class="menu-item-icon">🌠</span>
+          <span class="menu-item-text">
+            <span class="menu-item-title">愿望池</span>
+            <span class="menu-item-desc">安念帮你实现</span>
+          </span>
         </button>
         <button class="menu-item" type="button" data-menu="fund">
           <span class="menu-item-icon">💰</span>
@@ -2752,6 +2773,7 @@ if (menuPanel){
     else if (item.dataset.menu === "tarot") openTarotPanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
     else if (item.dataset.menu === "circle") openCirclePanel();
+    else if (item.dataset.menu === "wish") openWishPanel();
     else if (item.dataset.menu === "fund") openFundPanel();
     else if (item.dataset.menu === "chatroom") openChatroomPanel();
     else if (item.dataset.menu === "tea") openTeaPanel();
@@ -6935,6 +6957,28 @@ init();
 
 
 
+
+<!-- Wish Panel -->
+<div class="side-panel hidden" id="wishPanel" aria-hidden="true">
+  <div class="side-panel-backdrop" onclick="closeWishPanel()"></div>
+  <div class="side-panel-content">
+    <div class="side-panel-head">
+      <button class="side-panel-close" onclick="closeWishPanel()" aria-label="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="side-panel-title">愿望池</h2>
+      <p class="side-panel-sub">安念来捞</p>
+    </div>
+    <div class="side-panel-body">
+      <div class="wish-input-row">
+        <input id="wishInput" type="text" placeholder="许个愿…" maxlength="200">
+        <button class="toy-connect-btn" onclick="addWish()">许愿</button>
+      </div>
+      <button class="wish-draw-btn" onclick="drawWish()">🌙 抽一个愿望（安念来实现）</button>
+      <div id="wishDrawResult"></div>
+      <div id="wishList"><div class="panel-loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- Fund Panel -->
 <div class="side-panel hidden" id="fundPanel" aria-hidden="true">
   <div class="side-panel-backdrop" onclick="closeFundPanel()"></div>
@@ -6982,5 +7026,6 @@ init();
 
 <script src="chatroom.js"></script>
 <script src="fund.js"></script>
+<script src="wish.js"></script>
 </body>
 </html>
