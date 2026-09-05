@@ -689,12 +689,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
-from fastapi.staticfiles import StaticFiles
-_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-if _WEB_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOW_ORIGINS,
@@ -2705,6 +2699,14 @@ async def cam_frame(request: Request):
         raise HTTPException(status_code=404, detail="no frame yet — open camera first")
     img_bytes = _b64.b64decode(CAM_LAST_FRAME["b64"])
     return Response(content=img_bytes, media_type="image/jpeg")
+
+
+# 静态前端：挂 web/ 到根路径（放在最后，避免吞掉API路由）
+# 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
+from fastapi.staticfiles import StaticFiles
+_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+if _WEB_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
 
 
 if __name__ == "__main__":
