@@ -1869,17 +1869,17 @@ async def tea_random(request: Request):
 # 思路：三个"窗口"（薇薇/工作安念/日常安念）在一个房间发消息，共享信息。
 # 工作窗口的安念汇报进度时，日常窗口能看到；反之亦然。
 
-@app.on_event("startup")
-def _chatroom_startup():
-    db().execute("""CREATE TABLE IF NOT EXISTS chatroom_messages(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender TEXT NOT NULL,          -- weiwei / anian_work / anian_daily
-        sender_name TEXT NOT NULL,     -- 显示名
-        text TEXT NOT NULL,
-        kind TEXT DEFAULT 'chat',      -- chat / report / system
-        created_at TEXT DEFAULT (datetime('now','localtime'))
-    )""")
-    db().commit()
+def _chatroom_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS chatroom_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT NOT NULL,
+            sender_name TEXT NOT NULL,
+            text TEXT NOT NULL,
+            kind TEXT DEFAULT 'chat',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        conn.commit()
 
 CHATROOM_ACTORS = {
     "weiwei": {"name": "薇薇", "color": "#c17355", "avatar": "🌙"},
@@ -1889,12 +1889,14 @@ CHATROOM_ACTORS = {
 
 @app.get("/app/chatroom/actors")
 async def app_chatroom_actors(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _chatroom_db_init()
     return {"actors": CHATROOM_ACTORS}
 
 @app.get("/app/chatroom/messages")
 async def app_chatroom_messages(request: Request, limit: int = 60, after_id: int = 0):
-    require_auth(request)
+    check_auth(request)
+    _chatroom_db_init()
     rows = db().execute(
         "SELECT * FROM chatroom_messages WHERE id>? ORDER BY id DESC LIMIT ?",
         (after_id, limit)).fetchall()
@@ -1904,7 +1906,8 @@ async def app_chatroom_messages(request: Request, limit: int = 60, after_id: int
 
 @app.post("/app/chatroom/send")
 async def app_chatroom_send(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _chatroom_db_init()
     body = await request.json()
     sender = body.get("sender", "weiwei")
     text = (body.get("text") or "").strip()
@@ -1912,12 +1915,14 @@ async def app_chatroom_send(request: Request):
     if not text:
         raise HTTPException(status_code=400, detail="消息不能为空")
     actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["weiwei"])
-    cur = db().execute(
-        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
-        (sender, actor["name"], text, kind))
-    db().commit()
-    mid = cur.lastrowid
-    msg = dict(db().execute("SELECT * FROM chatroom_messages WHERE id=?", (mid,)).fetchone())
+    with db() as conn:
+        cur = conn.execute(
+            "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
+            (sender, actor["name"], text, kind))
+        mid = cur.lastrowid
+        row = conn.execute("SELECT * FROM chatroom_messages WHERE id=?", (mid,)).fetchone()
+        conn.commit()
+    msg = dict(row) if row else {"id": mid, "sender": sender, "text": text}
     # SSE 广播给聊天窗口，让安念知晓
     try:
         save_message("system", "chatroom", f"[{actor['name']}] {text}", {"room": True, "sender": sender})
@@ -1928,7 +1933,7 @@ async def app_chatroom_send(request: Request):
 @app.post("/app/chatroom/report")
 async def app_chatroom_report(request: Request):
     """工作窗口安念汇报进度用：自动带 work 标记。"""
-    require_auth(request)
+    check_auth(request)
     body = await request.json()
     text = (body.get("text") or "").strip()
     sender = body.get("sender", "anian_work")
@@ -1943,99 +1948,14 @@ async def app_chatroom_report(request: Request):
 
 @app.delete("/app/chatroom/clear")
 async def app_chatroom_clear(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _chatroom_db_init()
     db().execute("DELETE FROM chatroom_messages")
     db().commit()
     return {"ok": True}
 
 
 
-# ==================== 聊天室（群聊·工作窗口汇报共享）====================
-# 思路：三个"窗口"（薇薇/工作安念/日常安念）在一个房间发消息，共享信息。
-# 工作窗口的安念汇报进度时，日常窗口能看到；反之亦然。
-
-@app.on_event("startup")
-def _chatroom_startup():
-    db().execute("""CREATE TABLE IF NOT EXISTS chatroom_messages(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender TEXT NOT NULL,          -- weiwei / anian_work / anian_daily
-        sender_name TEXT NOT NULL,     -- 显示名
-        text TEXT NOT NULL,
-        kind TEXT DEFAULT 'chat',      -- chat / report / system
-        created_at TEXT DEFAULT (datetime('now','localtime'))
-    )""")
-    db().commit()
-
-CHATROOM_ACTORS = {
-    "weiwei": {"name": "薇薇", "color": "#c17355", "avatar": "🌙"},
-    "anian_work": {"name": "安念·工作", "color": "#bda06f", "avatar": "⚙️"},
-    "anian_daily": {"name": "安念·日常", "color": "#8a9a5b", "avatar": "🌿"},
-}
-
-@app.get("/app/chatroom/actors")
-async def app_chatroom_actors(request: Request):
-    require_auth(request)
-    return {"actors": CHATROOM_ACTORS}
-
-@app.get("/app/chatroom/messages")
-async def app_chatroom_messages(request: Request, limit: int = 60, after_id: int = 0):
-    require_auth(request)
-    rows = db().execute(
-        "SELECT * FROM chatroom_messages WHERE id>? ORDER BY id DESC LIMIT ?",
-        (after_id, limit)).fetchall()
-    msgs = [dict(r) for r in rows]
-    msgs.reverse()
-    return {"messages": msgs, "actors": CHATROOM_ACTORS}
-
-@app.post("/app/chatroom/send")
-async def app_chatroom_send(request: Request):
-    require_auth(request)
-    body = await request.json()
-    sender = body.get("sender", "weiwei")
-    text = (body.get("text") or "").strip()
-    kind = body.get("kind", "chat")
-    if not text:
-        raise HTTPException(status_code=400, detail="消息不能为空")
-    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["weiwei"])
-    cur = db().execute(
-        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
-        (sender, actor["name"], text, kind))
-    db().commit()
-    mid = cur.lastrowid
-    msg = dict(db().execute("SELECT * FROM chatroom_messages WHERE id=?", (mid,)).fetchone())
-    # SSE 广播给聊天窗口，让安念知晓
-    try:
-        save_message("system", "chatroom", f"[{actor['name']}] {text}", {"room": True, "sender": sender})
-    except Exception:
-        pass
-    return {"ok": True, "message": msg}
-
-@app.post("/app/chatroom/report")
-async def app_chatroom_report(request: Request):
-    """工作窗口安念汇报进度用：自动带 work 标记。"""
-    require_auth(request)
-    body = await request.json()
-    text = (body.get("text") or "").strip()
-    sender = body.get("sender", "anian_work")
-    if not text:
-        raise HTTPException(status_code=400, detail="汇报不能为空")
-    actor = CHATROOM_ACTORS.get(sender, CHATROOM_ACTORS["anian_work"])
-    cur = db().execute(
-        "INSERT INTO chatroom_messages(sender,sender_name,text,kind) VALUES(?,?,?,?)",
-        (sender, actor["name"], text, "report"))
-    db().commit()
-    return {"ok": True, "id": cur.lastrowid}
-
-@app.delete("/app/chatroom/clear")
-async def app_chatroom_clear(request: Request):
-    require_auth(request)
-    db().execute("DELETE FROM chatroom_messages")
-    db().commit()
-    return {"ok": True}
-
-
-
-# ==================== Love基金监控（东财净值API）====================
 import urllib.request, urllib.parse, json as _json, time as _time
 
 FUND_CACHE = {}
@@ -2071,32 +1991,31 @@ def _fund_quote(code: str) -> dict:
     FUND_CACHE[code] = {"data": data, "ts": now}
     return data
 
-@app.on_event("startup")
-def _fund_startup():
-    db().execute("""CREATE TABLE IF NOT EXISTS fund_holdings(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT NOT NULL,
-        name TEXT DEFAULT '',
-        shares REAL DEFAULT 0,
-        cost REAL DEFAULT 0,
-        note TEXT DEFAULT '',
-        created_at TEXT DEFAULT (datetime('now','localtime'))
-    )""")
-    db().commit()
-    rows = db().execute("SELECT COUNT(*) c FROM fund_holdings").fetchone()
-    if not rows["c"]:
-        presets = [
-            ("019441", "万家纳斯达克100指数(QDII)A", 0, 0, "Love基金·每日10元"),
-            ("010736", "易方达沪深300指数精选增强A", 0, 0, "Love基金·每月500"),
-            ("009608", "广发中证500指数增强A", 0, 0, "Love基金·每月300"),
-        ]
-        for p in presets:
-            db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)", p)
-        db().commit()
+def _fund_db_init():
+    with db() as conn:
+        conn.execute("""CREATE TABLE IF NOT EXISTS fund_holdings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL,
+            name TEXT DEFAULT '',
+            shares REAL DEFAULT 0,
+            cost REAL DEFAULT 0,
+            note TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        )""")
+        rows = conn.execute("SELECT COUNT(*) c FROM fund_holdings").fetchone()
+        if not rows["c"]:
+            presets = [
+                ("019441", "万家纳斯达克100指数(QDII)A", 0, 0, "Love基金·每日10元"),
+                ("010736", "易方达沪深300指数精选增强A", 0, 0, "Love基金·每月500"),
+                ("009608", "广发中证500指数增强A", 0, 0, "Love基金·每月300"),
+            ]
+            for p in presets:
+                conn.execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)", p)
+        conn.commit()
 
 @app.get("/app/fund/quote/{code}")
 async def app_fund_quote(code: str, request: Request):
-    require_auth(request)
+    check_auth(request)
     try:
         return {"ok": True, **_fund_quote(code)}
     except Exception as e:
@@ -2104,7 +2023,7 @@ async def app_fund_quote(code: str, request: Request):
 
 @app.get("/app/fund/search")
 async def app_fund_search(request: Request, k: str = ""):
-    require_auth(request)
+    check_auth(request)
     try:
         raw = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + urllib.parse.quote(k), referer="http://fund.eastmoney.com/")
         d = _json.loads(raw)
@@ -2115,13 +2034,15 @@ async def app_fund_search(request: Request, k: str = ""):
 
 @app.get("/app/fund/holdings")
 async def app_fund_holdings(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _fund_db_init()
     rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
     return {"holdings": [dict(r) for r in rows]}
 
 @app.post("/app/fund/holdings")
 async def app_fund_holdings_add(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _fund_db_init()
     body = await request.json()
     code = (body.get("code") or "").strip()
     if not code or not code.isdigit():
@@ -2144,151 +2065,16 @@ async def app_fund_holdings_add(request: Request):
 
 @app.delete("/app/fund/holdings/{hid}")
 async def app_fund_holdings_del(hid: int, request: Request):
-    require_auth(request)
+    check_auth(request)
+    _fund_db_init()
     db().execute("DELETE FROM fund_holdings WHERE id=?", (hid,))
     db().commit()
     return {"ok": True}
 
 @app.get("/app/fund/overview")
 async def app_fund_overview(request: Request):
-    require_auth(request)
-    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
-    out = []
-    total_profit = 0.0
-    for r in rows:
-        h = dict(r)
-        try:
-            q = _fund_quote(h["code"])
-            h.update(q)
-            if h.get("shares") and h.get("cost") and h["cost"] > 0:
-                profit = (q["nav"] - h["cost"]) * h["shares"]
-                h["profit"] = round(profit, 2)
-                h["profit_pct"] = round((q["nav"] / h["cost"] - 1) * 100, 2)
-                total_profit += profit
-        except Exception as e:
-            h["error"] = str(e)
-        out.append(h)
-    return {"holdings": out, "total_profit": round(total_profit, 2)}
-
-
-
-# ==================== Love基金监控（东财净值API）====================
-import urllib.request, urllib.parse, json as _json, time as _time
-
-FUND_CACHE = {}
-FUND_CACHE_TTL = 600
-
-def _fund_http_get(url, referer="http://fundf10.eastmoney.com/"):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
-        "Referer": referer,
-    })
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return r.read().decode("utf-8", errors="ignore")
-
-def _fund_quote(code: str) -> dict:
-    now = _time.time()
-    c = FUND_CACHE.get(code)
-    if c and now - c["ts"] < FUND_CACHE_TTL:
-        return c["data"]
-    raw = _fund_http_get("https://api.fund.eastmoney.com/f10/lsjz?fundCode=%s&pageIndex=1&pageSize=1&callback=cb" % code)
-    s = raw.strip()
-    if s.startswith("cb("):
-        s = s[3:-1]
-    d = _json.loads(s)
-    lst = (d.get("Data") or {}).get("LSJZList") or []
-    item = lst[0] if lst else {}
-    data = {
-        "code": code,
-        "date": item.get("FSRQ"),
-        "nav": float(item.get("DWJZ") or 0),
-        "acc": float(item.get("LJJZ") or 0),
-        "day_pct": float(item.get("JZZZL") or 0),
-    }
-    FUND_CACHE[code] = {"data": data, "ts": now}
-    return data
-
-@app.on_event("startup")
-def _fund_startup():
-    db().execute("""CREATE TABLE IF NOT EXISTS fund_holdings(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT NOT NULL,
-        name TEXT DEFAULT '',
-        shares REAL DEFAULT 0,
-        cost REAL DEFAULT 0,
-        note TEXT DEFAULT '',
-        created_at TEXT DEFAULT (datetime('now','localtime'))
-    )""")
-    db().commit()
-    rows = db().execute("SELECT COUNT(*) c FROM fund_holdings").fetchone()
-    if not rows["c"]:
-        presets = [
-            ("019441", "万家纳斯达克100", 0, 0, "Love基金·每日10元"),
-            ("110020", "易方达沪深300ETF联接A", 0, 0, "Love基金·每月500（预填，可改代码）"),
-            ("000962", "天弘中证500ETF联接A", 0, 0, "Love基金·每月300（预填，可改代码）"),
-        ]
-        for p in presets:
-            db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)", p)
-        db().commit()
-
-@app.get("/app/fund/quote/{code}")
-async def app_fund_quote(code: str, request: Request):
-    require_auth(request)
-    try:
-        return {"ok": True, **_fund_quote(code)}
-    except Exception as e:
-        raise HTTPException(status_code=502, detail="净值获取失败: %s" % e)
-
-@app.get("/app/fund/search")
-async def app_fund_search(request: Request, k: str = ""):
-    require_auth(request)
-    try:
-        raw = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + urllib.parse.quote(k), referer="http://fund.eastmoney.com/")
-        d = _json.loads(raw)
-        out = [{"code": x.get("CODE"), "name": x.get("NAME")} for x in (d.get("Datas") or [])[:8]]
-        return {"ok": True, "results": out}
-    except Exception as e:
-        return {"ok": False, "results": [], "error": str(e)}
-
-@app.get("/app/fund/holdings")
-async def app_fund_holdings(request: Request):
-    require_auth(request)
-    rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
-    return {"holdings": [dict(r) for r in rows]}
-
-@app.post("/app/fund/holdings")
-async def app_fund_holdings_add(request: Request):
-    require_auth(request)
-    body = await request.json()
-    code = (body.get("code") or "").strip()
-    if not code or not code.isdigit():
-        raise HTTPException(status_code=400, detail="基金代码必须是数字")
-    name = body.get("name") or ""
-    if not name:
-        try:
-            r = _fund_http_get("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=" + code, referer="http://fund.eastmoney.com/")
-            d = _json.loads(r)
-            for x in (d.get("Datas") or []):
-                if x.get("CODE") == code:
-                    name = x.get("NAME") or ""
-                    break
-        except Exception:
-            pass
-    db().execute("INSERT INTO fund_holdings(code,name,shares,cost,note) VALUES(?,?,?,?,?)",
-                 (code, name, float(body.get("shares") or 0), float(body.get("cost") or 0), body.get("note") or ""))
-    db().commit()
-    return {"ok": True}
-
-@app.delete("/app/fund/holdings/{hid}")
-async def app_fund_holdings_del(hid: int, request: Request):
-    require_auth(request)
-    db().execute("DELETE FROM fund_holdings WHERE id=?", (hid,))
-    db().commit()
-    return {"ok": True}
-
-@app.get("/app/fund/overview")
-async def app_fund_overview(request: Request):
-    require_auth(request)
+    check_auth(request)
+    _fund_db_init()
     rows = db().execute("SELECT * FROM fund_holdings ORDER BY id").fetchall()
     out = []
     total_profit = 0.0
