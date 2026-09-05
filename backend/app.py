@@ -2709,6 +2709,55 @@ if _WEB_DIR.exists():
     app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
 
 
+
+
+# ============ 手机摄像头（本地getUserMedia + 拍照存档） ============
+CAMERA_DIR = Path(os.environ.get("MOONLIGHT_DATA_DIR", "data")) / "camera_photos"
+
+def _camera_dir():
+    CAMERA_DIR.mkdir(parents=True, exist_ok=True)
+    return CAMERA_DIR
+
+@app.post("/app/camera/upload")
+async def camera_upload(request: Request):
+    """前端拍照后上传（base64 JPEG）。"""
+    check_auth(request)
+    body = await request.json()
+    b64 = (body.get("image") or "")
+    if not b64.startswith("data:image"):
+        raise HTTPException(status_code=400, detail="需要 data:image/jpeg;base64,... 格式")
+    try:
+        img_b64 = b64.split(",", 1)[1]
+        img_bytes = _b64.b64decode(img_b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="图片解析失败")
+    fname = f"cam_{int(time.time()*1000)}.jpg"
+    (_camera_dir() / fname).write_bytes(img_bytes)
+    # 存一条消息让聊天窗口知道
+    note = (body.get("note") or "").strip()
+    try:
+        save_message("user", "camera", f"📷 薇薇拍了张照片给安念看" + (f"：{note}" if note else ""), {"event": "camera", "file": fname})
+    except Exception:
+        pass
+    return {"ok": True, "file": fname, "url": f"/app/camera/photo/{fname}"}
+
+@app.get("/app/camera/photo/{fname}")
+async def camera_photo(fname: str, request: Request):
+    check_auth(request)
+    fpath = _camera_dir() / fname
+    if not fpath.exists() or "/" in fname or ".." in fname:
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(str(fpath), media_type="image/jpeg")
+
+@app.get("/app/camera/photos")
+async def camera_photos(request: Request):
+    """最近照片列表（给安念回看）。"""
+    check_auth(request)
+    d = _camera_dir()
+    files = sorted([p.name for p in d.glob("cam_*.jpg")], reverse=True)[:30]
+    return {"photos": [f"/app/camera/photo/{f}" for f in files]}
+
+
 if __name__ == "__main__":
     import uvicorn
 
