@@ -2701,16 +2701,6 @@ async def cam_frame(request: Request):
     return Response(content=img_bytes, media_type="image/jpeg")
 
 
-# 静态前端：挂 web/ 到根路径（放在最后，避免吞掉API路由）
-# 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
-from fastapi.staticfiles import StaticFiles
-_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-if _WEB_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
-
-
-
-
 # ============ 手机摄像头（本地getUserMedia + 拍照存档） ============
 CAMERA_DIR = Path(os.environ.get("MOONLIGHT_DATA_DIR", "data")) / "camera_photos"
 
@@ -2756,6 +2746,18 @@ async def camera_photos(request: Request):
     d = _camera_dir()
     files = sorted([p.name for p in d.glob("cam_*.jpg")], reverse=True)[:30]
     return {"photos": [f"/app/camera/photo/{f}" for f in files]}
+
+
+
+# 静态前端：挂 web/ 到根路径（放在最后，避免吞掉API路由）
+# 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
+from fastapi.staticfiles import StaticFiles
+_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+if _WEB_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+
 
 
 if __name__ == "__main__":
