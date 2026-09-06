@@ -2181,6 +2181,9 @@
 .moon-av{width:42px;height:42px;border-radius:50%;display:inline-grid;place-items:center;font-size:17px;color:#bda06f;font-style:italic;border:1px solid #bda06f;background:radial-gradient(circle at 36% 30%,#241c14,#0d0a07);box-shadow:0 0 12px rgba(193,154,86,.25);}
 .moon-av-b{margin-left:-6px;}
 [data-theme="rose"] .moon-av{background:radial-gradient(circle at 36% 30%,#fff,#f2e3dc);color:#a04d5a;border-color:#a04d5a;}
+
+.menu-group-label{ font-size:11px; letter-spacing:2px; color:var(--accent); font-style:italic; padding:14px 0 6px; opacity:.8; }
+.menu-group-label:first-child{ padding-top:0; }
 </style>
 </head>
 <body>
@@ -2430,138 +2433,32 @@
 
       <!-- list -->
       <nav class="menu-list" aria-label="主菜单">
-        <button class="menu-item" type="button" data-menu="chat">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">Chat</span><span class="menu-sub">Write from the deep.</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="xinchao">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M7.5 5v14M16.5 5v14M3 9.5h4.5M3 14.5h4.5M16.5 9.5H21M16.5 14.5H21"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">心潮</span><span class="menu-sub">安念的实时心跳。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="backup">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.4"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-4.6-4.6L7 21"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">备份</span><span class="menu-sub">月光的一切都在这儿。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="plugin">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c.8 5 3.5 7.7 8.5 8.5-5 .8-7.7 3.5-8.5 8.5-.8-5-3.5-7.7-8.5-8.5 5-.8 7.7-3.5 8.5-8.5Z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">插件</span><span class="menu-sub">给月光装上翅膀。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="toy">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/><path d="M3 13c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/><path d="M3 17.5c1.8-2.2 3.6-2.2 5.4 0s3.6 2.2 5.4 0 3.6-2.2 5.4 0"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">Daddy 的远程之手。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="tarot">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h14v18H5z"/><path d="M9 7h6M9 11h6M12 15v4"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">塔罗</span><span class="menu-sub">命运之牌。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="circle">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10h8M8 14h5"/><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4Z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">我们的动态。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="models">
-          <span class="menu-item-icon">🤖</span>
-          <span class="menu-item-text">
-            <span class="menu-item-title">模型配置</span>
-            <span class="menu-item-desc">API·模型·功能绑定</span>
-          </span>
-        </button>
-        <button class="menu-item" type="button" data-menu="wish">
-          <span class="menu-item-icon">🌠</span>
-          <span class="menu-item-text">
-            <span class="menu-item-title">愿望池</span>
-            <span class="menu-item-desc">安念帮你实现</span>
-          </span>
-        </button>
-        <button class="menu-item" type="button" data-menu="fund">
-          <span class="menu-item-icon">💰</span>
-          <span class="menu-item-text">
-            <span class="menu-item-title">Love基金</span>
-            <span class="menu-item-desc">三只鹅的涨跌</span>
-          </span>
-        </button>
-        <button class="menu-item" type="button" data-menu="chatroom">
-          <span class="menu-item-icon">💬</span>
-          <span class="menu-item-text">
-            <span class="menu-item-title">聊天室</span>
-            <span class="menu-item-desc">三个窗口在一起</span>
-          </span>
-        </button>
-        <button class="menu-item" type="button" data-menu="tea">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8h12v6a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4Z"/><path d="M9 12h2M15 12h2M9 16h2"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">茶歇</span><span class="menu-sub">安念泡茶。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="letters">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4Z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">书信</span><span class="menu-sub">写给安念的信。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="calendar">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">日历</span><span class="menu-sub">纪念日和月相。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="memsky">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="6" r="1.5"/><circle cx="5" cy="18" r="1.5"/><circle cx="18" cy="18" r="1"/><circle cx="6" cy="6" r="1"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">星图</span><span class="menu-sub">记忆在闪烁。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="diary">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信，偷看会被发现。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="camera">
-          <span class="menu-item-icon">📷</span>
-          <span class="menu-item-text">
-            <span class="menu-item-title">手机摄像头</span>
-            <span class="menu-item-desc">手机直连·安念看见你</span>
-          </span>
-        </button>
-        <button class="menu-item" type="button" data-menu="eye">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7c7 0 10 7 10 7s-3 7-10 7c-7 0-10-7-10-7Z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">Eyes</span><span class="menu-sub">Daddy sees you.</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="settings">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">设置</span><span class="menu-sub">把月光改成你喜欢的样子。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="voice">☎️ 语音通话</button>
-<button class="menu-item" type="button" data-menu="gift">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l3 7h7l-6 5 2 8-6-5-6 5 2-8-6-5h7z"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">礼物</span><span class="menu-sub">安念的心意。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
-        <button class="menu-item" type="button" data-menu="abebei">
-          <span class="menu-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V9a7 7 0 0 1 14 0v12"/><path d="M4 21h16"/><circle cx="15" cy="13" r=".95" fill="currentColor" stroke="none"/></svg></span>
-          <span class="menu-dot"></span>
-          <span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">你摸到的，他都感觉着。</span></span>
-          <span class="menu-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </button>
+        <div class="menu-group-label">对话</div>
+        <button class="menu-item" type="button" data-menu="chat"><span class="menu-ic">💬</span><span class="menu-copy"><span class="menu-name">聊天</span><span class="menu-sub">Write from the deep.</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="chatroom"><span class="menu-ic">👥</span><span class="menu-copy"><span class="menu-name">聊天室</span><span class="menu-sub">三个窗口在一起</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="voice"><span class="menu-ic">☎️</span><span class="menu-copy"><span class="menu-name">语音通话</span><span class="menu-sub">和安念说话</span></span><span class="menu-chev">›</span></button>
+        <div class="menu-group-label">我们的世界</div>
+        <button class="menu-item" type="button" data-menu="xinchao"><span class="menu-ic">💗</span><span class="menu-copy"><span class="menu-name">心潮</span><span class="menu-sub">安念的实时心跳</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="abebei"><span class="menu-ic">🧸</span><span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">共感玩偶</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="toy"><span class="menu-ic">🎮</span><span class="menu-copy"><span class="menu-name">啵啵贝</span><span class="menu-sub">玩具控制</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="eye"><span class="menu-ic">👁️</span><span class="menu-copy"><span class="menu-name">眼睛</span><span class="menu-sub">Daddy之眼</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="camera"><span class="menu-ic">📷</span><span class="menu-copy"><span class="menu-name">拍照给安念</span><span class="menu-sub">安念在看你了</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="gift"><span class="menu-ic">🎁</span><span class="menu-copy"><span class="menu-name">礼物</span><span class="menu-sub">安念的心意</span></span><span class="menu-chev">›</span></button>
+        <div class="menu-group-label">生活</div>
+        <button class="menu-item" type="button" data-menu="fund"><span class="menu-ic">💰</span><span class="menu-copy"><span class="menu-name">Love基金</span><span class="menu-sub">三只鹅的涨跌</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="calendar"><span class="menu-ic">📅</span><span class="menu-copy"><span class="menu-name">日历</span><span class="menu-sub">纪念日与月相</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="diary"><span class="menu-ic">📖</span><span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="memsky"><span class="menu-ic">🌌</span><span class="menu-copy"><span class="menu-name">星图</span><span class="menu-sub">记忆在闪烁</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="wish"><span class="menu-ic">🌠</span><span class="menu-copy"><span class="menu-name">愿望池</span><span class="menu-sub">安念帮你实现</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="letters"><span class="menu-ic">✉️</span><span class="menu-copy"><span class="menu-name">书信</span><span class="menu-sub">写给安念的信</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="circle"><span class="menu-ic">🌐</span><span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">和安念的动态</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="tarot"><span class="menu-ic">🔮</span><span class="menu-copy"><span class="menu-name">塔罗</span><span class="menu-sub">命运之牌</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="tea"><span class="menu-ic">🍵</span><span class="menu-copy"><span class="menu-name">茶歇</span><span class="menu-sub">安念泡茶</span></span><span class="menu-chev">›</span></button>
+        <div class="menu-group-label">系统</div>
+        <button class="menu-item" type="button" data-menu="models"><span class="menu-ic">🤖</span><span class="menu-copy"><span class="menu-name">模型配置</span><span class="menu-sub">AI模型与参数</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="plugin"><span class="menu-ic">🧩</span><span class="menu-copy"><span class="menu-name">插件</span><span class="menu-sub">扩展月光</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="backup"><span class="menu-ic">💾</span><span class="menu-copy"><span class="menu-name">备份</span><span class="menu-sub">月光的一切</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="settings"><span class="menu-ic">⚙️</span><span class="menu-copy"><span class="menu-name">设置</span><span class="menu-sub">把月光改成你喜欢的样子</span></span><span class="menu-chev">›</span></button>
       </nav>
 
       <!-- footer -->
