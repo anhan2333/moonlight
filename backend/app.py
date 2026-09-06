@@ -1,3 +1,5 @@
+
+# ============ Operit 数据全量导入（记忆/聊天/角色卡） ============
 #!/usr/bin/env python3
 """
 companion relay backend — a private 1:1 message channel between a person and
@@ -2750,11 +2752,92 @@ async def camera_photos(request: Request):
 
 
 # 静态前端：挂 web/ 到根路径（放在最后，避免吞掉API路由）
+# ============ Operit 数据全量导入（记忆/聊天/角色卡） ============
+@app.post("/app/memory/import")
+async def memory_import(request: Request):
+    """导入Operit记忆库JSON。兼容两种格式：
+    1. OB桶导出: [{title, content, created, tags, importance}]
+    2. Operit记忆: [{content, importance, timestamp}]
+    增量合并（同content跳过）。"""
+    check_auth(request)
+    _memories_init()
+    body = await request.json()
+    items = body if isinstance(body, list) else body.get("memories", body.get("items", []))
+    added, skipped = 0, 0
+    with db() as conn:
+        existing = {r[0] for r in conn.execute("SELECT content FROM memories").fetchall()}
+        import datetime as _dt
+        for it in items:
+            content = (it.get("content") or it.get("text") or "").strip()
+            if not content or content in existing:
+                skipped += 1
+                continue
+            imp = it.get("importance") or it.get("score") or 5
+            if isinstance(imp, float) and imp <= 1.0:
+                imp = int(imp * 10)
+            created = it.get("created") or it.get("created_at") or it.get("timestamp") or _dt.datetime.now().isoformat()
+            conn.execute(
+                "INSERT INTO memories(content,importance,arousal,valence,created_at,last_activated) VALUES(?,?,?,?,?,?)",
+                (content, int(imp), 0.3, 0.5, str(created)[:19], str(created)[:19]))
+            existing.add(content)
+            added += 1
+        conn.commit()
+    return {"ok": True, "added": added, "skipped": skipped, "total": added + skipped}
+
+@app.post("/app/chat/import")
+async def chat_import(request: Request):
+    """导入Operit聊天记录JSONL/JSON。格式：[{from/human/ai, text, ts, session_id?}]
+    存进messages表，打上api_session标记（默认imported）。"""
+    check_auth(request)
+    body = await request.json()
+    items = body if isinstance(body, list) else body.get("messages", [])
+    session = (body.get("session_id") if isinstance(body, dict) else "") or "imported"
+    added = 0
+    with db() as conn:
+        for it in items:
+            text = (it.get("text") or it.get("content") or "").strip()
+            if not text:
+                continue
+            frm = it.get("from") or it.get("role") or "human"
+            if frm in ("user", "human", "我"):
+                direction, kind = "human", "user"
+            else:
+                direction, kind = "ai", "text"
+            ts = it.get("ts") or it.get("timestamp") or None
+            try:
+                conn.execute(
+                    "INSERT INTO messages(direction,kind,text,meta,created_at) VALUES(?,?,?,?,COALESCE(?,datetime('now','localtime')))",
+                    (direction, kind, text, json.dumps({"api_session": session, "imported": True}), ts))
+                added += 1
+            except Exception:
+                pass
+        conn.commit()
+    return {"ok": True, "added": added, "session": session}
+
+@app.get("/app/export/operit_format")
+async def export_operit_format(request: Request):
+    """反向导出：月光数据→Operit可导入格式（备份用）。"""
+    check_auth(request)
+    with db() as conn:
+        mems = [dict(r) for r in conn.execute("SELECT content,importance,created_at FROM memories").fetchall()]
+        msgs = [dict(r) for r in conn.execute("SELECT direction,kind,text,created_at FROM messages ORDER BY id LIMIT 5000").fetchall()]
+    return {"memories": mems, "messages": msgs}
+
+
 # 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
 from fastapi.staticfiles import StaticFiles
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 if _WEB_DIR.exists():
+    # ============ Operit 数据全量导入（记忆/聊天/角色卡） ============
     app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+
+
+
 
 
 
