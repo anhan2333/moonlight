@@ -5,6 +5,7 @@
     const root = document.documentElement;
     // 月光主题: gold=慕夏夜(默认) rose=玫瑰哥特Day green=鼠尾草夜 blue=珍珠蓝(harbor)
     if (name === 'blue') root.setAttribute('data-theme', 'harbor');
+    else if (name === 'pink') root.setAttribute('data-theme', 'pink');
     else if (name === 'gold') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', name);
     document.querySelectorAll('.theme-chip').forEach(b => {

@@ -142,7 +142,37 @@
     --wall-default: linear-gradient(180deg, #fbf5f0 0%, #f6ebe4 45%, #efdcd4 100%);
   }
   /* ── SAGE NIGHT · 鼠尾草夜(慕夏夜的金换鼠尾草) ── */
-  :root[data-theme="green"]{
+  
+  /* ── OPERIT PINK · Operit粉紫(液态玻璃感) ── */
+  :root[data-theme="pink"]{
+    --bg: linear-gradient(160deg, #fdf0f5 0%, #f9e4ee 30%, #f5e6f5 60%, #efe9fa 100%);
+    --header-bg: rgba(253,240,245,.85);
+    --hairline: rgba(200,120,160,.22);
+    --text: #5a3a55;
+    --text-soft: rgba(90,58,85,.65);
+    --text-faint: rgba(90,58,85,.4);
+    --bubble-ai-bg: rgba(255,255,255,.65);
+    --bubble-ai-fg: #5a3a55;
+    --bubble-ai-line: rgba(200,120,160,.2);
+    --bubble-human-bg: linear-gradient(135deg, rgba(233,150,180,.22), rgba(180,140,220,.18));
+    --bubble-human-fg: #5a3a55;
+    --bubble-human-line: rgba(200,120,160,.3);
+    --accent: #e091b5;
+    --send-bg: linear-gradient(135deg, #e091b5, #b48ad4);
+    --tick: #c9a0c0;
+    --accent-fg: #fff;
+    --think-label: #d488ae;
+    --think-body: rgba(90,58,85,.65);
+    --composer-bg: rgba(255,248,252,.92);
+    --field-bg: rgba(255,255,255,.75);
+    --field-line: rgba(200,120,160,.2);
+    --card-bg: rgba(255,255,255,.42);
+    --card-line: rgba(200,120,160,.14);
+    --scrim: linear-gradient(180deg, rgba(253,240,245,.6), rgba(253,240,245,.2) 30%, rgba(253,240,245,.05) 68%, rgba(253,240,245,.28));
+    --wall-default: linear-gradient(160deg, #fdf0f5 0%, #f9e4ee 30%, #f5e6f5 60%, #efe9fa 100%);
+    --menu-wall-default: linear-gradient(180deg, #fdf0f5 0%, #f9e4ee 50%, #efe9fa 100%);
+  }
+:root[data-theme="green"]{
     --accent: #8a9b6e;
     --send-bg: linear-gradient(135deg, #8a9b6e, #5a6b45);
     --tick: #c19a56;
@@ -6873,6 +6903,7 @@ init();
         <div class="set-themes">
           <button class="theme-chip active" data-theme="gold" style="--c:#bda06f">暖金</button>
           <button class="theme-chip" data-theme="rose" style="--c:#c17355">玫瑰</button>
+          <button class="theme-chip" data-theme="pink" style="--c:#e091b5">粉紫</button>
           <button class="theme-chip" data-theme="green" style="--c:#8a9b6e">柔和绿</button>
           <button class="theme-chip" data-theme="blue" style="--c:#6a8aa8">珍珠蓝</button>
         </div>

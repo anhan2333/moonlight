@@ -5,3 +5,6 @@ INFO:     Uvicorn running on http://127.0.0.1:3020 (Press CTRL+C to quit)
 INFO:     127.0.0.1:54044 - "GET /loop/health HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:54048 - "GET /loop/sessions HTTP/1.1" 200 OK
 INFO:     127.0.0.1:47614 - "GET /loop/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52274 - "GET /loop/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /loop/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42322 - "GET /loop/sessions HTTP/1.1" 200 OK
