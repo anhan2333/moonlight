@@ -112,6 +112,44 @@
     --call-hangup-bg: #cf8d92;
     --call-hangup-shadow: rgba(176,96,104,.34);
   }
+  /* ── ROSE GOTHIC DAY · 玫瑰哥特(照kimi-manor DAY: 奶油纸+玫瑰油画) ── */
+  :root[data-theme="rose"]{
+    --bg: #fbf5f0;
+    --header-bg: rgba(255,252,250,.9);
+    --hairline: rgba(160,77,90,.25);
+    --text: #4a2c2c;
+    --text-soft: rgba(74,44,44,.6);
+    --text-faint: rgba(74,44,44,.4);
+    --bubble-ai-bg: rgba(255,252,250,.9);
+    --bubble-ai-fg: #4a2c2c;
+    --bubble-ai-line: rgba(160,77,90,.2);
+    --bubble-human-bg: rgba(160,77,90,.12);
+    --bubble-human-fg: #4a2c2c;
+    --bubble-human-line: rgba(160,77,90,.28);
+    --accent: #a04d5a;
+    --send-bg: linear-gradient(135deg, #a04d5a, #7a2e3c);
+    --tick: #7a5c52;
+    --accent-fg: #fff;
+    --think-label: #a04d5a;
+    --think-body: rgba(74,44,44,.6);
+    --composer-bg: rgba(251,245,240,.95);
+    --field-bg: rgba(255,252,250,.9);
+    --field-line: rgba(160,77,90,.2);
+    --card-bg: rgba(255,252,250,.55);
+    --card-line: rgba(160,77,90,.15);
+    --scrim: linear-gradient(180deg, rgba(251,245,240,.5), rgba(251,245,240,.15) 30%, rgba(251,245,240,.05) 68%, rgba(251,245,240,.25));
+  }
+  /* ── SAGE NIGHT · 鼠尾草夜(慕夏夜的金换鼠尾草) ── */
+  :root[data-theme="green"]{
+    --accent: #8a9b6e;
+    --send-bg: linear-gradient(135deg, #8a9b6e, #5a6b45);
+    --tick: #c19a56;
+    --hairline: rgba(138,155,110,.35);
+    --bubble-human-bg: rgba(138,155,110,.14);
+    --bubble-human-line: rgba(138,155,110,.3);
+    --field-line: rgba(138,155,110,.25);
+    --card-line: rgba(138,155,110,.18);
+  }
   /* ── HARBOR · 海港(通用开源主题 / 月光) ── 中性冷调,供 fork 使用;只覆盖带色相变量,其余继承 PEARL TIDE */
   :root[data-theme="harbor"]{
       --wall-default: var(--wall-harbor);
@@ -7202,5 +7240,6 @@ async function memSearch(){
 <script src="gift.js"></script>
 <script src="camera.js"></script>
 <script src="panels.js"></script>
+<script src="theme_switch.js"></script>
 </body>
 </html>
