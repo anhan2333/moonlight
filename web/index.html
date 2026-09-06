@@ -6618,14 +6618,25 @@ async function renderPluginList(){
   const list = document.getElementById("pluginList"); if (!list) return;
   const plugins = await pluginListAll();
   if (!plugins.length){ list.innerHTML = '<div class="panel-loading">还没有插件。点上方按钮导入 .toolpkg 或 .js 文件。</div>'; return; }
-  list.innerHTML = plugins.map(p => `
+  list.innerHTML = plugins.map(p => {
+    const mf = p.manifest || {};
+    const disp = mf.display_name || mf.name || p.name;
+    const ver = mf.version || "";
+    const hasUI = typeof p.ui_html === "string" && p.ui_html.length > 20;
+    const nm = p.name.replace(/'/g, "");
+    return `
     <div class="plugin-item">
-      <div class="plugin-info"><div class="plugin-name">${p.name}</div><div class="plugin-sub">${p.enabled ? "已启用" : "已停用"} · ${(p.code.length/1024).toFixed(1)}KB</div></div>
-      <div class="plugin-actions">
-        <button onclick="pluginToggle('${p.name.replace(/'/g, "")}')">${p.enabled ? "停用" : "启用"}</button>
-        <button class="danger" onclick="pluginRemove('${p.name.replace(/'/g, "")}')">删除</button>
+      <div class="plugin-info">
+        <div class="plugin-name">${disp} <span style="font-size:10px;opacity:.4;">${ver}</span></div>
+        <div class="plugin-sub">${p.enabled ? "已启用" : "已停用"} · ${(p.code.length/1024).toFixed(1)}KB${hasUI ? " · 有界面" : ""}</div>
       </div>
-    </div>`).join("");
+      <div class="plugin-actions">
+        ${hasUI ? `<button onclick="pluginOpenUI('${nm}')">打开</button>` : ""}
+        <button onclick="pluginToggle('${nm}')">${p.enabled ? "停用" : "启用"}</button>
+        <button class="danger" onclick="pluginRemove('${nm}')">删除</button>
+      </div>
+    </div>`;
+  }).join("");
 }
 async function pluginToggle(name){
   const plugins = await pluginListAll();
@@ -6637,6 +6648,33 @@ async function pluginToggle(name){
 async function pluginRemove(name){
   await pluginDelete(name); renderPluginList(); showToast("已删除：" + name);
 }
+
+async function pluginOpenUI(name){
+  const plugins = await pluginListAll();
+  const p = plugins.find(x => x.name === name); if (!p) return;
+  const old = document.getElementById('pluginUIOverlay'); if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'pluginUIOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;';
+  const box = document.createElement('div');
+  box.style.cssText = 'width:min(94vw,600px);max-height:85vh;overflow-y:auto;background:var(--bg,#0a0806);border:1px solid var(--hairline,#c19a5638);border-radius:18px;padding:14px;position:relative;';
+  const mf = p.manifest || {};
+  const title = mf.display_name || p.name;
+  box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+    '<strong style="color:var(--text,#f3e6cd);font-size:16px;">'+title+'</strong>'+
+    '<button data-close="1" style="background:none;border:none;color:var(--text-soft,#ccc);font-size:22px;cursor:pointer;">×</button></div>'+
+    '<div id="pluginUIBody"></div>';
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if (e.target === ov || (e.target.dataset && e.target.dataset.close)) ov.remove(); });
+  // 注入插件HTML并执行code
+  const body = box.querySelector('#pluginUIBody');
+  if (p.ui_html){ body.innerHTML = p.ui_html; }
+  try { new Function('moonlight', 'plugin', p.code)(window.moonlight || {}, { name: p.name, manifest: mf, root: body }); } catch(e){
+    body.insertAdjacentHTML('beforeend', '<div style="color:#c0533f;font-size:12px;margin-top:8px;">插件执行出错：'+e.message+'</div>');
+  }
+}
+
 function openPluginManager(){
   closeMenu();
   const panel = document.getElementById("pluginPanel"); if (!panel) return;
