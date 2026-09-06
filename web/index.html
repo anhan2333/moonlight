@@ -2138,6 +2138,17 @@
 
 /* 摄像头 */
 .cam-status{font-size:12px;color:#bda06f;margin-bottom:8px;min-height:16px;}
+
+/* ═══ 慕夏装饰 ═══ */
+.moon-corner{position:fixed;z-index:40;opacity:.55;pointer-events:none;}
+.moon-corner-tl{top:8px;left:8px;}
+.moon-corner-tr{top:8px;right:8px;transform:scaleX(-1);}
+.moon-spin{display:inline-block;text-align:center;margin:6px auto;line-height:0;animation:moonspin 120s linear infinite;}
+@keyframes moonspin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.moon-spin{animation:none}}
+.moon-av{width:42px;height:42px;border-radius:50%;display:inline-grid;place-items:center;font-size:17px;color:#bda06f;font-style:italic;border:1px solid #bda06f;background:radial-gradient(circle at 36% 30%,#241c14,#0d0a07);box-shadow:0 0 12px rgba(193,154,86,.25);}
+.moon-av-b{margin-left:-6px;}
+[data-theme="rose"] .moon-av{background:radial-gradient(circle at 36% 30%,#fff,#f2e3dc);color:#a04d5a;border-color:#a04d5a;}
 </style>
 </head>
 <body>
@@ -7241,5 +7252,6 @@ async function memSearch(){
 <script src="camera.js"></script>
 <script src="panels.js"></script>
 <script src="theme_switch.js"></script>
+<script src="ornaments.js"></script>
 </body>
 </html>
