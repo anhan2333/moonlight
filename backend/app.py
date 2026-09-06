@@ -2824,6 +2824,66 @@ async def export_operit_format(request: Request):
     return {"memories": mems, "messages": msgs}
 
 
+# ============ OB桶同步（从服务器拉取全部记忆进星图） ============
+import subprocess as _sp
+OB_SSH = "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@47.96.174.224"
+
+@app.post("/app/memory/sync_ob")
+async def memory_sync_ob(request: Request):
+    check_auth(request)
+    _memories_init()
+    D = chr(36)  # dollar sign
+    Q = chr(34)  # double quote
+    remote = "cd /root/Ombre-Brain/buckets/dynamic && for f in *.md; do echo ===FILE===" + D + "f; cat " + Q + D + "f" + Q + "; done"
+    cmd = OB_SSH + " " + chr(39) + remote + chr(39)
+    try:
+        r = _sp.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="OB ssh超时: %s" % e)
+    out = r.stdout or ""
+    files = []
+    for chunk in out.split("===FILE==="):
+        chunk = chunk.strip()
+        if not chunk or "\n" not in chunk:
+            continue
+        fn, _, body = chunk.partition("\n")
+        if fn.startswith("==") or not body.strip():
+            continue
+        files.append({"filename": fn.strip(), "text": body})
+    added, skipped = 0, 0
+    with db() as conn:
+        existing = {r2[0] for r2 in conn.execute("SELECT content FROM memories").fetchall()}
+        for f in files:
+            text = f["text"]
+            meta = {}
+            body = text
+            if text.startswith("---"):
+                parts = text.split("---", 2)
+                if len(parts) >= 3:
+                    for line in parts[1].split("\n"):
+                        if ":" in line:
+                            k, _, v = line.partition(":")
+                            meta[k.strip()] = v.strip().strip(Q).strip(chr(39))
+                    body = parts[2]
+            title = meta.get("title", "")
+            content = (title + "\n" + body).strip() if title else body.strip()
+            if not content or content in existing:
+                skipped += 1
+                continue
+            try:
+                imp = int(meta.get("importance", 5))
+            except Exception:
+                imp = 5
+            created = (meta.get("created", "") or "")[:19] or None
+            conn.execute(
+                "INSERT INTO memories(content,importance,arousal,valence,created_at,last_activated) VALUES(?,?,?,?,COALESCE(?,datetime('now','localtime')),datetime('now','localtime'))",
+                (content, imp, 0.3, 0.5, created))
+            existing.add(content)
+            added += 1
+        conn.commit()
+    return {"ok": True, "files": len(files), "added": added, "skipped": skipped}
+
+
 # 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
 from fastapi.staticfiles import StaticFiles
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -2833,6 +2893,10 @@ if _WEB_DIR.exists():
 
 
 app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+
+
 
 
 
