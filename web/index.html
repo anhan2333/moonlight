@@ -6027,8 +6027,10 @@ function startChat(initialMsgs, { connect = true, fromCache = false } = {}){
 
 async function init(){
   if (!secret){ showLogin(); return; }
-  await loadSessions();
-  loadBrain();
+  // 月光容错: sessions/brain 失败不阻断(仅401清密码)
+  try{ await loadSessions(); }catch(inner){ if(String(inner.message)==="401"){ handle401(); return; } }
+  try{ loadBrain(); }catch(_){}
+
   let showedCache = false;
   const cached = await readCachedMessages();
   if (cached.length){
