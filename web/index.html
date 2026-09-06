@@ -2198,6 +2198,13 @@
 .mt-chip:active{ transform:scale(.96); }
 .mt-ic{ font-size:14px; }
 .mt-label{ font-size:12px; opacity:.85; }
+
+.profile-tabs{display:flex;gap:6px;margin-bottom:8px;}
+.ptab{padding:6px 14px;border-radius:8px;border:1px solid var(--hairline);background:var(--card-bg);color:var(--text-soft);font-size:12px;cursor:pointer;}
+.ptab.active{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);}
+.profile-editor,.profile-preview{width:100%;padding:10px 12px;border:1px solid var(--field-line);border-radius:10px;background:var(--field-bg);color:var(--text);font-size:13px;font-family:var(--font-cn);line-height:1.6;}
+.profile-preview{white-space:pre-wrap;min-height:120px;}
+.profile-meta{font-size:11px;opacity:.5;text-align:right;margin:4px 0 8px;}
 </style>
 </head>
 <body>
@@ -6830,6 +6837,17 @@ init();
         <label class="set-label">上下文注入（自动携带时间/天气）</label>
         <label class="ctx-toggle"><input type="checkbox" id="setCtx" onchange="toggleCtx(this.checked)"> <span>发送消息时自动附加环境信息</span></label>
       </div>
+      <div class="set-group">
+        <label class="set-label">用户资料（Default配置）</label>
+        <div class="profile-tabs">
+          <button class="ptab active" data-ptab="edit" onclick="profileTab('edit')">编辑</button>
+          <button class="ptab" data-ptab="preview" onclick="profileTab('preview')">预览</button>
+        </div>
+        <textarea id="profileEdit" rows="8" class="profile-editor" placeholder="我是...（名字/昵称/性格/偏好/身份设定）" maxlength="5000"></textarea>
+        <pre id="profilePreview" class="profile-preview hidden"></pre>
+        <div class="profile-meta"><span id="profileCount">0</span> 字符</div>
+        <button class="toy-connect-btn" onclick="saveProfile()">保存用户资料</button>
+      </div>
       
       <div class="set-group">
         <label class="set-label">🎙 语音服务配置</label>
@@ -7204,6 +7222,8 @@ async function memSearch(){
 <script src="panels.js"></script>
 <script src="theme_switch.js"></script>
 <script src="ornaments.js"></script>
+<script src="profile.js"></script>
+<script src="card_selector.js"></script>
 <script src="window_switch.js"></script>
 <script src="toolbar.js"></script>
 </body>
