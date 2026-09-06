@@ -1,26 +1,22 @@
-/* ════════════ 窗口切换器v2（照Operit：菜单内置面板+会话隔离）════════════
-   - 每个窗口独立的会话（localStorage按window隔离消息）
-   - 菜单里内置"窗口"卡片面板（不遮挡），非悬浮窗
-   - 右上角小圆点按钮，点击打开菜单并定位到面板 */
+/* ════════════ 窗口切换器v3（会话真隔离）════════════
+   核心思路：每个窗口 = 一个独立 session_id（daily/work）。
+   切换时改 activeApiSession → 历史查询自动带上 session_id 过滤，
+   消息发送也带同个 session_id → 日常/工作两窗口消息完全隔离。 */
 (function(){
   var CARDS = [
     { id: 'daily', name: '日常安念', avatar: '🌿', desc: '陪薇薇 · 日常聊天', color: '#8a9b6e' },
     { id: 'work',  name: '工作安念', avatar: '⚙️', desc: '项目 · 施工汇报', color: '#bda06f' },
   ];
   var KEY = 'moon_active_window';
-
   function getActive(){ try{ return localStorage.getItem(KEY) || 'daily'; }catch(e){ return 'daily'; } }
   function setActive(id){ try{ localStorage.setItem(KEY, id); }catch(e){} }
 
-  function applyCard(id, skipReload){
+  function applyCard(id){
     var card = CARDS.find(function(c){ return c.id === id; }) || CARDS[0];
     window.MOON_ACTIVE_CARD = card;
     try{ localStorage.setItem('moon_chatroom_sender', id === 'work' ? 'anian_work' : 'anian_daily'); }catch(e){}
     var btn = document.getElementById('moonWinBtn');
     if (btn) btn.textContent = card.avatar;
-    if (!skipReload){
-      try{ window.dispatchEvent(new CustomEvent('moonwindowchange', {detail:{card:card}})); }catch(e){}
-    }
   }
 
   function mountInMenu(){
@@ -42,12 +38,20 @@
         '<div style="font-size:11px;opacity:.55;color:var(--text,#f3e6cd);">'+c.desc+'</div>'+
         '</div></div>';
     });
+    html += '<div style="font-size:10px;opacity:.4;color:var(--text,#f3e6cd);margin-top:4px;">两个窗口的消息互相隔离，各有各的聊天记录</div>';
     panel.innerHTML = html;
     menu.parentNode.insertBefore(panel, menu);
     panel.querySelectorAll('.moon-win-item').forEach(function(item){
       item.addEventListener('click', function(){
-        setActive(item.dataset.id);
-        applyCard(item.dataset.id);
+        var id = item.dataset.id;
+        if (id === getActive()) return; // 点当前的不动
+        setActive(id);
+        applyCard(id);
+        // 切换 activeApiSession 让历史/发送都走对应会话
+        try{
+          localStorage.setItem('companion_session_pick', id);
+          if (typeof activateSession === 'function') activateSession(id);
+        }catch(e){}
         var mp = document.querySelector('.menu-panel');
         if (mp) mp.classList.remove('open');
         setTimeout(function(){ location.reload(); }, 350);
@@ -72,12 +76,27 @@
       }, 400);
     };
     document.body.appendChild(btn);
-    applyCard(getActive(), true);
+    applyCard(getActive());
+  }
+
+  // 启动时：把后端 session 同步为当前窗口ID（让 history/send 自动过滤）
+  function syncBackendSession(){
+    var id = getActive();
+    try{ localStorage.setItem('companion_session_pick', id); }catch(e){}
+    // activateSession 在主script定义；等它可用后调用
+    var tries = 0;
+    (function wait(){
+      if (typeof activateSession === 'function'){
+        activateSession(id);
+      } else if (++tries < 50){
+        setTimeout(wait, 200);
+      }
+    })();
   }
 
   if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){ mountFloatBtn(); setTimeout(mountInMenu, 300); });
+    document.addEventListener('DOMContentLoaded', function(){ mountFloatBtn(); setTimeout(mountInMenu, 300); syncBackendSession(); });
   } else {
-    mountFloatBtn(); setTimeout(mountInMenu, 300);
+    mountFloatBtn(); setTimeout(mountInMenu, 300); syncBackendSession();
   }
 })();
