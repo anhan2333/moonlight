@@ -5964,8 +5964,9 @@ $("#loginForm").addEventListener("submit", async (e) => {
   secret = val;
   try{
     // 用 history 验证密钥(401 会抛错)
-    await loadSessions();
-    loadBrain();
+    // 月光容错: sessions(依赖api_loop)失败不阻断登录, 401密码错误除外
+    try{ await loadSessions(); }catch(inner){ if(String(inner.message)==="401") throw inner; }
+    try{ loadBrain(); }catch(_){}
     const msgs = await apiLatestHistory();
     localStorage.setItem(LS_KEY, secret);
     startChat(msgs);
