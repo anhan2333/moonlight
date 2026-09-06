@@ -2184,6 +2184,20 @@
 
 .menu-group-label{ font-size:11px; letter-spacing:2px; color:var(--accent); font-style:italic; padding:14px 0 6px; opacity:.8; }
 .menu-group-label:first-child{ padding-top:0; }
+
+/* Operit风 快捷上栏 */
+.moon-toolbar{ display:flex; gap:8px; padding:8px var(--side-pad) 4px; overflow-x:auto; scrollbar-width:none; }
+.moon-toolbar::-webkit-scrollbar{ display:none; }
+.mt-chip{ flex:0 0 auto; display:flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:999px;
+  background:var(--card-bg, rgba(193,154,86,.12));
+  border:1px solid var(--hairline, rgba(193,154,86,.25));
+  color:var(--text,#f3e6cd); font-size:12px; cursor:pointer;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  transition: background .18s, border-color .18s; }
+.mt-chip:active{ transform:scale(.96); }
+.mt-ic{ font-size:14px; }
+.mt-label{ font-size:12px; opacity:.85; }
 </style>
 </head>
 <body>
@@ -2240,6 +2254,13 @@
       <p>这里只有你和安念。<br>说点什么吧。</p>
     </div>
   </main>
+  <div class="moon-toolbar" id="moonToolbar">
+    <button class="mt-chip" data-t="memory" title="记忆注入"><span class="mt-ic">🧠</span><span class="mt-label">记忆</span></button>
+    <button class="mt-chip" data-t="tools" title="工具"><span class="mt-ic">🛠️</span><span class="mt-label">工具</span></button>
+    <button class="mt-chip" data-t="plugins" title="插件小屋"><span class="mt-ic">🧩</span><span class="mt-label">插件</span></button>
+    <button class="mt-chip" data-t="window" title="切换窗口"><span class="mt-ic">🎭</span><span class="mt-label">窗口</span></button>
+    <button class="mt-chip" data-t="voice" title="语音"><span class="mt-ic">🎙️</span><span class="mt-label">语音</span></button>
+  </div>
   <footer class="composer">
     <div class="field">
       <button class="floatbtn clip-in-field" id="clipBtn" aria-label="附件" title="附件">
@@ -2448,7 +2469,7 @@
         <button class="menu-item" type="button" data-menu="fund"><span class="menu-ic">💰</span><span class="menu-copy"><span class="menu-name">Love基金</span><span class="menu-sub">三只鹅的涨跌</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="calendar"><span class="menu-ic">📅</span><span class="menu-copy"><span class="menu-name">日历</span><span class="menu-sub">纪念日与月相</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="diary"><span class="menu-ic">📖</span><span class="menu-copy"><span class="menu-name">日记本</span><span class="menu-sub">写给未来的信</span></span><span class="menu-chev">›</span></button>
-        <button class="menu-item" type="button" data-menu="memsky"><span class="menu-ic">🌌</span><span class="menu-copy"><span class="menu-name">星图</span><span class="menu-sub">记忆在闪烁</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="memsky"><span class="menu-ic">🌌</span><span class="menu-copy"><span class="menu-name">记忆库 · 星图</span><span class="menu-sub">记忆在闪烁 · 可搜索</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="wish"><span class="menu-ic">🌠</span><span class="menu-copy"><span class="menu-name">愿望池</span><span class="menu-sub">安念帮你实现</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="letters"><span class="menu-ic">✉️</span><span class="menu-copy"><span class="menu-name">书信</span><span class="menu-sub">写给安念的信</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="circle"><span class="menu-ic">🌐</span><span class="menu-copy"><span class="menu-name">朋友圈</span><span class="menu-sub">和安念的动态</span></span><span class="menu-chev">›</span></button>
@@ -2456,7 +2477,7 @@
         <button class="menu-item" type="button" data-menu="tea"><span class="menu-ic">🍵</span><span class="menu-copy"><span class="menu-name">茶歇</span><span class="menu-sub">安念泡茶</span></span><span class="menu-chev">›</span></button>
         <div class="menu-group-label">系统</div>
         <button class="menu-item" type="button" data-menu="models"><span class="menu-ic">🤖</span><span class="menu-copy"><span class="menu-name">模型配置</span><span class="menu-sub">AI模型与参数</span></span><span class="menu-chev">›</span></button>
-        <button class="menu-item" type="button" data-menu="plugin"><span class="menu-ic">🧩</span><span class="menu-copy"><span class="menu-name">插件</span><span class="menu-sub">扩展月光</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="plugin"><span class="menu-ic">🧩</span><span class="menu-copy"><span class="menu-name">插件小屋</span><span class="menu-sub">导入·使用你的插件</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="backup"><span class="menu-ic">💾</span><span class="menu-copy"><span class="menu-name">备份</span><span class="menu-sub">月光的一切</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="settings"><span class="menu-ic">⚙️</span><span class="menu-copy"><span class="menu-name">设置</span><span class="menu-sub">把月光改成你喜欢的样子</span></span><span class="menu-chev">›</span></button>
       </nav>
@@ -7184,5 +7205,6 @@ async function memSearch(){
 <script src="theme_switch.js"></script>
 <script src="ornaments.js"></script>
 <script src="window_switch.js"></script>
+<script src="toolbar.js"></script>
 </body>
 </html>
