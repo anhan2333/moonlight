@@ -59,25 +59,7 @@
     });
   }
 
-  function mountFloatBtn(){
-    if (document.getElementById('moonWinBtn')) return;
-    var btn = document.createElement('button');
-    btn.id = 'moonWinBtn';
-    btn.title = '当前窗口 · 点开菜单切换';
-    btn.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top) + 62px);right:10px;z-index:290;'+
-      'width:34px;height:34px;border-radius:50%;background:rgba(193,154,86,.2);'+
-      'border:1px solid rgba(193,154,86,.4);cursor:pointer;font-size:15px;display:grid;place-items:center;';
-    btn.onclick = function(){
-      var mp = document.querySelector('.menu-panel');
-      if (mp){ mp.classList.add('open'); }
-      setTimeout(function(){
-        var p = document.getElementById('moonWinPanelMenu');
-        if (p) p.scrollIntoView({behavior:'smooth', block:'center'});
-      }, 400);
-    };
-    document.body.appendChild(btn);
-    applyCard(getActive());
-  }
+  function mountFloatBtn(){ /* v0.39: 入口改为点peerName，见card_selector.js */ }
 
   // 启动时：把后端 session 同步为当前窗口ID（让 history/send 自动过滤）
   function syncBackendSession(){
