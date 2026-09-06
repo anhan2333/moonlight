@@ -6602,8 +6602,7 @@ async function pluginImportFile(file){
 }
 function pluginRun(rec){
   try{
-    const fn = new Function("moonlight", "plugin", rec.code + "
-//# sourceURL=moonlight-plugin-" + rec.name);
+    const fn = new Function("moonlight", "plugin", rec.code + "\n//# sourceURL=moonlight-plugin-" + rec.name);
     fn(moonlight, { name: rec.name, manifest: rec.manifest });
     rec._ran = true;
   }catch(e){ showToast("插件运行出错（" + rec.name + "）：" + e.message); }
