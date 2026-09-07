@@ -48,13 +48,8 @@
     c.addEventListener('pointerup', function(e){
       state.dragging = false; state.pressing = false;
       if (!moved){
-        // 点击：打开菜单并定位窗口面板
-        var mp = document.querySelector('.menu-panel');
-        if (mp){ mp.classList.add('open'); }
-        setTimeout(function(){
-          var p = document.getElementById('moonWinPanelMenu');
-          if (p) p.scrollIntoView({behavior:'smooth', block:'center'});
-        }, 380);
+        // 点击：展开/收起小聊天窗（照Operit FloatingChatWindow）
+        if (window.MoonBallChat) window.MoonBallChat.toggle();
       }
     });
 
