@@ -6667,11 +6667,16 @@ async function pluginOpenUI(name){
   ov.appendChild(box);
   document.body.appendChild(ov);
   ov.addEventListener('click', function(e){ if (e.target === ov || (e.target.dataset && e.target.dataset.close)) ov.remove(); });
-  // 注入插件HTML并执行code
+  // 用插件运行时渲染（兼容Operit u.UI声明树）
   const body = box.querySelector('#pluginUIBody');
-  if (p.ui_html){ body.innerHTML = p.ui_html; }
-  try { new Function('moonlight', 'plugin', p.code)(window.moonlight || {}, { name: p.name, manifest: mf, root: body }); } catch(e){
-    body.insertAdjacentHTML('beforeend', '<div style="color:#c0533f;font-size:12px;margin-top:8px;">插件执行出错：'+e.message+'</div>');
+  if (window.MoonlightPluginRuntime && (p.ui_code || p.ui_html)){
+    try { window.MoonlightPluginRuntime.render(body, p); } catch(e){
+      body.innerHTML = '<div style="color:#c0533f;padding:8px;">运行时渲染失败：'+e.message+'</div>';
+    }
+  } else {
+    try { new Function('moonlight', 'plugin', p.code)(window.moonlight || {}, { name: p.name, manifest: mf, root: body }); } catch(e){
+      body.innerHTML = '<div style="color:#c0533f;font-size:12px;">插件执行出错：'+e.message+'</div>';
+    }
   }
 }
 
@@ -7262,6 +7267,7 @@ async function memSearch(){
 <script src="ornaments.js"></script>
 <script src="profile.js"></script>
 <script src="card_selector.js"></script>
+<script src="plugin_runtime.js"></script>
 <script src="siri_ball.js"></script>
 <script src="window_switch.js"></script>
 <script src="toolbar.js"></script>
