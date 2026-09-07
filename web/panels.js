@@ -73,6 +73,15 @@ async function _loadCalendar(){
 }
 
 /* ---- 星图 Memory Sky ---- */
+/* ---- 星图 Memory Sky · 打开 ---- */
+function openMemSkyPanel(){
+  const p = document.getElementById('memSkyPanel');
+  if (!p) return;
+  p.classList.remove('hidden');
+  p.setAttribute('aria-hidden', 'false');
+  if (typeof loadMemSky === 'function') loadMemSky();
+  else if (typeof memSkyInit === 'function') memSkyInit();
+}
 function closeMemSkyPanel(){ _mlClose('memSkyPanel'); }
 
 /* ---- 塔罗 Tarot ---- */
@@ -240,4 +249,44 @@ function toggleCtx(checked){
     window.ctxEnabled = !!checked;
     localStorage.setItem('moon_ctx', checked ? '1' : '0');
   } catch(e){}
+}
+async function loadMemSky(){
+  const canvas = document.getElementById('memSkyCanvas');
+  const list = document.getElementById('memSkyList');
+  if (!canvas) return;
+  canvas.innerHTML = '<div style="padding:20px;text-align:center;opacity:.5;font-size:12px;">星图加载中…</div>';
+  try {
+    const r = await fetch(API_BASE + '/app/memories/sky', { headers: authHeaders() });
+    const d = await r.json();
+    const mems = d.memories || [];
+    // 星空：随机布点，importance高更亮更大
+    canvas.innerHTML = '';
+    mems.forEach(function(m, i){
+      const star = document.createElement('div');
+      const size = 6 + (m.importance||5) * 1.2;
+      const x = m.x != null ? m.x * 100 : (i * 37 % 100);
+      const y = m.y != null ? m.y * 100 : (i * 53 % 80 + 10);
+      star.style.cssText = 'position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;'+
+        'left:'+x+'%;top:'+y+'%;'+
+        'background:radial-gradient(circle,#fff6e0,rgba(189,160,111,.6));'+
+        'box-shadow:0 0 '+(size)+'px rgba(212,154,86,.8);cursor:pointer;'+
+        'animation:twinkle 3s '+(i%5)*0.6+'s ease-in-out infinite alternate;';
+      star.title = (m.content||'').slice(0,60);
+      star.onclick = function(){
+        list.innerHTML = '<div class="fund-card" style="margin-top:10px;"><div class="fund-name">记忆 #'+m.id+'</div><div style="font-size:12px;opacity:.7;line-height:1.6;white-space:pre-wrap;">'+(m.content||'').slice(0,200)+'</div></div>';
+      };
+      canvas.appendChild(star);
+    });
+    if (!mems.length){
+      canvas.innerHTML = '<div style="padding:20px;text-align:center;opacity:.5;font-size:12px;">星空还是空的，存一条记忆吧</div>';
+    }
+    // twinkle动画
+    if (!document.getElementById('twinkleStyle')){
+      const st = document.createElement('style'); st.id='twinkleStyle';
+      st.textContent = '@keyframes twinkle{from{opacity:.5;transform:scale(.9)}to{opacity:1;transform:scale(1.1)}}';
+      document.head.appendChild(st);
+    }
+  } catch(e){
+    canvas.innerHTML = '<div style="padding:20px;text-align:center;opacity:.5;">星图加载失败</div>';
+  }
 }
