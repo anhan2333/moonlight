@@ -2884,6 +2884,71 @@ async def memory_sync_ob(request: Request):
     return {"ok": True, "files": len(files), "added": added, "skipped": skipped}
 
 
+# ============ 功能模型统一调用（按绑定路由到对应模型） ============
+def _resolve_model_for(func: str) -> dict:
+    """按功能名解析绑定的模型配置（无绑定则用默认）。"""
+    with db() as conn:
+        bind = conn.execute("SELECT config_id FROM function_bindings WHERE func=?", (func,)).fetchone()
+        if bind and bind["config_id"]:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE id=?", (bind["config_id"],)).fetchone()
+        else:
+            cfg = conn.execute("SELECT * FROM model_configs WHERE is_default=1 LIMIT 1").fetchone()
+        if not cfg:
+            cfg = conn.execute("SELECT * FROM model_configs ORDER BY id LIMIT 1").fetchone()
+    return dict(cfg) if cfg else {}
+
+@app.post("/app/invoke/{func}")
+async def invoke_with_func_model(func: str, request: Request):
+    """统一模型调用代理：POST /app/invoke/chat  {messages:[{role,content}], max_tokens?}
+    自动按 function_bindings 路由到绑定的模型执行。返回 OpenAI 格式响应。"""
+    check_auth(request)
+    body = await request.json()
+    messages = body.get("messages") or []
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages不能为空")
+    cfg = _resolve_model_for(func)
+    if not cfg:
+        raise HTTPException(status_code=404, detail="没有可用模型配置")
+    ep = (cfg.get("endpoint") or "").rstrip("/")
+    if not ep.endswith("/chat/completions"):
+        ep = ep + "/chat/completions"
+    payload = {
+        "model": cfg.get("model"),
+        "messages": messages,
+    }
+    if body.get("max_tokens"):
+        payload["max_tokens"] = int(body["max_tokens"])
+    if body.get("temperature") is not None:
+        payload["temperature"] = float(body["temperature"])
+    req = urllib.request.Request(ep, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"), headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + (cfg.get("api_key") or ""),
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            d = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        return {"ok": True, "func": func, "model": cfg.get("model"), "config_name": cfg.get("name"), "response": d}
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")[:300]
+        raise HTTPException(status_code=e.code, detail="模型调用失败: %s" % detail)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="模型调用失败: %s" % e)
+
+@app.get("/app/models/bindings_full")
+async def bindings_full(request: Request):
+    """返回全部功能绑定+对应模型详情（可视化面板用）。"""
+    check_auth(request)
+    _models_db_init()
+    with db() as conn:
+        binds = conn.execute("SELECT func,config_id FROM function_bindings").fetchall()
+        out = {}
+        for b in binds:
+            cfg = conn.execute("SELECT id,name,model,endpoint FROM model_configs WHERE id=?", (b["config_id"],)).fetchone()
+            if cfg:
+                out[b["func"]] = dict(cfg)
+    return {"bindings": out}
+
+
 # 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
 from fastapi.staticfiles import StaticFiles
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -2893,6 +2958,10 @@ if _WEB_DIR.exists():
 
 
 app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+
+
 
 
 
