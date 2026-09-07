@@ -1,0 +1,254 @@
+/* ════════════ 古典油画换皮（纯视觉层，不改任何逻辑）════════════
+   把宝宝给的 moonlight-ui.css 类名映射到月光现有DOM：
+   .login→开场页 / .plugin-item→插件卡 / .msg→气泡 / #moonBottomNav→底栏 */
+/* ═══ 1. 开场/登录页 → 古典油画卡片 ═══ */
+.login{
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 20px calc(42px + env(safe-area-inset-bottom));
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255,255,255,.72), transparent 34%),
+    radial-gradient(circle at 8% 90%, rgba(190,113,126,.12), transparent 23%),
+    linear-gradient(180deg, #f9f1ec, #f2dfd8) !important;
+}
+.login::before{
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .22;
+  background-image: radial-gradient(rgba(90,55,48,.13) .6px, transparent .7px);
+  background-size: 7px 7px;
+  mix-blend-mode: multiply;
+}
+/* 金色复古相框卡片 */
+.login > .orb{
+  width: 94px !important;
+  height: 94px !important;
+  margin: 0 auto 18px !important;
+  border-radius: 50% !important;
+  position: static !important;
+  background:
+    radial-gradient(circle at 36% 30%, #fff6e0, #e4d3ad 55%, #9b7c50) !important;
+  box-shadow:
+    0 0 0 8px rgba(255,250,246,.7),
+    0 0 0 9px rgba(185,154,105,.28),
+    0 14px 30px rgba(54,46,44,.15) !important;
+  animation: ml-float 4.5s ease-in-out infinite !important;
+}
+.login h1{
+  font-family: "Cormorant Garamond", "Baskerville", "Noto Serif SC", "Songti SC", serif !important;
+  font-size: clamp(42px, 12vw, 58px) !important;
+  font-weight: 500 !important;
+  font-style: italic;
+  color: #74404a !important;
+  letter-spacing: .03em !important;
+  text-shadow: none !important;
+  animation: ml-reveal 1.15s cubic-bezier(.22,.75,.25,1) both !important;
+}
+.login .sub{
+  color: #9b8580 !important;
+  font-size: 13px !important;
+  letter-spacing: .12em !important;
+  max-width: 290px;
+  text-align: center;
+  line-height: 1.8;
+  animation: ml-reveal 1.15s .12s cubic-bezier(.22,.75,.25,1) both !important;
+}
+/* 表单容器变相框卡片 */
+.login form{
+  width: min(100%, 340px);
+  padding: 22px 20px 20px;
+  margin-top: 14px;
+  border: 1px solid rgba(185,154,105,.55);
+  border-radius: 30px;
+  background: linear-gradient(145deg, rgba(255,251,247,.96), rgba(250,237,230,.88));
+  box-shadow: 0 25px 70px rgba(89,53,47,.16);
+  position: relative;
+  animation: ml-card-in .95s cubic-bezier(.2,.8,.2,1) both !important;
+}
+.login form::before,
+.login form::after{
+  content: "";
+  position: absolute;
+  width: 80px; height: 80px;
+  border: 1px solid rgba(185,154,105,.55);
+  pointer-events: none;
+}
+.login form::before{ top:12px; left:12px; border-right:0; border-bottom:0; border-radius:22px 0 0 0; }
+.login form::after{ right:12px; bottom:12px; border-left:0; border-top:0; border-radius:0 0 22px 0; }
+.login input#secretInput{
+  width: 100% !important;
+  min-height: 54px !important;
+  border: 1px solid rgba(185,154,105,.35) !important;
+  border-radius: 16px !important;
+  padding: 0 18px !important;
+  color: #4d3434 !important;
+  background: rgba(255,255,255,.6) !important;
+  box-shadow: inset 0 1px 2px rgba(70,40,35,.04) !important;
+  font-family: "Noto Serif SC","Songti SC",serif !important;
+  transition: .25s ease !important;
+}
+.login input#secretInput:focus{
+  border-color: #b99a69 !important;
+  box-shadow: 0 0 0 4px rgba(185,154,105,.11) !important;
+  outline: none !important;
+}
+.login button[type="submit"]{
+  width: 100% !important;
+  min-height: 54px !important;
+  margin-top: 14px !important;
+  border: 0 !important;
+  border-radius: 17px !important;
+  color: #fffaf6 !important;
+  background: linear-gradient(135deg, #b45e6c, #9f4d5c) !important;
+  box-shadow: 0 10px 24px rgba(159,77,92,.2) !important;
+  font-family: "Noto Serif SC","Songti SC",serif !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  letter-spacing: .2em;
+}
+.login button[type="submit"]:active{ transform: translateY(1px) scale(.99); }
+/* 金色装饰线（副标题下） */
+.login .sub::after{
+  content: "☾  ✦  ❦  ✦  ☽";
+  display: block;
+  margin-top: 12px;
+  color: #b99a69;
+  font-size: 12px;
+  letter-spacing: .22em;
+}
+
+/* ═══ 2. 聊天页 → 奶油纸+暗玫瑰 ═══ */
+.app .wall{
+  background:
+    radial-gradient(circle at 80% 12%, rgba(219,166,173,.16), transparent 22%),
+    radial-gradient(circle at 10% 55%, rgba(255,255,255,.85), transparent 28%),
+    linear-gradient(180deg, #faf4ef, #f0dfd8) !important;
+  background-color: transparent !important;
+}
+.app[data-theme="mucha"] .wall,
+.app .wall{ background-image: linear-gradient(180deg,#faf4ef,#f0dfd8) !important; }
+/* 顶栏 */
+.topbar{
+  background: rgba(255,250,246,.74) !important;
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(185,154,105,.3) !important;
+}
+.topbar .peerpill .name{
+  color: #74404a !important;
+  font-family: "Noto Serif SC","Songti SC",serif !important;
+  text-shadow: none !important;
+}
+.topbar .peerpill .status{ color: #9b8580 !important; }
+.backbtn, .topbtn{ color: #74404a !important; }
+/* 气泡 */
+#msgs .msg, .msg{
+  border: 1px solid rgba(185,154,105,.24) !important;
+  box-shadow: 0 8px 22px rgba(85,53,45,.07) !important;
+  font-family: "Noto Serif SC","Songti SC",serif;
+}
+#msgs .msg.ai, .msg.ai{
+  background: rgba(255,251,247,.88) !important;
+  border-radius: 18px 18px 18px 7px !important;
+}
+#msgs .msg.human, .msg.human{
+  background: rgba(232,199,204,.67) !important;
+  border-radius: 18px 18px 7px 18px !important;
+}
+/* 输入区胶囊 */
+.composer .field, .composer{
+  border-color: rgba(185,154,105,.34) !important;
+  background: rgba(255,250,246,.9) !important;
+}
+/* ═══ 3. 插件小屋 → 古典双列卡 ═══ */
+#pluginPanel .side-panel-content{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(220,189,151,.22), transparent 24%),
+    radial-gradient(circle at 0% 20%, rgba(221,166,173,.13), transparent 22%),
+    linear-gradient(180deg, #fbf5f0, #f5e5de) !important;
+}
+#pluginList{
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 12px !important;
+}
+#pluginList .plugin-item{
+  flex-direction: column !important;
+  align-items: stretch !important;
+  min-height: 154px;
+  position: relative;
+  padding: 17px 14px 14px !important;
+  border: 1px solid rgba(185,154,105,.42) !important;
+  border-radius: 19px !important;
+  background: linear-gradient(145deg, rgba(255,252,248,.93), rgba(249,236,228,.82)) !important;
+  box-shadow: 0 10px 28px rgba(94,57,48,.08) !important;
+  overflow: hidden;
+}
+#pluginList .plugin-item::before,
+#pluginList .plugin-item::after{
+  content: "";
+  position: absolute;
+  width: 34px; height: 34px;
+  border: 1px solid rgba(185,154,105,.48);
+  pointer-events: none;
+}
+#pluginList .plugin-item::before{ left:6px; top:6px; border-right:0; border-bottom:0; border-radius:12px 0 0 0; }
+#pluginList .plugin-item::after{ right:6px; bottom:6px; border-left:0; border-top:0; border-radius:0 0 12px 0; }
+#pluginList .plugin-item:active{ transform: scale(.985); }
+#pluginList .plugin-name{
+  color: #4d3434 !important;
+  font-family: "Noto Serif SC","Songti SC",serif !important;
+}
+#pluginList .plugin-sub{ color: #9b8580 !important; }
+#pluginList .plugin-actions{ display:flex; gap:6px; margin-top:auto; }
+#pluginList .plugin-actions button{
+  border-radius: 12px !important;
+  border: 1px solid rgba(185,154,105,.42) !important;
+  background: rgba(255,250,246,.74) !important;
+  color: #74404a !important;
+  font-size: 12px;
+}
+#pluginList .plugin-actions button.danger{
+  color: #a4938d !important;
+}
+
+/* ═══ 4. 底部导航 → 古典奶油 ═══ */
+#moonBottomNav{
+  background: rgba(255,249,245,.88) !important;
+  border-top: 1px solid rgba(185,154,105,.3) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 -8px 28px rgba(80,50,44,.06);
+}
+#moonBottomNav .mbn-item{ color: #a3918b !important; font-family: "Noto Serif SC","Songti SC",serif !important; }
+#moonBottomNav .mbn-item .lb{ color: inherit !important; }
+#moonBottomNav .mbn-item.active{ color: #b05a68 !important; opacity: 1 !important; }
+#moonBottomNav .mbn-item.active .lb{ color: #b05a68 !important; }
+#moonBottomNav .mbn-item.active .ic{ filter: drop-shadow(0 3px 7px rgba(176,90,104,.2)); }
+
+/* ═══ 面板通用 → 奶油纸 ═══ */
+.side-panel-content{
+  background: linear-gradient(180deg, #fbf5f0, #f5e5de) !important;
+}
+.side-panel-title{ color: #74404a !important; font-family: "Noto Serif SC","Songti SC",serif !important; }
+.side-panel-sub{ color: #9b8580 !important; }
+
+/* ═══ 动画 ═══ */
+@keyframes ml-card-in{
+  from{ opacity:0; transform: translateY(22px) scale(.975); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+@keyframes ml-reveal{
+  from{ opacity:0; transform: translateY(14px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+@keyframes ml-float{
+  0%,100%{ transform: translateY(0); }
+  50%{ transform: translateY(-8px); }
+}
