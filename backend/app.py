@@ -1480,7 +1480,12 @@ async def app_sessions(request: Request):
 @app.post("/app/sessions")
 async def app_sessions_create(request: Request):
     check_auth(request)
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
     if "since_id" not in body:
         try:
             with db() as conn:
