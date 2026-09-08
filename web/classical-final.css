@@ -75,34 +75,42 @@
 /* ── 古典金色画框（整个内容包在框内——用form+orb+h1+sub共用背景做不到，改为form本身大画框） ── */
 .login form{
   width: min(100%, 358px) !important;
-  padding: 26px 22px 24px !important;
+  padding: 24px 20px 22px !important;
   margin-top: 12px !important;
-  border: 1.5px solid rgba(199,164,106,.8) !important;
-  border-radius: 6px !important;
+  border: 1px solid rgba(199,164,106,.65) !important;
+  border-radius: 14px !important;
   background:
-    linear-gradient(180deg, rgba(255,248,242,.4), rgba(248,238,231,.82) 26%, rgba(250,240,232,.92)) !important;
-  backdrop-filter: blur(6px);
+    linear-gradient(180deg, rgba(255,248,242,.55), rgba(250,242,234,.93)) !important;
+  backdrop-filter: blur(8px);
   box-shadow:
-    0 0 0 3px rgba(40,48,61,.55),
-    0 0 0 4.5px rgba(199,164,106,.85),
-    0 0 0 5.5px rgba(228,201,149,.35),
-    0 34px 90px rgba(15,20,28,.6),
-    inset 0 0 46px rgba(255,236,220,.4) !important;
+    0 0 0 3px rgba(199,164,106,.4),
+    0 26px 70px rgba(15,20,28,.5),
+    inset 0 0 34px rgba(255,236,220,.45) !important;
   animation: mln-frame-in 1s cubic-bezier(.22,1,.36,1) 1.05s both !important;
+}
+/* 整体大画框：把头像+标题+欢迎语+表单都框住（描在.login上，避开底部） */
+.login::after{
+  display:block !important;
+  position:absolute !important;
+  inset: 12px 10px 88px !important;
+  background:none !important;
+  border: 1.5px solid rgba(199,164,106,.75);
+  border-radius: 8px;
+  outline: 1px solid rgba(199,164,106,.4);
+  outline-offset: 4px;
+  pointer-events:none;
+  z-index:3;
+  animation: none !important;
+  transform:none !important;
+  background-image:none !important;
 }
 @keyframes mln-frame-in{
   from{ opacity:0; transform: translateY(18px) scale(1.035); }
   to{ opacity:1; transform: translateY(0) scale(1); }
 }
 /* 框内四角❀饰 */
-.login form::before{
-  content:"❀"; position:absolute; top:8px; left:12px;
-  font-size:13px; color:rgba(199,164,106,.7); display:block !important;
-}
-.login form::after{
-  content:"❀"; position:absolute; bottom:8px; right:12px;
-  font-size:13px; color:rgba(199,164,106,.7); transform:rotate(180deg);
-}
+.login form::before{ display:none !important; }
+.login form::after{ display:none !important; }
 
 /* ── 头像（blur→clear, 金圈） ── */
 .login > .orb{
@@ -125,19 +133,21 @@
 /* ── Moonlight 标题 + stagger ── */
 .login h1{
   font-family: "Cormorant Garamond","Playfair Display","Noto Serif SC",serif !important;
-  font-size: clamp(38px, 11vw, 46px) !important;
+  font-size: clamp(40px, 11.5vw, 48px) !important;
   font-style: italic !important;
-  font-weight: 500 !important;
-  color: #6d4a45 !important;
+  font-weight: 600 !important;
+  color: #f5e3cf !important;
+  text-shadow: 0 2px 14px rgba(20,16,24,.75), 0 0 30px rgba(228,201,149,.35) !important;
   margin: 0 0 2px !important;
   animation: mln-brand-in .9s 1.9s cubic-bezier(.22,1,.36,1) both !important;
 }
 .login h1::after{ content:none !important; }
 .login .sub{
-  color: #8e7775 !important;
-  font-size: 12px !important;
-  letter-spacing: .18em !important;
+  color: #f0ddc8 !important;
+  font-size: 13px !important;
+  letter-spacing: .16em !important;
   line-height: 1.9;
+  text-shadow: 0 1px 10px rgba(20,16,24,.85) !important;
   animation: mln-brand-in .9s 2.1s cubic-bezier(.22,1,.36,1) both !important;
 }
 .login .sub::before{ content:none !important; }
