@@ -1,0 +1,130 @@
+/* ════════════ 第八阶段 · 固定比例画布（spec v9）════════════
+   核心思路：不再逐个元素调大小，而是把欢迎页建成一个100dvh画布，
+   五区域按纵向比例分配：图片27-30% / 标题+装饰+欢迎语 / 表单轻量。
+   所有元素同时缩放、同时保持比例。 */
+
+.login{
+  width: 100% !important;
+  height: 100dvh !important;          /* 完整手机可视区=一张画布 */
+  max-height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 10px) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  /* 古典纸张底色（米白淡粉香槟金） */
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,249,244,.85), transparent 42%),
+    radial-gradient(ellipse at 0% 20%, rgba(221,199,159,.16), transparent 32%),
+    radial-gradient(ellipse at 100% 14%, rgba(221,199,159,.2), transparent 34%),
+    radial-gradient(ellipse at 50% 112%, rgba(224,180,188,.24), transparent 44%),
+    linear-gradient(180deg, #f7eee8 0%, #f4e9e1 58%, #efe0d8 100%) !important;
+}
+
+/* ── 区域1：椭圆图片框（页面上方27-30%高度，宽45-50%内容宽） ── */
+.login > .orb{
+  width: 46% !important;
+  max-width: 172px !important;
+  height: 28% !important;
+  max-height: 220px !important;
+  min-height: 150px !important;
+  border-radius: 50% / 46% 46% 50% 50% !important;
+  margin: 4px auto 0 !important;
+  flex-shrink: 0 !important;
+  background:
+    radial-gradient(ellipse at 40% 30%, #f0dcc8, #dbb895 60%, #b99a69) !important;
+  box-shadow:
+    0 0 0 1.5px rgba(185,154,105,.7),
+    0 0 0 5px rgba(255,249,244,.85),
+    0 0 0 6.5px rgba(185,154,105,.45),
+    0 10px 28px rgba(74,49,54,.16) !important;
+  animation: mlv-fade .9s .3s ease-out both !important;
+}
+
+/* ── 区域2：Moonlight标题（视觉中心，垂直中部偏上，保持大比例） ── */
+.login h1{
+  font-size: clamp(44px, 12vw, 54px) !important;
+  margin: auto 0 0 !important;      /* margin-top:auto 把标题推到中部偏上 */
+  flex-shrink: 0 !important;
+  animation: mlv-fade .9s .6s ease-out both !important;
+}
+
+/* ── 区域3：装饰线+欢迎文字 ── */
+.login .gold-line{
+  margin: 14px auto 12px !important;
+  flex-shrink: 0 !important;
+  animation: mlv-fade .8s .85s ease-out both !important;
+}
+.login .sub{
+  margin: 0 auto !important;
+  flex-shrink: 0 !important;
+  animation: mlv-fade .8s 1s ease-out both !important;
+}
+
+/* ── 区域4：密码表单（小而轻，宽度80-84%内容区，不贴底不吃空间） ── */
+.login form{
+  width: 82% !important;
+  max-width: 420px !important;
+  margin: auto auto 0 !important;   /* margin-top:auto 把表单推到底部区域 */
+  padding: 14px 16px 12px !important;
+  border-radius: 12px !important;
+  background: rgba(255,249,244,.6) !important;
+  box-shadow:
+    0 0 0 1px rgba(185,154,105,.4),
+    0 8px 22px rgba(74,49,54,.08) !important;
+  flex-shrink: 0 !important;
+  animation: mlv-fade .8s 1.2s ease-out both !important;
+}
+.login input#secretInput{
+  height: 46px !important;
+  min-height: 46px !important;
+  margin-bottom: 10px !important;
+  font-size: 14px !important;
+}
+.login button[type="submit"]{
+  height: 46px !important;
+  min-height: 46px !important;
+  font-size: 14px !important;
+  letter-spacing: .2em !important;
+}
+.login .err{
+  margin: 3px 0 0 !important;
+  font-size: 10.5px !important;
+  line-height: 1.3 !important;
+}
+
+/* ── 动画顺序照spec五阶段 ──
+   1. 纸张背景（页面本体，立即）
+   2. 椭圆图片框 0.3s
+   3. Moonlight 0.6s
+   4. 装饰线0.85s + 欢迎文字1s
+   5. 密码框+按钮整体 1.2s（从淡到实） */
+
+/* ── 外框装饰线保留 ── */
+.login::after{
+  display:block !important;
+  position:absolute !important;
+  inset: 12px 10px 12px !important;
+  background:none !important;
+  border: 1px solid rgba(185,154,105,.5);
+  border-radius: 4px;
+  pointer-events:none;
+  z-index:3;
+  opacity: 1 !important;
+  animation: none !important;
+}
+.login::before{ display:none !important; }
+
+/* ── 隐藏旧装饰 ── */
+.login .login-roses, .login .login-gem{ display:none !important; }
+.login form::before, .login form::after{ display:none !important; }
+
+/* ── 底部导航隐藏（沿用） ── */
+#login:not(.hidden) ~ #moonBottomNav{ display:none !important; }
+body:has(#login:not(.hidden)) #moonBottomNav{ display:none !important; }
+
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; opacity:1 !important; transform:none !important; filter:none !important; }
+}
