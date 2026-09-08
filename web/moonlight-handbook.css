@@ -134,3 +134,10 @@
 /* 覆盖旧版元素：花丛/宝石/星星全关（本版纯净旧纸张） */
 .login .login-roses{ display:none !important; }
 .login .login-gem{ display:none !important; }
+
+/* ═══ 欢迎页显示时隐藏App底部导航（利用现有.hidden状态） ═══
+   DOM: body > #login + #wall + #app + ... + nav#moonBottomNav
+   欢迎页= #login不带.hidden；进入App后 #login被加.hidden */
+#login:not(.hidden) ~ #moonBottomNav{ display:none !important; }
+/* 兜底：也支持has选择器（新浏览器） */
+body:has(#login:not(.hidden)) #moonBottomNav{ display:none !important; }
