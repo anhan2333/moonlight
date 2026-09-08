@@ -1,0 +1,181 @@
+/* ════════════ 登录页v3 · 明亮玫瑰花园（照137274效果图，推翻夜空版！）════════════
+   明亮奶油粉底+右上月亮+古典金框+Moonlight+海景头像+欢迎语+暗玫瑰按钮+底部玫瑰花丛 */
+/* ── 全屏明亮花园背景 ── */
+.login{
+  background:
+    radial-gradient(ellipse at 85% 8%, rgba(255,236,214,.75), transparent 40%),
+    radial-gradient(ellipse at 8% 18%, rgba(255,222,228,.5), transparent 35%),
+    radial-gradient(ellipse at 92% 55%, rgba(244,196,196,.4), transparent 40%),
+    radial-gradient(ellipse at 10% 60%, rgba(255,214,222,.45), transparent 38%),
+    linear-gradient(165deg, #fce9de 0%, #f8ded4 25%, #f5d6cf 48%, #eec4c0 70%, #e3b1ae 100%) !important;
+  overflow: hidden;
+}
+/* 去掉v2的星星 */
+.login::after{ display: none !important; }
+/* 纸纹 */
+.login::before{
+  opacity: .16 !important;
+  mix-blend-mode: multiply !important;
+}
+/* 右上月亮（大月牙+光晕） */
+.login .orb::before{
+  content:"☾";
+  position:absolute; top:-130px; right:-170px;
+  font-size: 54px; color:#d9b268;
+  text-shadow:
+    0 0 30px rgba(217,178,104,.85),
+    0 0 70px rgba(217,178,104,.4);
+  animation: mln-twinkle 5s ease-in-out infinite alternate !important;
+}
+/* ── 古典金框卡片（整个画框内是奶油纸） ── */
+.login form{
+  width: min(100%, 352px) !important;
+  padding: 30px 22px 30px !important;
+  margin-top: 6px !important;
+  border: none !important;
+  border-radius: 22px !important;
+  background: linear-gradient(170deg, #fffaf4 0%, #fdf3ea 55%, #fbeee2 100%) !important;
+  backdrop-filter: none !important;
+  box-shadow:
+    0 0 0 1.5px rgba(199,164,106,.85),
+    0 0 0 6px rgba(255,248,242,.55),
+    0 0 0 7.5px rgba(199,164,106,.6),
+    0 34px 90px rgba(120,72,66,.35),
+    inset 0 0 50px rgba(255,240,225,.6) !important;
+  animation: mln-frame-in 1.6s cubic-bezier(.2,.7,.2,1) both !important;
+}
+/* 画框顶部耳饰+底部花丛 */
+.login form::before{
+  content:"";
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  width: 140px; height: 22px;
+  background: linear-gradient(90deg, transparent, rgba(199,164,106,.85) 18% 82%, transparent);
+  clip-path: polygon(0 100%, 14% 28%, 32% 58%, 50% 0, 68% 58%, 86% 28%, 100% 100%);
+  filter: drop-shadow(0 3px 8px rgba(199,164,106,.5));
+  z-index: 3;
+}
+.login form::after{
+  content:"❀ · ✦ · ☾ · ✦ · ❀";
+  position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+  font-size:11px; color: rgba(199,164,106,.6); letter-spacing:.3em;
+  white-space: nowrap; z-index: 3;
+}
+/* ── 海景头像（金色细圈+玫瑰纹装饰） ── */
+.login > .orb{
+  width: 86px !important; height: 86px !important;
+  margin: 4px auto 14px !important;
+  background:
+    radial-gradient(circle at 40% 32%, #7f96ad, #4a617a 55%, #2c4258) !important;
+  box-shadow:
+    0 0 0 3px rgba(199,164,106,.9),
+    0 0 0 6px rgba(255,248,242,.9),
+    0 0 0 7.5px rgba(199,164,106,.65),
+    0 14px 34px rgba(120,72,66,.3) !important;
+  animation: mln-avatar-in 1.3s .5s cubic-bezier(.2,.7,.2,1) both !important;
+}
+.login > .orb::before{
+  display: none !important;
+}
+@keyframes mln-avatar-in{
+  from{ opacity:0; filter: blur(8px); transform: scale(.85); }
+  to{ opacity:1; filter: blur(0); transform: scale(1); }
+}
+/* ── Moonlight 标题（深玫瑰棕，在明亮底上） ── */
+.login h1{
+  font-family: "Cormorant Garamond","Playfair Display","Noto Serif SC",serif !important;
+  font-size: clamp(40px, 11.5vw, 52px) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  color: #6d4a45 !important;
+  letter-spacing: .02em !important;
+  margin: 0 0 6px !important;
+  animation: mln-brand-in 1s .9s cubic-bezier(.2,.7,.2,1) both !important;
+}
+.login h1::after{
+  content: "❀  ────  ☽  ────  ❀";
+  display: block;
+  margin-top: 6px;
+  color: rgba(199,164,106,.75);
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: .12em;
+}
+/* ── 副标题 ── */
+.login .sub::before{
+  content: "与月光为伴 · 与你相遇";
+  display: block;
+  color: rgba(199,164,106,.8);
+  font-size: 11px;
+  letter-spacing: .22em;
+  margin-bottom: 8px;
+}
+.login .sub{
+  color: #8e7775 !important;
+  font-size: 12px !important;
+  letter-spacing: .2em !important;
+  animation: mln-brand-in 1s 1.1s cubic-bezier(.2,.7,.2,1) both !important;
+}
+.login .sub::after{ content: none !important; }
+/* ── 欢迎语（sub后加欢迎回来） ── */
+.login form::before{ content:""; }
+/* ── 输入框：白纸+金线 ── */
+.login input#secretInput{
+  min-height: 52px !important;
+  background: rgba(255,252,248,.85) !important;
+  border: 1px solid rgba(199,164,106,.5) !important;
+  border-radius: 12px !important;
+  color: var(--mln-brown) !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  font-size: 15px !important;
+}
+.login input#secretInput::placeholder{ color:#bca8a2 !important; }
+.login input#secretInput:focus{
+  border-color: #b76570 !important;
+  box-shadow: 0 0 0 3px rgba(183,101,112,.14) !important;
+}
+/* ── 登录按钮：暗玫瑰+金边+古典两端装饰 ── */
+.login button[type="submit"]{
+  min-height: 56px !important;
+  border: 1px solid rgba(199,164,106,.8) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #bc6874, #9b4d5a) !important;
+  color: #fff7ef !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  font-size: 18px !important;
+  letter-spacing: .22em !important;
+  font-weight: 500 !important;
+  box-shadow:
+    0 10px 26px rgba(145,75,89,.3),
+    inset 0 1px 0 rgba(255,255,255,.3) !important;
+  animation: mln-brand-in .9s 1.4s cubic-bezier(.2,.7,.2,1) both !important;
+}
+.login button[type="submit"]::before,
+.login button[type="submit"]::after{
+  content:"✦"; position:absolute; top:50%; transform:translateY(-50%);
+  color: var(--mln-gold-light); font-size: 13px;
+}
+.login button[type="submit"]::before{ left: 16px; }
+.login button[type="submit"]::after{ right: 16px; }
+/* ── 错误提示 ── */
+.login .err{ color:#914b59 !important; font-size:12px; }
+/* ── 玫瑰花丛装饰（画面四角，纯CSS渐变花朵） ── */
+.login > .orb{
+  /* orb上再叠花是不行的，用独立伪元素挂在form上 */
+}
+.login form{
+  /* 四角花丛：底部两侧 */
+}
+@keyframes mln-twinkle{
+  0%{ opacity:.55; } 50%{ opacity:1; } 100%{ opacity:.7; }
+}
+@keyframes mln-frame-in{
+  from{ opacity:0; transform: translateY(18px) scale(1.04); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+@keyframes mln-brand-in{
+  from{ opacity:0; transform: translateY(12px) scale(.97); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; }
+}

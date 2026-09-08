@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="moonlight-ui.css">
 <link rel="stylesheet" href="classical-skin.css">
 <link rel="stylesheet" href="classical-skin2.css">
+<link rel="stylesheet" href="classical-skin3.css">
 <link rel="stylesheet" href="effect-skin.css">
 <script src="intro_gate.js"></script>
 <link rel="preload" href="chat-light.webp" as="image" fetchpriority="high">
@@ -2218,7 +2219,7 @@
 <div class="login" id="login">
   <div class="orb"></div>
   <h1>Moonlight</h1>
-  <p class="sub">与月光为伴 · 与你相遇</p>
+  <p class="sub">欢迎回来，<br>愿月光照见你此刻的每一次思考。</p>
   <form id="loginForm" autocomplete="off">
     <input id="secretInput" type="password" inputmode="text" placeholder="连接密钥" autocomplete="off" spellcheck="false">
     <button type="submit">连接</button>
@@ -2740,7 +2741,7 @@ function applyIdentity(){
   const setText = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
   const setAttr = (sel, a, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(a, val); };
   setText(".login h1", "Moonlight");
-  { const sub = document.querySelector(".login .sub"); if (sub) sub.innerHTML = "与月光为伴 · 与你相遇"; }
+  { const sub = document.querySelector(".login .sub"); if (sub) sub.innerHTML = "欢迎回来，<br>愿月光照见你此刻的每一次思考。"; }
   const emp = document.querySelector("#empty p"); if (emp) emp.innerHTML = "这里只有你和" + AI_NAME + "。<br>说点什么吧。";
   setText(".call-name", AI_NAME);
   setAttr("#callAvatarImg", "aria-label", AI_NAME);

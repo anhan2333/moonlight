@@ -32,6 +32,7 @@
     document.head.appendChild(s);
   }
 
+  window.openPluginPanelFixed = openPluginPanelFixed;
   function openPluginPanelFixed(){
     var p = document.getElementById('pluginPanel');
     if (p){ p.classList.remove('hidden'); p.setAttribute('aria-hidden','false'); }
@@ -44,14 +45,13 @@
       });
       return;
     }
-    var fn = { memsky:'openMemSkyPanel', plugin:'openPluginPanelFixed', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
-    if (fn && typeof window[fn] === 'function'){
-      // 先关已开的
-      document.querySelectorAll('.side-panel:not(.hidden)').forEach(function(p){
-        var c = p.querySelector('.side-panel-close'); if (c) c.click();
-      });
-      setTimeout(function(){ window[fn](); }, 80);
-    }
+    // 先关已开的
+    document.querySelectorAll('.side-panel:not(.hidden)').forEach(function(p){
+      var c = p.querySelector('.side-panel-close'); if (c) c.click();
+    });
+    if (id === 'plugin'){ setTimeout(openPluginPanelFixed, 80); return; }
+    var fn = { memsky:'openMemSkyPanel', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
+    if (fn){ setTimeout(function(){ if (typeof window[fn] === 'function') window[fn](); }, 80); }
   }
 
   function mark(id){
