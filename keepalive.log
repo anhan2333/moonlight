@@ -1,1 +1,4 @@
 [09-08 14:06:44] keepalive daemon started (60s interval)
+[09-08 14:22:47] backend DOWN -> restarting
+[09-08 14:22:47] killed stale backend pid=25630
+[09-08 14:22:47] backend started
