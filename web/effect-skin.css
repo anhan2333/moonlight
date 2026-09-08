@@ -1,0 +1,119 @@
+/* ════════════ v3 效果图版（137658/137661/137662）════════════
+   三处大改：聊天页奶油+金线双列 / 底部导航金线描边 / 主面板玫瑰金卡片 */
+
+/* ═══ A. 聊天页（照137658：奶油纸+花朵角+金线边框气泡+衬线） ═══ */
+/* 消息滚动区背景：奶油纸+淡粉角落光 */
+.scroll, .app .scroll{
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(232,205,190,.4), transparent 40%),
+    radial-gradient(ellipse at 0% 100%, rgba(232,205,190,.3), transparent 38%),
+    linear-gradient(180deg, #fdf6ef, #f9ece4) !important;
+}
+/* 气泡：金线细框+古典圆角+奶油底 */
+.row.ai .bubble{
+  background: linear-gradient(160deg, #fffbf6, #f9efe5) !important;
+  border: 1px solid rgba(199,164,106,.45) !important;
+  border-radius: 16px 16px 16px 5px !important;
+  box-shadow: 0 6px 18px rgba(94,57,48,.08) !important;
+  color: #50383a !important;
+  position: relative;
+}
+.row.ai .bubble::after{
+  content:"❀";
+  position:absolute; left:-7px; bottom:4px;
+  font-size:9px; color:rgba(199,164,106,.6);
+}
+.row.human .bubble{
+  background: linear-gradient(160deg, #f3d7da, #eeccc9) !important;
+  border: 1px solid rgba(183,101,112,.4) !important;
+  border-radius: 16px 16px 5px 16px !important;
+  box-shadow: 0 6px 18px rgba(145,75,89,.1) !important;
+  color: #5d3a42 !important;
+}
+.row.human .bubble::after{
+  content:"❀";
+  position:absolute; right:-7px; bottom:4px;
+  font-size:9px; color:rgba(183,101,112,.55);
+}
+/* 顶栏：奶油+金线 */
+.topbar{
+  background: linear-gradient(180deg, #fdf6ef, #fbf1e9) !important;
+  border-bottom: 1px solid rgba(199,164,106,.4) !important;
+}
+.topbar .peerpill .name{
+  color:#50383a !important;
+  font-family: "Cormorant Garamond","Noto Serif SC",serif !important;
+  font-size: 21px !important;
+}
+/* 输入栏：白纸胶囊+金线 */
+.composer .field, .composer{
+  background: rgba(255,250,244,.94) !important;
+  border: 1px solid rgba(199,164,106,.5) !important;
+}
+.composer button[type="submit"], .composer .send{
+  background: linear-gradient(180deg,#bc6874,#9b4d5a) !important;
+  border: 1px solid rgba(199,164,106,.7) !important;
+}
+
+/* ═══ B. 主面板（设置/资料）照137661：奶油底+玫瑰金卡片+衬线标题 ═══ */
+.profile-panel .settings-card, .settings-card, .profile-scroll section{
+  background: linear-gradient(160deg, #fffbf6, #f7ece3) !important;
+  border: 1px solid rgba(199,164,106,.42) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(94,57,48,.07) !important;
+}
+.settings-label, .profile-scroll .settings-label{
+  color: #914b59 !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  letter-spacing: .08em;
+}
+.profile-panel, .profile-scroll{
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(232,205,190,.35), transparent 42%),
+    linear-gradient(180deg, #fdf6ef, #f8ebe2) !important;
+}
+.profile-identity h3, .profile-name-row h3{
+  color:#50383a !important;
+  font-family: "Cormorant Garamond","Noto Serif SC",serif !important;
+}
+.profile-bio{ color:#8e7775 !important; }
+/* 分段控件：珍珠/海港那种 → 改奶油+玫瑰高亮 */
+.segmented{
+  background: rgba(246,231,223,.8) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(199,164,106,.35) !important;
+}
+.segmented button{
+  border-radius: 10px !important;
+  color: #8e7775 !important;
+  font-family: "Noto Serif SC",serif !important;
+}
+.segmented button.on, .segmented button.active, .segmented button[aria-pressed="true"]{
+  background: linear-gradient(135deg,#bc6874,#9b4d5a) !important;
+  color: #fff7ef !important;
+  box-shadow: 0 4px 12px rgba(145,75,89,.2) !important;
+}
+
+/* ═══ C. 底部导航（照137661底部：奶油+金线上边+衬线+玫瑰高亮） ═══ */
+#moonBottomNav{
+  background: linear-gradient(180deg, #fdf6ef, #fbf1e9) !important;
+  border-top: 1px solid rgba(199,164,106,.45) !important;
+}
+#moonBottomNav .mbn-item .lb{
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  letter-spacing: .06em;
+}
+#moonBottomNav .mbn-item{ color:#a3918b !important; }
+#moonBottomNav .mbn-item.active{ color:#914b59 !important; }
+#moonBottomNav .mbn-item.active .ic{
+  filter: drop-shadow(0 2px 6px rgba(145,75,89,.3));
+}
+
+/* ═══ D. 面板标题衬线化 ═══ */
+.side-panel-title{
+  font-family: "Cormorant Garamond","Noto Serif SC",serif !important;
+  color:#50383a !important;
+  font-size: 24px !important;
+  letter-spacing: .04em;
+}
+.side-panel-sub{ color:#8e7775 !important; letter-spacing:.14em; font-size:11px !important; }
