@@ -64,25 +64,31 @@
 /* 表单容器变相框卡片 */
 .login form{
   width: min(100%, 340px);
-  padding: 22px 20px 20px;
+  padding: 26px 22px 22px;
   margin-top: 14px;
-  border: 1px solid rgba(185,154,105,.55);
-  border-radius: 30px;
-  background: linear-gradient(145deg, rgba(255,251,247,.96), rgba(250,237,230,.88));
-  box-shadow: 0 25px 70px rgba(89,53,47,.16);
+  border: 2px solid rgba(185,154,105,.75);
+  border-radius: 26px;
+  outline: 1px solid rgba(185,154,105,.3);
+  outline-offset: 4px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.6), transparent 60%),
+    linear-gradient(145deg, rgba(255,251,247,.97), rgba(249,235,227,.92));
+  box-shadow:
+    0 25px 70px rgba(89,53,47,.18),
+    inset 0 0 0 4px rgba(255,250,246,.7),
+    inset 0 0 0 5px rgba(185,154,105,.35);
   position: relative;
   animation: ml-card-in .95s cubic-bezier(.2,.8,.2,1) both !important;
 }
 .login form::before,
 .login form::after{
-  content: "";
+  font-size: 15px;
+  color: rgba(185,154,105,.85);
   position: absolute;
-  width: 80px; height: 80px;
-  border: 1px solid rgba(185,154,105,.55);
   pointer-events: none;
 }
-.login form::before{ top:12px; left:12px; border-right:0; border-bottom:0; border-radius:22px 0 0 0; }
-.login form::after{ right:12px; bottom:12px; border-left:0; border-top:0; border-radius:0 0 22px 0; }
+.login form::before{ content:"❀"; top:8px; left:12px; }
+.login form::after{ content:"❀"; right:12px; bottom:8px; transform: rotate(180deg); }
 .login input#secretInput{
   width: 100% !important;
   min-height: 54px !important;
@@ -116,6 +122,15 @@
 }
 .login button[type="submit"]:active{ transform: translateY(1px) scale(.99); }
 /* 金色装饰线（副标题下） */
+.login h1::after{
+  content: "❀  ───  ☾  ───  ❀";
+  display: block;
+  margin-top: 8px;
+  color: #b99a69;
+  font-size: 13px;
+  font-style: normal;
+  letter-spacing: .1em;
+}
 .login .sub::after{
   content: "☾  ✦  ❦  ✦  ☽";
   display: block;

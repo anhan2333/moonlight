@@ -32,6 +32,10 @@
     document.head.appendChild(s);
   }
 
+  function openPluginPanelFixed(){
+    var p = document.getElementById('pluginPanel');
+    if (p){ p.classList.remove('hidden'); p.setAttribute('aria-hidden','false'); }
+  }
   function openPanel(id){
     // 聊天 = 关掉所有面板回聊天
     if (id === 'chat'){
@@ -40,7 +44,7 @@
       });
       return;
     }
-    var fn = { memsky:'openMemSkyPanel', plugin:'openPluginPanel', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
+    var fn = { memsky:'openMemSkyPanel', plugin:'openPluginPanelFixed', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
     if (fn && typeof window[fn] === 'function'){
       // 先关已开的
       document.querySelectorAll('.side-panel:not(.hidden)').forEach(function(p){
