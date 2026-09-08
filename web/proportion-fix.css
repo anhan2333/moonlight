@@ -1,0 +1,79 @@
+/* ════════════ 第四阶段 · 页面比例修正（spec v6）════════════
+   只改比例/尺寸/留白/层级。不改动画、不改数据、不改功能。
+   目标比例：内容主体65% / 连接区域25% / 剩余10% */
+
+/* ── 1. Moonlight 标题恢复视觉中心（42~52px @375-430宽） ── */
+.login h1{
+  font-size: clamp(42px, 11vw, 52px) !important;
+  margin: 6px 0 14px !important;
+}
+
+/* ── 2. 中央肖像框：古典椭圆油画（150-175宽 × 190-225高） ── */
+.login > .orb{
+  width: 158px !important;
+  height: 200px !important;
+  margin: 22px auto 20px !important;
+  border-radius: 50% / 44% 44% 50% 50% !important;
+  background:
+    radial-gradient(ellipse at 42% 28%, #f5e4d2, #e3c4a8 50%, #c9a67c 80%, #b99a69) !important;
+  box-shadow:
+    0 0 0 1px rgba(185,154,105,.7),
+    0 0 0 5px rgba(255,249,244,.9),
+    0 0 0 6px rgba(185,154,105,.45),
+    0 14px 34px rgba(74,49,54,.18) !important;
+}
+
+/* ── 3. 垂直节奏（留白即设计） ── */
+.login{
+  padding: 26px 16px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+.login .sub{
+  margin: 0 auto 30px !important;   /* 中文后大呼吸 */
+  font-size: 12.5px !important;
+}
+
+/* ── 4. 连接区域：小型印章/输入区（明显缩小，非第二个主体） ── */
+.login form{
+  width: calc(100% - 56px) !important;
+  max-width: 560px !important;
+  margin: 0 auto !important;
+  padding: 16px 20px 16px !important;
+  border-radius: 14px !important;
+  background: rgba(255,249,244,.55) !important;
+  backdrop-filter: blur(4px);
+  box-shadow:
+    0 0 0 1px rgba(185,154,105,.45),
+    0 12px 32px rgba(74,49,54,.12) !important;
+}
+.login input#secretInput{
+  min-height: 54px !important;
+  margin-bottom: 10px !important;
+  font-size: 14px !important;
+}
+.login button[type="submit"]{
+  min-height: 54px !important;
+  margin-top: 0 !important;
+  font-size: 15px !important;
+}
+.login .err{
+  margin: 8px 0 0 !important;
+  font-size: 11px !important;
+}
+
+/* ── 5. 金色装饰线保持小型 ── */
+.login .gold-line{
+  width: min(48%, 170px) !important;
+  margin: 0 auto 18px !important;
+}
+
+/* ── 6. 保证375×844竖屏一屏可见（不滚动）：压缩多余间距 ── */
+.login .corner-deco{ width: 34px; height: 34px; font-size: 12px; }
+.login .corner-deco::after{ width: 22px; }
+/* 登录页内部元素间距收敛 */
+.login .orb + h1{ margin-top: 0 !important; }
+
+/* ── 保持动画不动（上阶段已修） ── */
+/* intro-fix.css 的时序全部继续生效 */
