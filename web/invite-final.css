@@ -1,0 +1,196 @@
+/* ════════════ 欢迎页 · 月光邀请函最终版（spec 终版）════════════
+   深蓝夜空+明显月光光晕+奶油纸张密码卡+月亮38-45%宽+比例整体校正 */
+
+.login{
+  width: 100% !important;
+  height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 10px) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  /* 夜空+背景中心淡径向光晕（月光照亮纸张感） */
+  background:
+    radial-gradient(ellipse 140% 60% at 50% 20%, rgba(228,201,149,.22), rgba(228,201,149,.08) 40%, transparent 65%),
+    radial-gradient(ellipse at 50% 115%, rgba(90,70,95,.3), transparent 55%),
+    linear-gradient(180deg, #182232 0%, #202b3b 45%, #273244 78%, #2b2f40 100%) !important;
+  color: #f5e8d8;
+}
+/* 旧装饰层关闭 */
+.login::before, .login::after{ display:none !important; }
+.login .corner-deco, .login .gold-line{ display:none !important; }
+/* 星星层：少量细小星星 */
+.login .login-roses{
+  display:block !important;
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    radial-gradient(1.2px 1.2px at 16% 8%, rgba(255,244,220,.75), transparent 60%),
+    radial-gradient(1px 1px at 34% 4%, rgba(255,244,220,.55), transparent 60%),
+    radial-gradient(1.3px 1.3px at 58% 7%, rgba(255,244,220,.7), transparent 60%),
+    radial-gradient(1px 1px at 76% 3%, rgba(255,244,220,.5), transparent 60%),
+    radial-gradient(1.4px 1.4px at 89% 11%, rgba(255,244,220,.65), transparent 60%),
+    radial-gradient(1px 1px at 8% 16%, rgba(255,244,220,.45), transparent 60%),
+    radial-gradient(1.2px 1.2px at 68% 15%, rgba(255,244,220,.5), transparent 60%);
+  animation: mln-star 5s ease-in-out infinite alternate;
+}
+@keyframes mln-star{ 0%{opacity:.55;} 100%{opacity:.85;} }
+
+/* ── 月亮：宽38-45%视口宽，圆形，中心亮+层次光晕 ── */
+.login > .orb{
+  width: 41vw !important;
+  max-width: 165px !important;
+  min-width: 128px !important;
+  aspect-ratio: 1 !important;
+  height: auto !important;
+  border-radius: 50% !important;
+  margin: 6vh auto 0 !important;
+  flex-shrink: 0 !important;
+  /* 中心偏亮柔光（不是实心米黄椭圆）：多层径向渐变 */
+  background:
+    radial-gradient(circle at 40% 34%, rgba(255,250,238,.98) 0%, rgba(250,238,214,.95) 30%, rgba(238,216,180,.9) 55%, rgba(214,182,138,.85) 80%, rgba(178,146,102,.9) 100%) !important;
+  /* 层次光晕：外圈细金线+柔和辉光+远晕（明显但柔和） */
+  box-shadow:
+    0 0 0 1px rgba(228,201,149,.6),
+    0 0 0 8px rgba(228,201,149,.1),
+    0 0 34px rgba(228,201,149,.45),
+    0 0 90px rgba(228,201,149,.25),
+    0 0 150px rgba(228,201,149,.12),
+    0 10px 30px rgba(10,14,22,.45) !important;
+  animation: mln-moon-breath 6s ease-in-out infinite alternate, mlv-fade 1.1s .2s ease-out both !important;
+}
+/* 月亮光晕呼吸（明显但有扩散层次，非霓虹） */
+@keyframes mln-moon-breath{
+  0%,100%{
+    box-shadow:
+      0 0 0 1px rgba(228,201,149,.55),
+      0 0 0 8px rgba(228,201,149,.08),
+      0 0 30px rgba(228,201,149,.38),
+      0 0 80px rgba(228,201,149,.2),
+      0 0 140px rgba(228,201,149,.1),
+      0 10px 30px rgba(10,14,22,.45);
+  }
+  50%{
+    box-shadow:
+      0 0 0 1px rgba(228,201,149,.65),
+      0 0 0 9px rgba(228,201,149,.12),
+      0 0 44px rgba(228,201,149,.55),
+      0 0 110px rgba(228,201,149,.32),
+      0 0 190px rgba(228,201,149,.16),
+      0 10px 30px rgba(10,14,22,.45);
+  }
+}
+
+/* ── Moonlight：暖米白+明显视觉重量 ── */
+.login h1{
+  font-family: "Cormorant Garamond","Baskerville","Times New Roman","Noto Serif SC",serif !important;
+  font-size: clamp(38px, 10.5vw, 48px) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  color: #f2e4cd !important;
+  letter-spacing: .05em !important;
+  margin: auto 0 0 !important;
+  text-shadow: 0 1px 14px rgba(20,26,38,.55) !important;
+  flex-shrink: 0 !important;
+  animation: mlv-fade .9s .6s ease-out both !important;
+}
+/* 装饰线+月牙（花朵+月牙装饰线，淡金） */
+.login h1::after{
+  content: "❀  ✦  ───  ☽  ───  ✦  ❀";
+  display: block;
+  margin-top: 12px;
+  font-style: normal;
+  font-size: 11px;
+  color: rgba(221,199,159,.65);
+  letter-spacing: .1em;
+}
+
+/* ── 欢迎文字：细衬线中文，暖灰白不缩太小 ── */
+.login .sub{
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  font-size: 13px !important;
+  letter-spacing: .13em !important;
+  line-height: 2.05 !important;
+  color: #d8c8b2 !important;
+  margin: 18px auto 0 !important;
+  flex-shrink: 0 !important;
+  text-shadow: 0 1px 8px rgba(20,26,38,.45) !important;
+  animation: mlv-fade .8s 1s ease-out both !important;
+}
+.login .sub::before{
+  content: "(  ♥  ✦  ❦  ✦  )";
+  display: block;
+  margin-bottom: 14px;
+  font-size: 11px;
+  color: rgba(221,199,159,.6);
+  letter-spacing: .18em;
+}
+.login .sub::after{ content:none !important; }
+
+/* ── 密码区域：精致小型古典卡片（宽78-84%，轻量，含输入+按钮+err整体） ── */
+.login form{
+  width: 81% !important;
+  max-width: 390px !important;
+  margin: auto auto 10px !important;
+  padding: 14px 14px 10px !important;
+  border: 1px solid rgba(199,164,106,.5) !important;
+  border-radius: 14px !important;
+  background: rgba(255,248,242,.55) !important;
+  box-shadow: 0 8px 26px rgba(10,14,22,.35) !important;
+  flex-shrink: 0 !important;
+  animation: mlv-fade .9s 1.25s ease-out both !important;
+}
+.login input#secretInput{
+  height: 52px !important;
+  min-height: 52px !important;
+  width: 100% !important;
+  margin-bottom: 12px !important;
+  background: rgba(255,249,244,.92) !important;
+  border: 1px solid rgba(199,164,106,.45) !important;
+  border-radius: 10px !important;
+  color: #f0e2d0 !important;
+  font-family: "Noto Serif SC",serif !important;
+  font-size: 15px !important;
+  animation: none !important;
+}
+.login input#secretInput::placeholder{ color: rgba(150,132,128,.85) !important; }
+.login input#secretInput:focus{
+  border-color: rgba(228,201,149,.75) !important;
+  box-shadow: 0 0 0 3px rgba(199,164,106,.13) !important;
+}
+.login button[type="submit"]{
+  height: 52px !important;
+  min-height: 52px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border: 1px solid rgba(199,164,106,.55) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #a85b64, #8e4a56) !important;
+  color: #fff7ef !important;
+  font-family: "Noto Serif SC",serif !important;
+  font-size: 16px !important;
+  letter-spacing: .2em !important;
+  box-shadow: 0 5px 14px rgba(116,64,74,.2) !important;
+  animation: none !important;
+}
+.login .err{
+  margin: 5px 0 0 !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+  color: rgba(216,155,160,.85) !important;
+  animation: mlv-fade .5s 1.4s both !important;
+}
+
+/* ── 动画时序（spec：背景→月亮→标题→装饰→欢迎→密码区最后柔和浮现） ── */
+@keyframes mlv-fade{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* ── 欢迎页隐藏底部导航 ── */
+#login:not(.hidden) ~ #moonBottomNav{ display:none !important; }
+body:has(#login:not(.hidden)) #moonBottomNav{ display:none !important; }
+
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; opacity:1 !important; transform:none !important; filter:none !important; }
+}
