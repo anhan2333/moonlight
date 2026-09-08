@@ -2,3 +2,5 @@
 [09-08 14:22:47] backend DOWN -> restarting
 [09-08 14:22:47] killed stale backend pid=25630
 [09-08 14:22:47] backend started
+[09-08 16:43:32] api_loop DOWN -> restarting
+[09-08 16:43:32] api_loop started
