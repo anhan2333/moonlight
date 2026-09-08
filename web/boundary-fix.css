@@ -20,15 +20,15 @@
 
 /* ── 2. 肖像框缩小（145-165宽 × 180-205高，不再巨大） ── */
 .login > .orb{
-  width: 150px !important;
-  height: 186px !important;
+  width: 155px !important;
+  height: 192px !important;
   margin: 8px auto 14px !important;
   flex-shrink: 0 !important;
 }
 
 /* ── 3. Moonlight 保持44-50px ── */
 .login h1{
-  font-size: clamp(44px, 11vw, 50px) !important;
+  font-size: clamp(46px, 11.5vw, 50px) !important;
   margin: 0 0 10px !important;
   flex-shrink: 0 !important;
 }
@@ -50,7 +50,7 @@
   width: calc(100% - 48px) !important;
   max-width: 560px !important;
   margin: 0 auto !important;
-  padding: 18px 20px 20px !important;
+  padding: 16px 20px 18px !important;
   border-radius: 14px !important;
   background: rgba(255,249,244,.55) !important;
   box-shadow:
@@ -64,7 +64,7 @@
   height: 54px !important;
   min-height: 54px !important;
   max-height: 58px !important;
-  margin-bottom: 16px !important;
+  margin-bottom: 14px !important;
   font-size: 14px !important;
 }
 .login button[type="submit"]{
@@ -76,8 +76,10 @@
 }
 /* 连接区域距纸张底部至少24px（.login的padding-bottom 30px + form后无内容） */
 .login .err{
-  margin: 6px 0 0 !important;
+  margin: 4px 0 0 !important;
   font-size: 11px !important;
+  min-height: 0 !important;
+  line-height: 1.4 !important;
 }
 
 /* ── 6. 装饰小件 ── */
@@ -86,3 +88,9 @@
 
 /* ── 7. 保险：禁止login出现滚动条（内容应自适应） ── */
 .login{ overflow-y: auto !important; overflow-x: hidden !important; }
+/* ═══ 第六阶段微调（以23:03为基准） ═══ */
+.login > .orb{ width: 155px !important; height: 192px !important; }
+.login h1{ font-size: clamp(46px, 11.5vw, 50px) !important; }
+.login form{ padding: 16px 20px 18px !important; }
+.login input#secretInput{ margin-bottom: 14px !important; }
+.login .err{ margin: 4px 0 0 !important; line-height: 1.4 !important; }
