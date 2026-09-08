@@ -9,6 +9,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="moonlight-ui.css">
 <link rel="stylesheet" href="classical-skin.css">
+<link rel="stylesheet" href="classical-skin2.css">
+<script src="intro_gate.js"></script>
 <link rel="preload" href="chat-light.webp" as="image" fetchpriority="high">
 <link rel="preload" href="avatar-sea.png" as="image">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -2215,7 +2217,7 @@
 <div class="login" id="login">
   <div class="orb"></div>
   <h1>Moonlight</h1>
-  <p class="sub">输入连接密钥,进入你和安念的频道。</p>
+  <p class="sub">与月光为伴 · 与你相遇</p>
   <form id="loginForm" autocomplete="off">
     <input id="secretInput" type="password" inputmode="text" placeholder="连接密钥" autocomplete="off" spellcheck="false">
     <button type="submit">连接</button>
@@ -2737,7 +2739,7 @@ function applyIdentity(){
   const setText = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
   const setAttr = (sel, a, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(a, val); };
   setText(".login h1", "Moonlight");
-  { const sub = document.querySelector(".login .sub"); if (sub) sub.innerHTML = "输入连接密钥，进入你和<b>" + AI_NAME + "</b>的频道。"; }
+  { const sub = document.querySelector(".login .sub"); if (sub) sub.innerHTML = "与月光为伴 · 与你相遇"; }
   const emp = document.querySelector("#empty p"); if (emp) emp.innerHTML = "这里只有你和" + AI_NAME + "。<br>说点什么吧。";
   setText(".call-name", AI_NAME);
   setAttr("#callAvatarImg", "aria-label", AI_NAME);
