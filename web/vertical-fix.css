@@ -1,0 +1,70 @@
+/* ════════════ 第七阶段 · 垂直布局修正（spec v8）════════════
+   只改 margin/padding/gap/flex。不改尺寸/字体/颜色/动画/数据。
+   目标：上下留白均衡，连接区在文档流自然出现，消除底部巨大空白 */
+
+.login{
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;   /* 上下留白均衡 */
+  padding: 20px 16px 26px !important;
+  min-height: 100dvh !important;
+  overflow-y: auto !important;
+  gap: 0 !important;
+}
+
+/* ── ① 肖像：145-160 × 180-200 ── */
+.login > .orb{
+  width: 152px !important;
+  height: 190px !important;
+  margin: 0 auto 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── ② 肖像→Moonlight：55-75px（含h1自己的margin） ── */
+.login h1{
+  margin: 62px 0 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── ③ Moonlight保持46-50px（尺寸不动） ── */
+.login h1{
+  font-size: clamp(46px, 11.5vw, 50px) !important;
+}
+
+/* ── ④ 装饰线→欢迎文字：24-32px；文字两行间10-14px ── */
+.login .gold-line{
+  margin: 8px auto 26px !important;
+  flex-shrink: 0 !important;
+}
+.login .sub{
+  margin: 0 auto 0 !important;
+  line-height: 2.1 !important;   /* 两行间距约12px */
+  flex-shrink: 0 !important;
+}
+
+/* ── ⑤ 欢迎文字→连接区域：35-50px ── */
+.login form{
+  margin: 42px auto 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── ⑥ 连接区域：正常文档流，无absolute/flex:1/translateY ── */
+.login form{
+  position: static !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+}
+
+/* ── ⑦ 连接区结束后→纸张底：40-70px（login的padding-bottom 26px+form自身padding 18px=44px✓） ── */
+
+/* ── ⑧ 覆盖旧版可能残留的绝对定位/钉死 ── */
+.login .orb, .login h1, .login .sub, .login .gold-line, .login form, .login .err{
+  position: static !important;
+}
+.login .login-roses, .login .login-gem{
+  display: none !important;
+}
+.login .corner-deco{
+  /* 四角花枝用绝对定位是装饰，保留 */
+}
