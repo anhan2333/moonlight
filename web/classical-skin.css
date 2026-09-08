@@ -273,3 +273,41 @@
   0%,100%{ transform: translateY(0); }
   50%{ transform: translateY(-8px); }
 }
+/* ═══ v0.54 插件小屋全屏化 + 功能卡片收纳 ═══ */
+#pluginPanel .side-panel-content{
+  width: 100% !important;
+  max-height: 100dvh !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(232,205,190,.35), transparent 40%),
+    linear-gradient(180deg, #fdf6ef, #f6e5dc) !important;
+}
+#pluginPanel .side-panel-head{ padding-top: calc(env(safe-area-inset-top) + 12px); }
+/* 功能入口卡片（把侧栏功能收进小屋） */
+#pluginFuncGrid{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;
+  margin: 12px 0 18px;
+}
+.pfunc-card{
+  padding: 14px;
+  border: 1px solid rgba(199,164,106,.42);
+  border-radius: 16px;
+  background: linear-gradient(160deg, #fffbf6, #f7ece3);
+  box-shadow: 0 6px 18px rgba(94,57,48,.07);
+  cursor: pointer;
+  display:flex; flex-direction:column; gap:6px;
+  position:relative;
+}
+.pfunc-card::before{ content:"❀"; position:absolute; top:6px; left:10px; font-size:10px; color:rgba(199,164,106,.55); }
+.pfunc-card .ic{ font-size:22px; }
+.pfunc-card .nm{ font-size:14px; color:#50383a; font-family:"Noto Serif SC",serif; font-weight:600; }
+.pfunc-card .ds{ font-size:11px; color:#8e7775; }
+.pfunc-card:active{ transform: scale(.98); }
+/* 分区标题 */
+#pluginPanel .sec-title{
+  font-size:12px; letter-spacing:.18em; color:#914b59;
+  font-style:italic; margin:16px 4px 10px;
+  display:flex; align-items:center; gap:8px;
+}
+#pluginPanel .sec-title::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, rgba(199,164,106,.5), transparent); }

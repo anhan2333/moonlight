@@ -79,8 +79,9 @@
         tr.id = 'moonCornerTR'; tr.className = 'moon-corner moon-corner-tr';
         document.body.appendChild(tr);
       }
-      document.getElementById('moonCornerTL').innerHTML = mosaic(40);
-      document.getElementById('moonCornerTR').innerHTML = mosaic(40);
+      // v0.54: 马赛克角饰按宝宝要求移除
+      var tlEl = document.getElementById('moonCornerTL'); if (tlEl) tlEl.remove();
+      var trEl = document.getElementById('moonCornerTR'); if (trEl) trEl.remove();
 
       // 2) 菜单 hero：圆章（内嵌双人头像）+旋转月相+藤蔓
       var hero = document.querySelector('.menu-hero') || document.querySelector('[class*="menu"] .hero');

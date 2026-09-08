@@ -6807,6 +6807,18 @@ init();
       <p class="side-panel-sub">导入 .toolpkg 或 .js，像 Operit 一样扩展月光</p>
     </div>
     <div class="side-panel-body">
+      <div class="sec-title">我们的功能</div>
+      <div id="pluginFuncGrid">
+        <div class="pfunc-card" onclick="openGiftPanel()"><span class="ic">🎁</span><span class="nm">礼物</span><span class="ds">安念的心意</span></div>
+        <div class="pfunc-card" onclick="openCalendarPanel()"><span class="ic">📅</span><span class="nm">日历</span><span class="ds">纪念日与月光历</span></div>
+        <div class="pfunc-card" onclick="openTarotPanel()"><span class="ic">🔮</span><span class="nm">塔罗</span><span class="ds">抽一张今天的牌</span></div>
+        <div class="pfunc-card" onclick="openTeaPanel()"><span class="ic">🍵</span><span class="nm">茶歇</span><span class="ds">喝口茶歇一歇</span></div>
+        <div class="pfunc-card" onclick="openWishPanel()"><span class="ic">🌠</span><span class="nm">愿望池</span><span class="ds">许个愿让安念捞</span></div>
+        <div class="pfunc-card" onclick="openLettersPanel()"><span class="ic">✉️</span><span class="nm">书信</span><span class="ds">写给彼此的信</span></div>
+        <div class="pfunc-card" onclick="openCirclePanel()"><span class="ic">💕</span><span class="nm">朋友圈</span><span class="ds">两个人的动态</span></div>
+        <div class="pfunc-card" onclick="openDiaryPanel()"><span class="ic">📖</span><span class="nm">日记</span><span class="ds">记录每一天</span></div>
+      </div>
+      <div class="sec-title">已导入的插件</div>
       <label class="toy-connect-btn" style="display:block;text-align:center;cursor:pointer;">
         ＋ 导入插件（.toolpkg / .js）
         <input type="file" accept=".toolpkg,.zip,.js" style="display:none" onchange="pluginImportFile(this.files[0]); this.value='';">

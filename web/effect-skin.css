@@ -3,11 +3,17 @@
 
 /* ═══ A. 聊天页（照137658：奶油纸+花朵角+金线边框气泡+衬线） ═══ */
 /* 消息滚动区背景：奶油纸+淡粉角落光 */
-.scroll, .app .scroll{
+.wall, .app .wall{
   background:
-    radial-gradient(ellipse at 100% 0%, rgba(232,205,190,.4), transparent 40%),
-    radial-gradient(ellipse at 0% 100%, rgba(232,205,190,.3), transparent 38%),
-    linear-gradient(180deg, #fdf6ef, #f9ece4) !important;
+    radial-gradient(ellipse at 0% 100%, rgba(216,155,160,.5), transparent 45%),
+    radial-gradient(ellipse at 100% 96%, rgba(216,155,160,.45), transparent 42%),
+    radial-gradient(ellipse at 8% 88%, rgba(228,180,186,.5), transparent 36%),
+    radial-gradient(ellipse at 94% 82%, rgba(228,180,186,.45), transparent 34%),
+    radial-gradient(ellipse at 50% 110%, rgba(240,205,195,.55), transparent 50%),
+    linear-gradient(180deg, #fdf6ef 0%, #fbeee7 40%, #f6ddd6 78%, #f0cfc9 100%) !important;
+}
+.scroll, .app .scroll{
+  background: transparent !important;
 }
 /* 气泡：金线细框+古典圆角+奶油底 */
 .row.ai .bubble{

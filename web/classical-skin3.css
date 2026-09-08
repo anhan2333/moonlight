@@ -37,23 +37,12 @@
   background: linear-gradient(170deg, #fffaf4 0%, #fdf3ea 55%, #fbeee2 100%) !important;
   backdrop-filter: none !important;
   box-shadow:
-    0 0 0 1.5px rgba(199,164,106,.85),
-    0 0 0 6px rgba(255,248,242,.55),
-    0 0 0 7.5px rgba(199,164,106,.6),
-    0 34px 90px rgba(120,72,66,.35),
-    inset 0 0 50px rgba(255,240,225,.6) !important;
+    0 0 0 1px rgba(199,164,106,.6),
+    0 24px 60px rgba(120,72,66,.25) !important;
   animation: mln-frame-in 1.6s cubic-bezier(.2,.7,.2,1) both !important;
 }
 /* 画框顶部耳饰+底部花丛 */
-.login form::before{
-  content:"";
-  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
-  width: 140px; height: 22px;
-  background: linear-gradient(90deg, transparent, rgba(199,164,106,.85) 18% 82%, transparent);
-  clip-path: polygon(0 100%, 14% 28%, 32% 58%, 50% 0, 68% 58%, 86% 28%, 100% 100%);
-  filter: drop-shadow(0 3px 8px rgba(199,164,106,.5));
-  z-index: 3;
-}
+.login form::before{ display:none; }
 .login form::after{
   content:"❀ · ✦ · ☾ · ✦ · ❀";
   position:absolute; bottom:10px; left:50%; transform:translateX(-50%);

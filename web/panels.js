@@ -16,6 +16,18 @@ function _mlClose(id){
   p.classList.add('hidden');
   p.setAttribute('aria-hidden','true');
 }
+function openLettersPanel(){ _mlOpen('lettersPanel'); }
+function openCalendarPanel(){ _mlOpen('calendarPanel'); }
+function openTarotPanel(){ _mlOpen('tarotPanel'); }
+function openCirclePanel(){ _mlOpen('circlePanel'); }
+function openTeaPanel(){ _mlOpen('teaPanel'); }
+function openDiaryPanel(){ _mlOpen('diaryPanel'); }
+function openGiftPanel(){
+  const p = _mlPanel('giftPanel'); if (p){ _mlOpen('giftPanel'); }
+  else if (typeof window.openPluginPanel === 'function'){}
+}
+function openWishPanel(){ _mlOpen('wishPanel'); }
+
 
 /* ---- 书信 Letters ---- */
 function closeLettersPanel(){ _mlClose('lettersPanel'); }

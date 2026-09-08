@@ -13,7 +13,7 @@
     });
   }
   // 初始化: 恢复保存的主题
-  const saved = (()=>{ try{ return localStorage.getItem('moon_color') || 'gold'; }catch(e){ return 'gold'; } })();
+  const saved = (()=>{ try{ return localStorage.getItem('moon_color') || 'rose'; }catch(e){ return 'rose'; } })();
   applyColorTheme(saved);
   // 点击监听（事件委托，随时可点）
   document.addEventListener('click', e => {
