@@ -1,0 +1,177 @@
+/* ════════════ 登录页最终版 · 照 spec_v2.txt 完整实现 ════════════
+   夜空玫瑰庄园油画：.moonlight-auth 覆盖 #login，用月光现有DOM加装饰层
+   星光闪烁+金色粒子+背景渐显+画框1.05→1+头像blur→clear+stagger文案 */
+/* 覆盖旧skin2/3的夜空/明亮规则，这里为准 */
+/* ── 舞台 ── */
+.login{
+  background: #28303d !important;
+  color: var(--ml-text,#50383a);
+  overflow: hidden;
+  padding: 24px 18px calc(30px + env(safe-area-inset-bottom)) !important;
+}
+/* 纸纹关闭（油画不用点纹） */
+.login::before{ display:none !important; }
+/* v2的星星/月牙关闭 */
+.login::after{ display:none !important; }
+.login .orb::before{ display:none !important; }
+
+/* ── 背景层1：夜空+云+月光+玫瑰园+廊柱（多重渐变合成油画） ── */
+.login > .orb{ position:relative; z-index:2; }
+.login h1, .login .sub, .login form{ position:relative; z-index:2; }
+.login{
+  background:
+    /* 玫瑰花丛（底部两侧，多层花瓣色斑） */
+    radial-gradient(circle at 6% 96%, rgba(216,155,160,.9) 0 4%, rgba(183,101,112,.55) 4% 9%, transparent 13%),
+    radial-gradient(circle at 13% 90%, rgba(228,180,186,.8) 0 3%, rgba(183,101,112,.5) 3% 7%, transparent 11%),
+    radial-gradient(circle at 20% 97%, rgba(216,155,160,.75) 0 3%, transparent 8%),
+    radial-gradient(circle at 94% 95%, rgba(216,155,160,.9) 0 4%, rgba(183,101,112,.55) 4% 9%, transparent 13%),
+    radial-gradient(circle at 87% 89%, rgba(228,180,186,.8) 0 3%, rgba(183,101,112,.5) 3% 7%, transparent 11%),
+    radial-gradient(circle at 80% 98%, rgba(216,155,160,.75) 0 3%, transparent 8%),
+    /* 玫瑰花园远景（中部） */
+    radial-gradient(ellipse at 0% 78%, rgba(183,101,112,.5), transparent 34%),
+    radial-gradient(ellipse at 100% 76%, rgba(183,101,112,.45), transparent 34%),
+    radial-gradient(ellipse at 50% 85%, rgba(160,95,105,.4), transparent 45%),
+    /* 廊柱阴影（左右边缘竖向暗带） */
+    linear-gradient(90deg, rgba(30,36,46,.5) 0%, transparent 9%, transparent 91%, rgba(30,36,46,.5) 100%),
+    /* 月光光柱（顶部中央） */
+    radial-gradient(ellipse at 50% -8%, rgba(228,201,149,.4), rgba(228,201,149,.12) 30%, transparent 52%),
+    /* 云层 */
+    radial-gradient(ellipse at 30% 22%, rgba(90,100,116,.4), transparent 42%),
+    radial-gradient(ellipse at 74% 30%, rgba(90,100,116,.32), transparent 40%),
+    /* 夜空基底（上深下微亮） */
+    linear-gradient(180deg, #1f2632 0%, #28303d 40%, #3a3f4c 68%, #54454b 88%, #6d5152 100%) !important;
+}
+/* ── 星光（闪烁）+金色粒子（漂浮） ── */
+.login::after{
+  content:""; display:block !important;
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background-image:
+    radial-gradient(1.6px 1.6px at 14% 9%, rgba(255,240,214,.95), transparent 60%),
+    radial-gradient(1px 1px at 28% 5%, rgba(255,240,214,.7), transparent 60%),
+    radial-gradient(1.3px 1.3px at 41% 13%, rgba(255,240,214,.85), transparent 60%),
+    radial-gradient(1px 1px at 55% 7%, rgba(255,240,214,.65), transparent 60%),
+    radial-gradient(1.5px 1.5px at 68% 11%, rgba(255,240,214,.9), transparent 60%),
+    radial-gradient(1px 1px at 82% 6%, rgba(255,240,214,.7), transparent 60%),
+    radial-gradient(1.2px 1.2px at 91% 15%, rgba(255,240,214,.8), transparent 60%),
+    radial-gradient(1px 1px at 22% 19%, rgba(228,201,149,.6), transparent 60%),
+    radial-gradient(1.1px 1.1px at 63% 21%, rgba(228,201,149,.55), transparent 60%),
+    radial-gradient(1.8px 1.8px at 84% 40%, rgba(228,201,149,.4), transparent 60%),
+    radial-gradient(1.5px 1.5px at 12% 48%, rgba(228,201,149,.4), transparent 60%);
+  animation: mln-twinkle 3.6s ease-in-out infinite alternate, mln-drift 26s linear infinite alternate;
+}
+@keyframes mln-twinkle{ 0%{opacity:.45;} 50%{opacity:1;} 100%{opacity:.6;} }
+@keyframes mln-drift{ from{ transform:translate(0,0);} to{ transform:translate(-8px,10px);} }
+
+/* ── 月牙（月亮在夜空右上） ── */
+.login .orb::after{
+  content:"☾";
+  display:block !important;
+  position:fixed; top:calc(env(safe-area-inset-top) + 26px); right:9%;
+  font-size:40px; color:#e4c995; z-index:1;
+  text-shadow: 0 0 26px rgba(228,201,149,.9), 0 0 60px rgba(228,201,149,.4);
+  animation: mln-twinkle 5s ease-in-out infinite alternate;
+}
+
+/* ── 古典金色画框（整个内容包在框内——用form+orb+h1+sub共用背景做不到，改为form本身大画框） ── */
+.login form{
+  width: min(100%, 358px) !important;
+  padding: 26px 22px 24px !important;
+  margin-top: 12px !important;
+  border: 1.5px solid rgba(199,164,106,.8) !important;
+  border-radius: 6px !important;
+  background:
+    linear-gradient(180deg, rgba(255,248,242,.4), rgba(248,238,231,.82) 26%, rgba(250,240,232,.92)) !important;
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 0 0 3px rgba(40,48,61,.55),
+    0 0 0 4.5px rgba(199,164,106,.85),
+    0 0 0 5.5px rgba(228,201,149,.35),
+    0 34px 90px rgba(15,20,28,.6),
+    inset 0 0 46px rgba(255,236,220,.4) !important;
+  animation: mln-frame-in 1s cubic-bezier(.22,1,.36,1) 1.05s both !important;
+}
+@keyframes mln-frame-in{
+  from{ opacity:0; transform: translateY(18px) scale(1.035); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+/* 框内四角❀饰 */
+.login form::before{
+  content:"❀"; position:absolute; top:8px; left:12px;
+  font-size:13px; color:rgba(199,164,106,.7); display:block !important;
+}
+.login form::after{
+  content:"❀"; position:absolute; bottom:8px; right:12px;
+  font-size:13px; color:rgba(199,164,106,.7); transform:rotate(180deg);
+}
+
+/* ── 头像（blur→clear, 金圈） ── */
+.login > .orb{
+  width: 92px !important; height: 92px !important;
+  margin: 2px auto 12px !important;
+  background: radial-gradient(circle at 38% 32%, #7f96ad, #4a617a 55%, #2c4258) !important;
+  box-shadow:
+    0 0 0 2.5px rgba(199,164,106,.9),
+    0 0 0 5px rgba(248,238,231,.85),
+    0 0 0 6.5px rgba(199,164,106,.6),
+    0 0 30px rgba(228,201,149,.35),
+    0 12px 30px rgba(15,20,28,.5) !important;
+  animation: mln-portrait-in 1s cubic-bezier(.22,1,.36,1) 2.35s both !important;
+}
+@keyframes mln-portrait-in{
+  from{ opacity:0; filter: blur(7px); transform: scale(.82); }
+  to{ opacity:1; filter: blur(0); transform: scale(1); }
+}
+
+/* ── Moonlight 标题 + stagger ── */
+.login h1{
+  font-family: "Cormorant Garamond","Playfair Display","Noto Serif SC",serif !important;
+  font-size: clamp(38px, 11vw, 46px) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  color: #6d4a45 !important;
+  margin: 0 0 2px !important;
+  animation: mln-brand-in .9s 1.9s cubic-bezier(.22,1,.36,1) both !important;
+}
+.login h1::after{ content:none !important; }
+.login .sub{
+  color: #8e7775 !important;
+  font-size: 12px !important;
+  letter-spacing: .18em !important;
+  line-height: 1.9;
+  animation: mln-brand-in .9s 2.1s cubic-bezier(.22,1,.36,1) both !important;
+}
+.login .sub::before{ content:none !important; }
+.login .sub::after{ content:none !important; }
+@keyframes mln-brand-in{
+  from{ opacity:0; transform: translateY(14px) scale(.96); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+
+/* ── 输入框/按钮 stagger ── */
+.login input#secretInput{
+  min-height: 52px !important;
+  background: rgba(255,248,242,.72) !important;
+  border: 1px solid rgba(199,164,106,.45) !important;
+  border-radius: 12px !important;
+  color: var(--mln-brown,#493136) !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  animation: mln-brand-in .8s 2.6s cubic-bezier(.22,1,.36,1) both !important;
+}
+.login button[type="submit"]{
+  min-height: 56px !important;
+  border: 1px solid rgba(199,164,106,.9) !important;
+  border-radius: 9px !important;
+  background: linear-gradient(180deg,#bc6874,#9b4d5a) !important;
+  color:#fff7ef !important;
+  font-family: "Noto Serif SC",serif !important;
+  font-size: 18px !important;
+  letter-spacing: .18em !important;
+  box-shadow: 0 8px 22px rgba(145,75,89,.25), inset 0 1px 0 rgba(255,255,255,.25) !important;
+  animation: mln-brand-in .8s 2.9s cubic-bezier(.22,1,.36,1) both !important;
+}
+.login .err{ animation: mln-brand-in .8s 3.1s both !important; }
+
+/* ── reduced-motion：直接显示 ── */
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; opacity:1 !important; filter:none !important; transform:none !important; }
+}
