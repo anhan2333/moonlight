@@ -186,6 +186,15 @@
 /* ── 玫瑰花丛装饰（底部+两侧，照137276：大朵粉玫瑰+花苞） ── */
 .login .login-roses{
   position:absolute; inset:0; z-index:1; pointer-events:none;
+  /* 顶部两侧垂枝花（照137276拱门玫瑰） */
+  background-image:
+    radial-gradient(circle at 3% 8%, rgba(233,160,166,.85) 0 18px, rgba(183,101,112,.6) 18px 30px, transparent 40px),
+    radial-gradient(circle at 10% 4%, rgba(240,190,194,.8) 0 12px, rgba(183,101,112,.5) 12px 20px, transparent 28px),
+    radial-gradient(circle at 97% 6%, rgba(233,160,166,.85) 0 18px, rgba(183,101,112,.6) 18px 30px, transparent 40px),
+    radial-gradient(circle at 90% 3%, rgba(240,190,194,.8) 0 12px, rgba(183,101,112,.5) 12px 20px, transparent 28px),
+    radial-gradient(circle at 5% 16%, rgba(240,190,194,.5) 0 6px, transparent 9px),
+    radial-gradient(circle at 95% 15%, rgba(240,190,194,.5) 0 6px, transparent 9px),
+    /* 主花丛 */
   background:
     /* 左下大玫瑰丛 */
     radial-gradient(circle at 4% 99%, rgba(233,160,166,.95) 0 26px, rgba(183,101,112,.75) 26px 44px, rgba(145,75,89,.45) 44px 58px, transparent 60px),
@@ -203,4 +212,38 @@
     radial-gradient(circle at 82% 68%, rgba(236,170,175,.4) 0 4px, transparent 6px),
     radial-gradient(circle at 16% 72%, rgba(240,190,194,.45) 0 4px, transparent 6px);
   filter: blur(.4px);
+}
+
+/* ═══ v0.58 登录页细化 ═══ */
+/* 登录页显示时隐藏底部导航 */
+body:has(.login:not(.hidden)) #moonBottomNav{ display:none !important; }
+/* 天空改粉紫（照137276：粉紫晚霞不是黑） */
+.login{
+  background:
+    radial-gradient(ellipse at 50% 108%, rgba(255,214,196,.55), transparent 55%),
+    radial-gradient(ellipse at 12% 92%, rgba(216,155,160,.5), transparent 40%),
+    radial-gradient(ellipse at 88% 90%, rgba(216,155,160,.45), transparent 40%),
+    radial-gradient(ellipse at 78% 60%, rgba(196,150,180,.35), transparent 40%),
+    radial-gradient(ellipse at 20% 55%, rgba(180,150,190,.32), transparent 38%),
+    radial-gradient(ellipse at 50% 12%, rgba(228,201,149,.3), transparent 45%),
+    linear-gradient(180deg, #3a3d52 0%, #4a4460 30%, #6b5068 55%, #96647a 78%, #c48a92 100%) !important;
+}
+/* 框顶加粉色宝石（form上方小宝石点，用login-roses前加） */
+.login .login-gem{
+  position:absolute; top: calc(10px + 118px); left:50%; transform:translateX(-50%);
+  z-index:4; pointer-events:none;
+  width: 14px; height: 14px;
+  background: radial-gradient(circle at 35% 30%, #ffd7de, #e0909c 55%, #b76370);
+  border-radius: 50% 50% 50% 0;
+  transform: translateX(-50%) rotate(45deg);
+  box-shadow: 0 0 12px rgba(224,144,156,.7), inset 0 -2px 4px rgba(145,75,89,.4);
+}
+.login .login-gem::after{
+  content:""; position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  width: 2px; height: 12px;
+  background: linear-gradient(180deg, transparent, rgba(199,164,106,.8));
+}
+/* 花丛加强：更大更多层 */
+.login .login-roses{
+  filter: blur(.5px);
 }
