@@ -221,3 +221,15 @@ INFO:     127.0.0.1:47356 - "GET / HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:34974 - "GET / HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:47886 - "GET / HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:47180 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41930 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53504 - "GET /loop/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58970 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33710 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39452 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40666 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56968 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:35086 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:35912 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58284 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51848 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57192 - "GET / HTTP/1.1" 404 Not Found

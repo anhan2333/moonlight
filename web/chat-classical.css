@@ -1,0 +1,172 @@
+/* ════════════ 聊天页 · 古典花卉信笺（spec 聊天版）════════════
+   奶油纸+玫瑰油画背景+金线双层边框+信笺Header+古典气泡+古典输入框+古典底栏
+   只换视觉皮肤，零功能改动 */
+
+/* ── 一、页面底色：奶油白+四周淡玫瑰油画 ── */
+.app .wall, .app .wall::after{
+  background:
+    radial-gradient(ellipse 60% 40% at 0% 0%, rgba(216,155,160,.28), transparent 60%),
+    radial-gradient(ellipse 55% 38% at 100% 0%, rgba(228,180,186,.24), transparent 58%),
+    radial-gradient(ellipse 58% 40% at 0% 100%, rgba(224,168,172,.3), transparent 60%),
+    radial-gradient(ellipse 55% 38% at 100% 100%, rgba(216,155,160,.28), transparent 58%),
+    radial-gradient(ellipse 40% 28% at 50% 0%, rgba(221,199,159,.16), transparent 55%),
+    linear-gradient(180deg, #f7eee8 0%, #f6ece4 55%, #f3e5dc 100%) !important;
+  background-color: #f7eee8 !important;
+}
+/* 中央保持干净的遮罩（花朵只在四周，中央可读） */
+.app .wall::before{
+  content:""; position:absolute; inset:8%; z-index:0;
+  background: rgba(250,244,238,.55);
+  filter: blur(18px);
+}
+
+/* ── 二、聊天区双层金色古典边框（细线） ── */
+.app .scroll, .app main.scroll{
+  position: relative;
+}
+.app main.scroll::before{
+  content:"";
+  position:fixed;
+  inset: calc(env(safe-area-inset-top) + 8px) 7px calc(env(safe-area-inset-bottom) + 64px);
+  border: 1px solid rgba(185,154,105,.4);
+  border-radius: 4px;
+  outline: 1px solid rgba(185,154,105,.22);
+  outline-offset: 2.5px;
+  pointer-events:none;
+  z-index:5;
+}
+/* 四角小玫瑰 */
+.app main.scroll::after{
+  content:"❀";
+  position:fixed;
+  top: calc(env(safe-area-inset-top) + 1px);
+  left: 0px;
+  color: rgba(185,154,105,.55);
+  font-size: 11px;
+  z-index:6;
+  pointer-events:none;
+}
+
+/* ── 三、顶部Header：古典信笺（月亮小图标+Moonlight+淡副标题） ── */
+.topbar{
+  background:
+    linear-gradient(180deg, rgba(250,242,233,.97), rgba(248,238,228,.94)) !important;
+  border-bottom: 1px solid rgba(185,154,105,.4) !important;
+  height: calc(64px + env(safe-area-inset-top)) !important;
+  padding-top: calc(env(safe-area-inset-top) + 6px) !important;
+}
+.topbar .peerpill .name{
+  font-family: "Cormorant Garamond","Playfair Display","Noto Serif SC",serif !important;
+  font-style: italic !important;
+  font-size: 21px !important;
+  color: #4d3434 !important;
+  letter-spacing: .06em !important;
+  text-shadow: none !important;
+}
+.topbar .peerpill .name::before{
+  content:"☾ ";
+  font-size: 14px;
+  color: rgba(185,154,105,.7);
+}
+.topbar .peerpill .status{
+  font-family: "Noto Serif SC",serif !important;
+  font-size: 10.5px !important;
+  color: #9b8580 !important;
+}
+.topbar .peerpill .status::after{
+  content:"";
+  display:block;
+  margin: 2px auto 0;
+  width: 60px; height:1px;
+  background: linear-gradient(90deg, transparent, rgba(185,154,105,.5), transparent);
+}
+.backbtn, .topbtn{ color: #74404a !important; }
+
+/* ── 四、AI气泡：象牙白信笺气泡+古典圆角+左侧头像 ── */
+.row.ai .bubble{
+  background: rgba(255,250,246,.92) !important;
+  border: 1px solid rgba(185,154,105,.35) !important;
+  border-radius: 18px !important;
+  color: #4d3434 !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  box-shadow: 0 3px 12px rgba(94,57,48,.07) !important;
+  position: relative !important;
+}
+/* AI气泡右上角✦淡金装饰（极淡，克制） */
+.row.ai .bubble::after{
+  content:"✦";
+  position:absolute; top:5px; right:9px;
+  font-size:8px; color:rgba(185,154,105,.4);
+}
+/* ── 用户气泡：柔和玫瑰粉#e8c0c3+深棕字 ── */
+.row.human .bubble{
+  background: #e8c0c3 !important;
+  border: 1px solid rgba(176,90,104,.28) !important;
+  border-radius: 16px !important;
+  color: #4d3434 !important;
+  font-family: "Noto Serif SC",serif !important;
+  box-shadow: 0 3px 10px rgba(145,75,89,.1) !important;
+}
+/* ── 时间：小、#9b8580 ── */
+.msg-time, .row .time{
+  color: #9b8580 !important;
+  font-size: 10px !important;
+  font-family: "Cormorant Garamond",serif !important;
+}
+
+/* ── 五、输入框：古典金色信笺（奶油白+金边+玫瑰粉发送键） ── */
+.composer{
+  background:
+    linear-gradient(180deg, rgba(250,242,233,.96), rgba(248,238,228,.94)) !important;
+  border-top: 1px solid rgba(185,154,105,.4) !important;
+}
+.composer .field{
+  background:
+    linear-gradient(180deg, rgba(255,249,244,.9), rgba(250,240,231,.85)) !important;
+  border: 1px solid rgba(185,154,105,.5) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    inset 0 1px 3px rgba(74,49,54,.05),
+    0 0 0 3px rgba(255,249,244,.5),
+    0 0 0 4px rgba(185,154,105,.25) !important;
+}
+.composer input, .composer textarea{
+  color: #4d3434 !important;
+  font-family: "Noto Serif SC",serif !important;
+}
+.composer input::placeholder{ color:#b99a69 !important; opacity:.7 !important; }
+.composer .floatbtn, .composer button[type="submit"], .composer .send{
+  color: #b05a68 !important;
+}
+.composer button[type="submit"], .composer .send{
+  background: #b05a68 !important;
+  border: 1px solid rgba(185,154,105,.55) !important;
+  color: #fff9f4 !important;
+}
+
+/* ── 六、底部导航：半透明奶油+古典金图标+当前暗玫瑰 ── */
+#moonBottomNav{
+  background: rgba(250,242,233,.93) !important;
+  border-top: 1px solid rgba(185,154,105,.45) !important;
+  backdrop-filter: blur(14px) !important;
+}
+#moonBottomNav .mbn-item{ color: #b99a69 !important; }
+#moonBottomNav .mbn-item .lb{
+  font-family: "Noto Serif SC",serif !important;
+  letter-spacing: .08em;
+}
+#moonBottomNav .mbn-item.active{ color: #b05a68 !important; opacity:1 !important; }
+#moonBottomNav .mbn-item.active .lb{ color: #b05a68 !important; font-weight: 600; }
+#moonBottomNav .mbn-item.active .ic{ filter: drop-shadow(0 2px 5px rgba(176,90,104,.28)); }
+
+/* ── 七、比例（13/70/9/8）── */
+.topbar{ height: calc(58px + env(safe-area-inset-top)) !important; }
+.composer{ padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) !important; }
+
+/* ── 八、消息淡入+上移4px轻微动画 ── */
+@keyframes msg-in{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+.row{ animation: msg-in .35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce){
+  .row{ animation: none !important; }
+}
