@@ -4,7 +4,7 @@
   var TABS = [
     { id:'chat',    icon:'💬', label:'聊天' },
     { id:'memsky',  icon:'🌌', label:'记忆' },
-    { id:'chatroom',icon:'👥', label:'小窝' },
+    { id:'plugin',icon:'🧩', label:'插件' },
     { id:'models',  icon:'🤖', label:'模型' },
     { id:'settings',icon:'⚙️', label:'设置' },
   ];
@@ -40,7 +40,7 @@
       });
       return;
     }
-    var fn = { memsky:'openMemSkyPanel', chatroom:'openChatroomPanel', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
+    var fn = { memsky:'openMemSkyPanel', plugin:'openPluginPanel', models:'openModelsPanel', settings:'openSettingsPanel' }[id];
     if (fn && typeof window[fn] === 'function'){
       // 先关已开的
       document.querySelectorAll('.side-panel:not(.hidden)').forEach(function(p){

@@ -126,15 +126,15 @@
 }
 
 /* ═══ 2. 聊天页 → 奶油纸+暗玫瑰 ═══ */
-.app .wall{
-  background:
-    radial-gradient(circle at 80% 12%, rgba(219,166,173,.16), transparent 22%),
+.wall, .app .wall{
+  background: radial-gradient(circle at 80% 12%, rgba(219,166,173,.16), transparent 22%),
     radial-gradient(circle at 10% 55%, rgba(255,255,255,.85), transparent 28%),
     linear-gradient(180deg, #faf4ef, #f0dfd8) !important;
-  background-color: transparent !important;
+  background-image: radial-gradient(circle at 80% 12%, rgba(219,166,173,.16), transparent 22%),
+    radial-gradient(circle at 10% 55%, rgba(255,255,255,.85), transparent 28%),
+    linear-gradient(180deg, #faf4ef, #f0dfd8) !important;
+  background-color: #faf4ef !important;
 }
-.app[data-theme="mucha"] .wall,
-.app .wall{ background-image: linear-gradient(180deg,#faf4ef,#f0dfd8) !important; }
 /* 顶栏 */
 .topbar{
   background: rgba(255,250,246,.74) !important;
@@ -149,18 +149,24 @@
 .topbar .peerpill .status{ color: #9b8580 !important; }
 .backbtn, .topbtn{ color: #74404a !important; }
 /* 气泡 */
-#msgs .msg, .msg{
+.row .bubble{
   border: 1px solid rgba(185,154,105,.24) !important;
   box-shadow: 0 8px 22px rgba(85,53,45,.07) !important;
-  font-family: "Noto Serif SC","Songti SC",serif;
+  font-family: "Noto Serif SC","Songti SC",serif !important;
 }
-#msgs .msg.ai, .msg.ai{
-  background: rgba(255,251,247,.88) !important;
+.row.ai .bubble{
+  background: rgba(255,251,247,.9) !important;
+  color: #4d3434 !important;
   border-radius: 18px 18px 18px 7px !important;
 }
-#msgs .msg.human, .msg.human{
-  background: rgba(232,199,204,.67) !important;
+.row.human .bubble{
+  background: rgba(232,199,204,.72) !important;
+  color: #5d3a42 !important;
   border-radius: 18px 18px 7px 18px !important;
+}
+.row.ai::before{
+  border: 1px solid rgba(185,154,105,.5) !important;
+  box-shadow: 0 4px 14px rgba(82,51,44,.12) !important;
 }
 /* 输入区胶囊 */
 .composer .field, .composer{
