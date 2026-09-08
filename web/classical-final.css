@@ -15,7 +15,7 @@
     linear-gradient(180deg, #f2d9d3 0%, #f0cdc6 30%, #ecc2bf 55%, #e4b3b2 80%, #d9a5a6 100%) !important;
 }
 /* 框顶加粉色宝石（form上方小宝石点，用login-roses前加） */
-.login .login-gem{
+.login .login-gem{ display:none !important;
   position:absolute; top: 6px; left:50%; transform:translateX(-50%);
   z-index:4; pointer-events:none;
   width: 14px; height: 14px;
