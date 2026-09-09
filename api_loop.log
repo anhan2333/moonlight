@@ -1,74 +1,24 @@
-INFO:     Started server process [25005]
+INFO:     Started server process [7412]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:3020 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55664 - "GET /loop/sessions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33944 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:48296 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54738 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:35308 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:49216 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:39408 - "POST /loop/ingest HTTP/1.1" 500 Internal Server Error
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/usr/local/lib/python3.12/dist-packages/uvicorn/protocols/http/h11_impl.py", line 416, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.12/dist-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/applications.py", line 1163, in __call__
-    await super().__call__(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/applications.py", line 90, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/usr/local/lib/python3.12/dist-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/usr/local/lib/python3.12/dist-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/routing.py", line 660, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 2734, in app
-    await route.handle(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 1281, in handle
-    await super().handle(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 158, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/usr/local/lib/python3.12/dist-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/usr/local/lib/python3.12/dist-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 144, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 706, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.12/dist-packages/fastapi/routing.py", line 352, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/moonlight/examples/api_loop.py", line 485, in loop_ingest
-    return await handle_ingest(text, before_id, session_id, dry=dry)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/moonlight/examples/api_loop.py", line 387, in handle_ingest
-    messages = build_messages(text, before_id=msg_id, session_id=session_id, use_context=True)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/moonlight/examples/api_loop.py", line 228, in build_messages
-    for row in relay_rows(before_id, session_id, history_n()):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/tmp/moonlight/examples/api_loop.py", line 221, in relay_rows
-    rows = conn.execute(sql, params).fetchall()
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-sqlite3.OperationalError: no such table: messages
-INFO:     127.0.0.1:51644 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54572 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:44284 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59250 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59258 - "GET /loop/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45092 - "POST /loop/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60188 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36916 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33364 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45350 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34302 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50788 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33702 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41980 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39452 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52212 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39698 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34126 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:44768 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:47618 - "POST /loop/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35072 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:34912 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48794 - "POST /loop/chat HTTP/1.1" 200 OK

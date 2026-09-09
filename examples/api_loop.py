@@ -50,7 +50,7 @@ load_dotenv(HERE / ".env")
 
 LOOP_PORT = int(os.environ.get("LOOP_PORT", "3020"))
 LOOP_CONFIG = Path(os.environ.get("LOOP_CONFIG", str(HERE / "api_loop.config.json")))
-RELAY_DB = os.environ.get("RELAY_DB", str(HERE.parent / "backend" / "relay.db"))
+RELAY_DB = os.environ.get("RELAY_DB", str(HERE.parent / "relay.db"))
 RELAY_URL = os.environ.get("RELAY_URL", "http://127.0.0.1:3011").rstrip("/")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 PERSONA_FILE = os.environ.get("PERSONA_FILE", "")
