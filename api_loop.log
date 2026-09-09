@@ -22,3 +22,40 @@ INFO:     127.0.0.1:47618 - "POST /loop/ingest HTTP/1.1" 200 OK
 INFO:     127.0.0.1:35072 - "GET / HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:34912 - "GET / HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:48794 - "POST /loop/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49472 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41792 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40974 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55674 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41418 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39160 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59058 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59064 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52974 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52982 - "PATCH /loop/sessions/work HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57554 - "PATCH /loop/sessions/work HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60086 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:45250 - "PATCH /loop/sessions/daily HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38948 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38376 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50768 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60046 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33248 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:43960 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42680 - "POST /loop/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47808 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:38840 - "POST /loop/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50986 - "GET / HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7412]
+INFO:     Started server process [14646]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:3020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54904 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53200 - "POST /loop/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53970 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49618 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:33266 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50476 - "GET / HTTP/1.1" 404 Not Found

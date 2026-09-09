@@ -54,9 +54,18 @@ def start_backend():
     log("backend started")
 
 def start_loop():
+    env = dict(os.environ)
+    with open(MOON + "/backend/relay.env") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                env[k] = v
     subprocess.Popen(
-        "cd %s/examples && nohup python3 api_loop.py > /tmp/moonlight/api_loop.log 2>&1 &" % MOON,
-        shell=True, cwd=MOON)
+        ["python3", MOON + "/examples/api_loop.py"],
+        env=env, cwd=MOON + "/examples",
+        stdout=open("/tmp/moonlight/api_loop.log", "ab"),
+        stderr=subprocess.STDOUT)
     log("api_loop started")
 
 def main():

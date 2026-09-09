@@ -18,3 +18,6 @@
 [09-09 02:10:57] keepalive daemon started (60s interval)
 [09-09 02:10:57] backend DOWN -> restarting
 [09-09 02:10:57] backend started
+[09-09 02:51:49] keepalive daemon started (60s interval)
+[09-09 02:51:49] api_loop DOWN -> restarting
+[09-09 02:51:49] api_loop started
