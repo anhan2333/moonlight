@@ -39,9 +39,18 @@ def kill_backend():
 
 def start_backend():
     kill_backend()
+    env = dict(os.environ)
+    with open(MOON + "/backend/relay.env") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                env[k] = v
     subprocess.Popen(
-        "set -a && source %s/backend/relay.env && set +a && nohup python3 %s/backend/app.py > /tmp/moonlight_backend.log 2>&1 &" % (MOON, MOON),
-        shell=True, cwd=MOON)
+        ["python3", MOON + "/backend/app.py"],
+        env=env, cwd=MOON,
+        stdout=open("/tmp/moonlight_backend.log", "ab"),
+        stderr=subprocess.STDOUT)
     log("backend started")
 
 def start_loop():
