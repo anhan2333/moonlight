@@ -1,10 +1,11 @@
-/* 月光 — service worker (offline shell + Web Push).
+/* 鏈堝厜 鈥?service worker (offline shell + Web Push).
    IMPORTANT: bump CACHE on every front-end change, or installed clients keep the
    old shell (the precached index.html won't refresh until the SW reinstalls). */
-const AI_NAME = "Claude";          // push-title fallback; keep in sync with index.html CONFIG.AI_NAME
-const CACHE = "companion-v2-api-loop";
+const AI_NAME = "安念";          // push-title fallback; keep in sync with index.html CONFIG.AI_NAME
+const CACHE = "moonlight-v114-20261002-final";
 const PRECACHE = [
   "./index.html",
+  "./galaxy.html",
   "./chat-light.webp", "./chat-harbor.webp",
   "./menu-light.webp", "./menu-harbor.webp",
   "./avatar-sea.png",
@@ -27,9 +28,11 @@ self.addEventListener("activate", (e) => {
 });
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  if (url.pathname.startsWith("/relay/")) return;          // never intercept the API / SSE
+  // never intercept the API / SSE:鐢熶骇璧?/relay/ 鍓嶇紑,鏈湴鐩磋繛璧版牴璺緞(/app /channel /uploads /healthz)
+  if (url.pathname.startsWith("/relay/") || url.pathname.startsWith("/channel/") ||
+      url.pathname.startsWith("/uploads/") || url.pathname === "/healthz") return;
   if (e.request.mode === "navigate") {
-    // network-first for the page → an online reload always gets the latest index.html
+    // network-first for the page 鈫?an online reload always gets the latest index.html
     e.respondWith(fetch(e.request, { cache: "reload" }).catch(() => caches.match("./index.html")));
     return;
   }
@@ -47,7 +50,7 @@ self.addEventListener("fetch", (e) => {
   }
 });
 
-// ── Web Push (VAPID) ──────────────────────────────
+// 鈹€鈹€ Web Push (VAPID) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 // The relay sends a push when the AI replies and no PWA tab is holding the stream;
 // here we surface it on the lock screen.
 self.addEventListener("push", (e) => {
@@ -55,7 +58,7 @@ self.addEventListener("push", (e) => {
   try { d = e.data ? e.data.json() : {}; }
   catch (_) { d = { body: (e.data && e.data.text && e.data.text()) || "" }; }
   const title = d.title || AI_NAME;                        // backend sends RELAY_AI_NAME as title
-  const body  = d.body  || "你有一条新消息";
+  const body  = d.body  || "浣犳湁涓€鏉℃柊娑堟伅";
   const tag   = d.id ? ("companion-" + d.id) : "companion-msg";
   e.waitUntil(
     self.registration.showNotification(title, {
@@ -83,3 +86,5 @@ self.addEventListener("notificationclick", (e) => {
     })
   );
 });
+
+

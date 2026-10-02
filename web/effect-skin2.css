@@ -1,0 +1,110 @@
+/* ════════════ 全屏面板 + 资料页/聊天页效果图版 ════════════ */
+/* ── 1. 四大面板全屏化（插件/记忆/模型/设置） ── */
+#pluginPanel .side-panel-content,
+#memSkyPanel .side-panel-content,
+#modelsPanel .side-panel-content,
+#settingsPanel .side-panel-content,
+#profilePanel .side-panel-content{
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  border-radius: 0 !important;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(232,205,190,.35), transparent 40%),
+    linear-gradient(180deg, #fdf6ef, #f6e5dc) !important;
+}
+#pluginPanel .side-panel-head,
+#memSkyPanel .side-panel-head,
+#modelsPanel .side-panel-head,
+#settingsPanel .side-panel-head,
+#profilePanel .side-panel-head{
+  padding-top: calc(env(safe-area-inset-top) + 12px) !important;
+}
+
+/* ── 2. 聊天页（照137794左图：顶部金框标题bar+奶油纸消息区+金线气泡） ── */
+.topbar{
+  background:
+    linear-gradient(180deg, rgba(250,240,230,.96), rgba(248,236,225,.92)) !important;
+  border-bottom: 1.5px solid rgba(199,164,106,.55) !important;
+}
+.topbar .peerpill .name{
+  font-family: "Playfair Display","Cormorant Garamond","Noto Serif SC",serif !important;
+  font-style: italic !important;
+  font-size: 22px !important;
+  color: #6d4a45 !important;
+}
+.topbar .peerpill .status{
+  font-family: "Cormorant Garamond",serif !important;
+  color: #914b59 !important;
+  letter-spacing: .1em;
+}
+/* 消息区奶油纸+玫瑰花丛边缘（照137794：上浅下浓玫瑰） */
+.scroll{
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(216,155,160,.4), transparent 42%),
+    radial-gradient(ellipse at 100% 98%, rgba(216,155,160,.38), transparent 40%),
+    linear-gradient(180deg, #fdf6ef 0%, #faf0e6 55%, #f5ded4 100%) !important;
+}
+/* 安念气泡：白纸金线（照效果图白色圆角气泡） */
+.row.ai .bubble{
+  background: rgba(255,252,248,.95) !important;
+  border: 1px solid rgba(199,164,106,.4) !important;
+  border-radius: 14px !important;
+  color: #50383a !important;
+  box-shadow: 0 4px 14px rgba(94,57,48,.08) !important;
+}
+/* 你的气泡：暗玫瑰 */
+.row.human .bubble{
+  background: linear-gradient(160deg,#e8b7bd,#dda4ab) !important;
+  border: 1px solid rgba(145,75,89,.35) !important;
+  border-radius: 14px !important;
+  color: #5d3a42 !important;
+  box-shadow: 0 4px 14px rgba(145,75,89,.12) !important;
+}
+/* 输入栏：Write a letter 胶囊 */
+.composer .field{
+  background: rgba(255,250,244,.95) !important;
+  border: 1px solid rgba(199,164,106,.55) !important;
+  border-radius: 999px !important;
+}
+
+/* ── 3. 右上角资料页（照137794右图：油画玫瑰头像大圈+月光+副标题+月相链） ── */
+.profilePanel .side-panel-content,
+#profilePanel .side-panel-content{
+  background:
+    radial-gradient(ellipse at 85% 10%, rgba(232,205,190,.5), transparent 42%),
+    radial-gradient(ellipse at 0% 100%, rgba(216,155,160,.4), transparent 45%),
+    linear-gradient(180deg, #fdf3ea, #f6e0d4) !important;
+}
+#profilePanel .profile-avatar{
+  border: 3px solid rgba(199,164,106,.8) !important;
+  box-shadow:
+    0 0 0 6px rgba(255,248,242,.8),
+    0 0 0 8px rgba(199,164,106,.5),
+    0 12px 32px rgba(94,57,48,.25) !important;
+}
+#profilePanel .profile-name-row h3{
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  color: #50383a !important;
+  font-size: 26px !important;
+}
+#profilePanel .profile-handle, #profilePanel .profile-bio{
+  color: #8e7775 !important;
+}
+#profilePanel .profile-bio{
+  font-family: "Noto Serif SC",serif !important;
+  letter-spacing: .05em;
+  line-height: 1.9 !important;
+}
+
+/* ── 4. 侧面板标题统一衬线金棕 ── */
+.side-panel-title{
+  font-family: "Playfair Display","Cormorant Garamond","Noto Serif SC",serif !important;
+  color: #6d4a45 !important;
+}
+.side-panel-sub{
+  font-family: "Cormorant Garamond","Noto Serif SC",serif !important;
+  color: #914b59 !important;
+  letter-spacing: .12em;
+}

@@ -1,0 +1,70 @@
+/* ════════════ 第三阶段 · 入场动画修正（spec v5）════════════
+   只改动画时序，不改视觉布局。
+   核心原则：外框无独立入场动画（一直存在）；主体内容整体轻现；
+   肖像→标题→中文→连接区域（输入框+按钮作为一个整体）。 */
+
+/* ── 外框：opacity 1，无动画（一直存在） ── */
+.login::after{
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* ── 背景无动画 ── */
+.login{ animation: none !important; }
+
+/* ── 清除旧版所有stagger delay（orb/h1/sub/input/button/gold-line/err） ── */
+.login > .orb,
+.login h1,
+.login .sub,
+.login input#secretInput,
+.login button[type="submit"],
+.login .gold-line,
+.login .err{
+  animation-delay: 0ms !important;
+}
+
+/* ── 中央主体内容：肖像+标题+中文作为一个整体轻现（800ms） ── */
+.login > .orb,
+.login h1,
+.login .sub,
+.login .gold-line{
+  animation-name: mlv-content-in !important;
+  animation-duration: 850ms !important;
+  animation-timing-function: cubic-bezier(.22,1,.36,1) !important;
+  animation-fill-mode: both !important;
+  animation-delay: 0ms !important;
+}
+/* 微差：标题比肖像晚120ms，中文比标题晚120ms（连续感，不产生组件加载感） */
+.login h1{ animation-delay: 120ms !important; }
+.login .sub{ animation-delay: 240ms !important; }
+.login .gold-line{ animation-delay: 360ms !important; }
+
+@keyframes mlv-content-in{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* ── 连接区域：输入框+按钮作为一个整体出现（800ms） ── */
+.login input#secretInput,
+.login button[type="submit"]{
+  animation-name: mlv-connect-in !important;
+  animation-duration: 800ms !important;
+  animation-timing-function: cubic-bezier(.22,1,.36,1) !important;
+  animation-fill-mode: both !important;
+}
+/* 输入框比按钮早60ms（几乎同时） */
+.login input#secretInput{ animation-delay: 500ms !important; }
+.login button[type="submit"]{ animation-delay: 560ms !important; }
+
+@keyframes mlv-connect-in{
+  from{ opacity:0; transform: translateY(8px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* ── 错误提示跟随 ── */
+.login .err{ animation: mlv-fade .5s .7s both !important; }
+
+/* ── reduced-motion ── */
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; opacity:1 !important; transform:none !important; filter:none !important; }
+}

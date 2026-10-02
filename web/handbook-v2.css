@@ -1,0 +1,152 @@
+/* ════════════ 欢迎页第二阶段 · 高级私人宅邸（spec v4）════════════
+   核心方针：减少装饰，提升材质/比例/留白/细节。低饱和、克制、贵气。
+   金色 = 旧书封面烫金线，非亮金。覆盖此前所有欢迎页皮肤规则。 */
+
+/* ── 全局：低饱和旧纸张，无大面积渐变 ── */
+.login{
+  background: linear-gradient(180deg, #f7eee8 0%, #f4e9e1 60%, #f0e2d9 100%) !important;
+}
+/* 关闭此前所有粒子/星星/纸纹颗粒 */
+.login::before{ display:none !important; }
+
+/* ── 页面边框：古典书籍装帧（外细内细，呼吸空间，四角花纹缩小） ── */
+.login::after{
+  display:block !important;
+  position:absolute !important;
+  inset: 16px 14px 18px !important;
+  background:none !important;
+  border: 1px solid rgba(185,154,105,.5);
+  border-radius: 3px;
+  outline: 1px solid rgba(185,154,105,.3);
+  outline-offset: 3px;
+  pointer-events:none;
+  z-index:3;
+  box-shadow: none !important;
+  animation: none !important;
+}
+/* 四角花纹缩小、不抢视觉 */
+.login .corner-deco{ width:40px; height:40px; font-size:14px; color:rgba(185,154,105,.42); }
+.login .corner-deco::after{ width:26px; }
+
+/* ── 中央肖像框：古典油画肖像（椭圆细金边+内衬象牙+轻阴影） ── */
+.login > .orb{
+  width: 78px !important; height: 100px !important;
+  border-radius: 50% / 46% 46% 50% 50% !important;
+  margin: 18px auto 22px !important;
+  background:
+    radial-gradient(ellipse at 40% 30%, #f2ddc6, #dcb990 62%, #b99a69) !important;
+  box-shadow:
+    0 0 0 1px rgba(185,154,105,.7),
+    0 0 0 4px rgba(255,249,244,.9),
+    0 0 0 5px rgba(185,154,105,.4),
+    0 6px 16px rgba(74,49,54,.12) !important;
+  animation: mlv-fade .9s .4s ease-out both !important;
+}
+
+/* ── Moonlight：古典书名（缩小、字距增加、深棕） ── */
+.login h1{
+  font-family: "Cormorant Garamond","Playfair Display","Noto Serif SC",serif !important;
+  font-size: clamp(26px, 7.5vw, 34px) !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  color: #4d3434 !important;
+  letter-spacing: .08em !important;
+  margin: 0 0 10px !important;
+  text-shadow: none !important;
+  animation: mlv-fade .9s .6s ease-out both !important;
+}
+
+/* ── 中文文字：古典书页小字（暖灰棕、呼吸空间） ── */
+.login .sub{
+  color: #9b8580 !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  font-size: 12px !important;
+  letter-spacing: .12em !important;
+  line-height: 2.1 !important;
+  margin: 0 auto 26px !important;
+  animation: mlv-fade .9s .8s ease-out both !important;
+}
+.login .sub::before, .login .sub::after{ content:none !important; }
+
+/* ── 密钥框：古典书页嵌入书签区（象牙白+细金边+内阴影+轻纸感） ── */
+.login input#secretInput{
+  min-height: 52px !important;
+  background: rgba(255,249,244,.9) !important;
+  border: 1px solid rgba(185,154,105,.5) !important;
+  border-radius: 8px !important;
+  color: #493136 !important;
+  font-family: "Noto Serif SC","Source Han Serif SC",serif !important;
+  font-size: 15px !important;
+  box-shadow: inset 0 1px 3px rgba(74,49,54,.06) !important;
+  animation: mlv-key-in .8s 1s cubic-bezier(.16,1,.3,1) both !important;
+}
+.login input#secretInput::placeholder{ color:#bca8a2 !important; }
+.login input#secretInput:focus{
+  border-color: #b99a69 !important;
+  box-shadow: inset 0 1px 3px rgba(74,49,54,.06), 0 0 0 3px rgba(185,154,105,.1) !important;
+}
+
+/* ── 连接按钮：降饱和暗玫瑰+旧金细边+✦装饰（无强烈阴影） ── */
+.login button[type="submit"]{
+  min-height: 52px !important;
+  border: 1px solid rgba(185,154,105,.6) !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #a85b64, #8e4a56) !important;
+  color: #fff9f4 !important;
+  font-family: "Noto Serif SC",serif !important;
+  font-size: 16px !important;
+  letter-spacing: .22em !important;
+  box-shadow: 0 4px 12px rgba(116,64,74,.16) !important;
+  animation: mlv-fade .9s 1.2s ease-out both !important;
+}
+.login button[type="submit"]::before,
+.login button[type="submit"]::after{
+  content:"✦"; position:absolute; top:50%; transform:translateY(-50%);
+  color: rgba(221,199,159,.7); font-size: 9px;
+}
+.login button[type="submit"]::before{ left: 14px; }
+.login button[type="submit"]::after{ right: 14px; }
+
+/* ── 底部装饰：一条古典细线（花枝—小月亮—花枝），极细极淡 ── */
+.login .gold-line{
+  width: min(56%, 200px); height: 1px; margin: 18px auto 6px;
+  background: linear-gradient(90deg, transparent, rgba(185,154,105,.4) 22% 78%, transparent);
+  position: relative;
+  animation: mlv-fade .9s 1.3s ease-out both;
+}
+.login .gold-line::before{
+  content:"☾"; position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  color: rgba(185,154,105,.55); font-size: 10px;
+  background: #f4e9e1; padding: 0 8px;
+}
+
+/* ── 隐藏此前的冗余装饰 ── */
+.login .login-roses{ display:none !important; }
+.login .login-gem{ display:none !important; }
+.login form::before, .login form::after{ display:none !important; }
+.login .err{ animation: mlv-fade .6s 1.4s both !important; }
+
+/* ── 动画：只有轻移淡入（无旋转/弹跳/缩放/闪烁） ── */
+@keyframes mlv-fade{
+  from{ opacity:0; transform: translateY(8px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+/* 密钥框专用：700-900ms 缓慢 ease-out */
+@keyframes mlv-key-in{
+  from{ opacity:0; transform: translateY(8px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* ── 动画时序（照spec：0ms背景 200ms边框 400ms肖像 600ms标题 800ms中文 1000ms密钥 1200ms按钮） ── */
+.login{ animation: mlv-bg .6s ease-out both !important; }
+@keyframes mlv-bg{ from{ opacity:0; } to{ opacity:1; } }
+.login::after{ animation: mlv-fade .8s .2s ease-out both !important; }
+
+@media (prefers-reduced-motion: reduce){
+  .login, .login *{ animation: none !important; opacity:1 !important; transform:none !important; filter:none !important; }
+}
+
+/* ── 欢迎页时隐藏底部导航（沿用现有状态） ── */
+#login:not(.hidden) ~ #moonBottomNav{ display:none !important; }
+body:has(#login:not(.hidden)) #moonBottomNav{ display:none !important; }

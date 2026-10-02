@@ -1,0 +1,35 @@
+/* ════════════ 登录页最终版 · 照 spec_v2.txt 完整实现 ════════════
+   夜空玫瑰庄园油画：.moonlight-auth 覆盖 #login，用月光现有DOM加装饰层
+   星光闪烁+金色粒子+背景渐显+画框1.05→1+头像blur→clear+stagger文案 */
+/* 覆盖旧skin2/3的夜空/明亮规则，这里为准 */
+/* ── 舞台 ── */
+.login{
+  background:
+    radial-gradient(ellipse 120px 40px at 78% 14%, rgba(228,201,149,.28), transparent 70%),
+    radial-gradient(ellipse 90px 30px at 88% 10%, rgba(228,201,149,.22), transparent 70%),
+    radial-gradient(ellipse 100px 34px at 18% 26%, rgba(228,201,149,.18), transparent 70%),
+    radial-gradient(ellipse at 50% 6%, rgba(255,232,200,.5), transparent 38%),
+    radial-gradient(ellipse at 0% 100%, rgba(214,146,152,.75), transparent 48%),
+    radial-gradient(ellipse at 100% 100%, rgba(214,146,152,.75), transparent 48%),
+    radial-gradient(ellipse at 50% 112%, rgba(226,168,172,.8), transparent 55%),
+    linear-gradient(180deg, #f2d9d3 0%, #f0cdc6 30%, #ecc2bf 55%, #e4b3b2 80%, #d9a5a6 100%) !important;
+}
+/* 框顶加粉色宝石（form上方小宝石点，用login-roses前加） */
+.login .login-gem{ display:none !important;
+  position:absolute; top: 6px; left:50%; transform:translateX(-50%);
+  z-index:4; pointer-events:none;
+  width: 14px; height: 14px;
+  background: radial-gradient(circle at 35% 30%, #ffd7de, #e0909c 55%, #b76370);
+  border-radius: 50% 50% 50% 0;
+  transform: translateX(-50%) rotate(45deg);
+  box-shadow: 0 0 12px rgba(224,144,156,.7), inset 0 -2px 4px rgba(145,75,89,.4);
+}
+.login .login-gem::after{
+  content:""; position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  width: 2px; height: 12px;
+  background: linear-gradient(180deg, transparent, rgba(199,164,106,.8));
+}
+/* 花丛加强：更大更多层 */
+.login .login-roses{
+  filter: blur(.5px);
+}
