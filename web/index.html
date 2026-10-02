@@ -3649,7 +3649,7 @@ const AI_NAME = CONFIG.AI_NAME, HUMAN_NAME = CONFIG.HUMAN_NAME, APP_NAME = CONFI
 const API_BASE = "";       // 月光本地直连：后端直接挂在同源根路径（无nginx反代）；留空=跟随当前访问地址，手机/电脑各自同源
 const USE_MOCK  = (location.hostname === "127.0.0.1" || location.hostname === "localhost") && ["8090", "8091"].includes(location.port);  // 仅纯静态预览端口用假数据；3011 等真后端地址照常联网
 const LS_KEY    = "companion_secret";
-  const APP_VER   = "v118";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
+  const APP_VER   = "v120";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
 
 /* 安全 storage：Edge 的 Tracking Prevention 会拦 http://127.0.0.1 的 storage 访问（报错导致登录卡死）。
    被拦时降级为内存变量——本次会话内登录照常可用，只是关页后要重输密钥。 */
@@ -8070,12 +8070,13 @@ async function sendEcMsg(){
       tries++;
       try {
         const r = await fetch(API_BASE + "/app/history?since=0&limit=3&session_id=" + encodeURIComponent(_ecSessionId), { headers: authHeaders() });
+        if (!r.ok){ ecBubble("ai", "（等待回复时出错 HTTP " + r.status + "）"); return; }
         const data = await r.json();
         const msgs = Array.isArray(data) ? data : (data.messages || []);
         const last = msgs.filter(m => (m.direction === "out" || m.from === "ai") && m.kind !== "thinking").pop();
         if (last){ ecBubble("ai", last.text || ""); return; }
       } catch (e) {}
-      if (tries < 8) _ecPoll = setTimeout(poll, 2500);
+      if (tries < 12) _ecPoll = setTimeout(poll, 3000);
     };
     _ecPoll = setTimeout(poll, 2500);
   } catch (e) { ecBubble("ai", "（发送失败：" + (e.message || e) + "）"); }
