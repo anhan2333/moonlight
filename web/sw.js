@@ -2,7 +2,7 @@
    IMPORTANT: bump CACHE on every front-end change, or installed clients keep the
    old shell (the precached index.html won't refresh until the SW reinstalls). */
 const AI_NAME = "安念";          // push-title fallback; keep in sync with index.html CONFIG.AI_NAME
-const CACHE = "moonlight-v114-20261002-final";
+const CACHE = "moonlight-v117-20261002-gclayout";
 const PRECACHE = [
   "./index.html",
   "./galaxy.html",

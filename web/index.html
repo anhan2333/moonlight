@@ -3521,18 +3521,23 @@
   </div>
   <div class="call-scrim" id="callScrim"></div>
   <div class="call-sheet" role="dialog" aria-modal="true" aria-label="语音通话">
-    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起" style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);left:12px;width:36px;height:36px;background:rgba(255,255,255,.5);border:1px solid rgba(150,120,80,.25);border-radius:50%;z-index:5;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><polyline points="6 9 12 15 18 9"/></svg>
+    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起通话" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;width:38px;height:38px;background:rgba(255,255,255,.35);border:1px solid rgba(150,120,80,.25);border-radius:12px;z-index:5;display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 20h8"/></svg>
     </button>
     <div style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;display:flex;flex-direction:column;gap:8px;z-index:5;">
-      <button id="callFlipTop" type="button" aria-label="翻转镜头" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:16px;">🔄</button>
-      <button id="callZoomTop" type="button" aria-label="放大画面" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;">🔍</button>
+      <button id="callZoomTop" type="button" aria-label="缩小/放大画面" style="width:38px;height:38px;border-radius:12px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+      <button id="callFlipTop" type="button" aria-label="翻转镜头" style="height:38px;padding:0 14px;border-radius:20px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.35);cursor:pointer;display:flex;align-items:center;gap:5px;font-size:13px;color:inherit;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;"><path d="M20 11A8 8 0 0 0 6.7 6.7L4 9"/><path d="M4 5v4h4"/><path d="M4 13a8 8 0 0 0 13.3 4.3L20 15"/><path d="M20 19v-4h-4"/></svg>
+        <span>翻转</span>
+      </button>
     </div>
     <div id="callTypeRow" style="display:none;position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 170px);z-index:6;display:none;gap:8px;padding:0 4px;">
       <input id="callTypeInput" type="text" placeholder="不方便说话？打字也行" autocomplete="off" style="flex:1;padding:10px 14px;border-radius:999px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.85);font-size:14px;">
       <button id="callTypeSend" type="button" style="padding:10px 16px;border-radius:999px;border:none;background:#a5586c;color:#fff;cursor:pointer;">发送</button>
     </div>
-    <button id="callTypeBtn" type="button" aria-label="打字" style="position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom) + 74px);width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;z-index:6;">⌨</button>
+    <button id="callTypeBtn" type="button" aria-label="打字" style="position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom) + 200px);width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;z-index:6;">⌨</button>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
     <div class="call-avatar-stage">
@@ -3644,7 +3649,7 @@ const AI_NAME = CONFIG.AI_NAME, HUMAN_NAME = CONFIG.HUMAN_NAME, APP_NAME = CONFI
 const API_BASE = "";       // 月光本地直连：后端直接挂在同源根路径（无nginx反代）；留空=跟随当前访问地址，手机/电脑各自同源
 const USE_MOCK  = (location.hostname === "127.0.0.1" || location.hostname === "localhost") && ["8090", "8091"].includes(location.port);  // 仅纯静态预览端口用假数据；3011 等真后端地址照常联网
 const LS_KEY    = "companion_secret";
-  const APP_VER   = "v115";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
+  const APP_VER   = "v117";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
 
 /* 安全 storage：Edge 的 Tracking Prevention 会拦 http://127.0.0.1 的 storage 访问（报错导致登录卡死）。
    被拦时降级为内存变量——本次会话内登录照常可用，只是关页后要重输密钥。 */
@@ -4045,8 +4050,8 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     const b = document.createElement("div");
     const mine = who === "me";
     b.style.cssText = "max-width:86%;padding:7px 11px;border-radius:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;" +
-      (mine ? "align-self:flex-end;font-size:12.5px;opacity:.6;background:rgba(255,255,255,.35);color:#6b5545;"
-            : "align-self:flex-start;background:rgba(255,190,215,.32);font-size:15px;color:#7a4a5a;backdrop-filter:blur(4px);");
+      (mine ? "align-self:flex-end;font-size:12px;opacity:.6;color:#8a7455;"
+            : "align-self:flex-start;font-size:14px;font-weight:600;color:#c2557a;text-shadow:0 1px 0 rgba(255,255,255,.6);");
     b.textContent = text;
     box.appendChild(b);
     while (box.children.length > 40) box.removeChild(box.firstChild);
@@ -4575,6 +4580,10 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     paiActive = true;
     window.__paiActive = true;
     try {
+      try {
+        const mz = document.getElementById("callMinimize");
+        if (mz){ mz.style.width = "36px"; mz.style.height = "36px"; mz.style.position = "absolute"; mz.style.top = "calc(env(safe-area-inset-top) + 10px)"; mz.style.left = "12px"; mz.style.borderRadius = "50%"; const sv = mz.querySelector("svg"); if (sv){ sv.style.width = "16px"; sv.style.height = "16px"; } }
+      } catch (e) {}
       const cb = document.getElementById("callCamBtn");
       if (cb && !cb.dataset.bound){
         cb.dataset.bound = "1";
@@ -7972,8 +7981,8 @@ async function openEnglishCorner(){
   closeMenu();
   if (USE_MOCK) { showToast("（本地预览）部署后在真后端使用"); return; }
   try {
-    let ses = apiSessions.find(s => (s.title || "") === "英语角");
-    if (!ses) {
+    let ses = null;   // 每次开英语角都新建干净频道（旧频道历史已污染）
+    {
       const r = await fetch(API_BASE + "/app/sessions", { method: "POST",
         headers: Object.assign({}, authHeaders(), { "Content-Type": "application/json" }),
         body: JSON.stringify({ title: "英语角" }) });
@@ -7989,10 +7998,6 @@ async function openEnglishCorner(){
 /* ── 英语角独立插件窗口：固定连英语角 session，绝不碰主窗口的会话 ── */
 let _ecPanel = null, _ecSessionId = null, _ecPoll = null;
 function openEnglishCornerPanel(sid){
-  try {
-    const saved = localStorage.getItem("ec_session_id");
-    if (saved && saved !== sid && (apiSessions || []).some(s => s.id === saved)) sid = saved;   // 用验证过的老会话
-  } catch (e) {}
   _ecSessionId = sid;
   try { localStorage.setItem("ec_session_id", sid); } catch (e) {}
   if (_ecPanel){ _ecPanel.classList.remove("hidden"); _ecPanel.setAttribute("aria-hidden","false"); loadEcLog(); return; }
