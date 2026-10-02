@@ -3530,15 +3530,15 @@
       </button>
       <button id="callFlipTop" type="button" aria-label="翻转镜头" style="height:38px;padding:0 14px;border-radius:20px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.35);cursor:pointer;display:flex;align-items:center;gap:5px;font-size:13px;color:inherit;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:15px;height:15px;"><path d="M20 11A8 8 0 0 0 6.7 6.7L4 9"/><path d="M4 5v4h4"/><path d="M4 13a8 8 0 0 0 13.3 4.3L20 15"/><path d="M20 19v-4h-4"/></svg>
-        <span>翻转</span>
+        
       </button>
     </div>
     <div id="callTypeRow" style="display:none;position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 170px);z-index:6;display:none;gap:8px;padding:0 4px;">
       <input id="callTypeInput" type="text" placeholder="不方便说话？打字也行" autocomplete="off" style="flex:1;padding:10px 14px;border-radius:999px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.85);font-size:14px;">
       <button id="callTypeSend" type="button" style="padding:10px 16px;border-radius:999px;border:none;background:#a5586c;color:#fff;cursor:pointer;">发送</button>
     </div>
-    <button id="callTypeBtn" type="button" aria-label="打字" style="position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom) + 200px);width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;z-index:6;">⌨</button>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    <button id="callTypeBtn" type="button" aria-label="打字" style="position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom) + 175px);width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;z-index:6;">⌨</button>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 20h8"/></svg>
     </button>
     <div class="call-avatar-stage">
       <div class="call-vu call-vu-left" id="callVuLeft" aria-hidden="true"></div>
@@ -3573,7 +3573,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.2h3.3L12 5v14l-4.7-4.2H4z" fill="currentColor" stroke-width="1.2"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>
         
       </button>
-      <button id="callHangup" type="button" aria-label="挂断" style="width:56px;height:56px;border-radius:50%;border:none;background:#b56a7a;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(181,106,122,.4);"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true" style="width:24px;height:24px;"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.996.996 0 0 0-1.01.24l-1.57 1.97a15.045 15.045 0 0 1-6.59-6.59l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
     </div>
     <div hidden></div>
     
@@ -3649,7 +3648,7 @@ const AI_NAME = CONFIG.AI_NAME, HUMAN_NAME = CONFIG.HUMAN_NAME, APP_NAME = CONFI
 const API_BASE = "";       // 月光本地直连：后端直接挂在同源根路径（无nginx反代）；留空=跟随当前访问地址，手机/电脑各自同源
 const USE_MOCK  = (location.hostname === "127.0.0.1" || location.hostname === "localhost") && ["8090", "8091"].includes(location.port);  // 仅纯静态预览端口用假数据；3011 等真后端地址照常联网
 const LS_KEY    = "companion_secret";
-  const APP_VER   = "v117";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
+  const APP_VER   = "v118";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
 
 /* 安全 storage：Edge 的 Tracking Prevention 会拦 http://127.0.0.1 的 storage 访问（报错导致登录卡死）。
    被拦时降级为内存变量——本次会话内登录照常可用，只是关页后要重输密钥。 */
