@@ -3521,14 +3521,14 @@
   </div>
   <div class="call-scrim" id="callScrim"></div>
   <div class="call-sheet" role="dialog" aria-modal="true" aria-label="语音通话">
-    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起" style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);left:12px;width:36px;height:36px;background:rgba(255,255,255,.5);border:1px solid rgba(150,120,80,.25);border-radius:50%;z-index:5;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
-    <div style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;display:flex;gap:8px;z-index:5;">
+    <div style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;display:flex;flex-direction:column;gap:8px;z-index:5;">
       <button id="callFlipTop" type="button" aria-label="翻转镜头" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:16px;">🔄</button>
       <button id="callZoomTop" type="button" aria-label="放大画面" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;">🔍</button>
     </div>
-    <div id="callTypeRow" style="display:none;position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 108px);z-index:6;display:none;gap:8px;padding:0 4px;">
+    <div id="callTypeRow" style="display:none;position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 170px);z-index:6;display:none;gap:8px;padding:0 4px;">
       <input id="callTypeInput" type="text" placeholder="不方便说话？打字也行" autocomplete="off" style="flex:1;padding:10px 14px;border-radius:999px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.85);font-size:14px;">
       <button id="callTypeSend" type="button" style="padding:10px 16px;border-radius:999px;border:none;background:#a5586c;color:#fff;cursor:pointer;">发送</button>
     </div>
@@ -3568,10 +3568,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.2h3.3L12 5v14l-4.7-4.2H4z" fill="currentColor" stroke-width="1.2"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>
         
       </button>
+      <button id="callHangup" type="button" aria-label="挂断" style="width:56px;height:56px;border-radius:50%;border:none;background:#b56a7a;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(181,106,122,.4);"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true" style="width:24px;height:24px;"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.996.996 0 0 0-1.01.24l-1.57 1.97a15.045 15.045 0 0 1-6.59-6.59l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
     </div>
-    <button class="call-hangup" id="callHangup" type="button" aria-label="挂断">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.996.996 0 0 0-1.01.24l-1.57 1.97a15.045 15.045 0 0 1-6.59-6.59l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
-    </button>
+    <div hidden></div>
+    
   </div>
 </div>
 
@@ -3644,7 +3644,7 @@ const AI_NAME = CONFIG.AI_NAME, HUMAN_NAME = CONFIG.HUMAN_NAME, APP_NAME = CONFI
 const API_BASE = "";       // 月光本地直连：后端直接挂在同源根路径（无nginx反代）；留空=跟随当前访问地址，手机/电脑各自同源
 const USE_MOCK  = (location.hostname === "127.0.0.1" || location.hostname === "localhost") && ["8090", "8091"].includes(location.port);  // 仅纯静态预览端口用假数据；3011 等真后端地址照常联网
 const LS_KEY    = "companion_secret";
-  const APP_VER   = "v114";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
+  const APP_VER   = "v115";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
 
 /* 安全 storage：Edge 的 Tracking Prevention 会拦 http://127.0.0.1 的 storage 访问（报错导致登录卡死）。
    被拦时降级为内存变量——本次会话内登录照常可用，只是关页后要重输密钥。 */
@@ -4045,8 +4045,8 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     const b = document.createElement("div");
     const mine = who === "me";
     b.style.cssText = "max-width:86%;padding:7px 11px;border-radius:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;" +
-      (mine ? "align-self:flex-end;font-size:12.5px;opacity:.55;text-shadow:none;"
-            : "align-self:flex-start;background:rgba(20,24,60,.42);font-size:15px;font-weight:600;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.5);");
+      (mine ? "align-self:flex-end;font-size:12.5px;opacity:.6;background:rgba(255,255,255,.35);color:#6b5545;"
+            : "align-self:flex-start;background:rgba(255,190,215,.32);font-size:15px;color:#7a4a5a;backdrop-filter:blur(4px);");
     b.textContent = text;
     box.appendChild(b);
     while (box.children.length > 40) box.removeChild(box.firstChild);
@@ -4588,7 +4588,11 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
         });
       }
       const fb = document.getElementById("callFlipTop");
-      if (fb && !fb.dataset.bound){ fb.dataset.bound = "1"; fb.addEventListener("click", () => { if (pai) pai.flipCamera(); }); }
+      if (fb && !fb.dataset.bound){ fb.dataset.bound = "1"; fb.addEventListener("click", () => {
+          if (!pai) return;
+          if (!pai.video){ if (typeof showToast === "function") showToast("先点下面的摄像头开画面，才能翻转"); return; }
+          pai.flipCamera();
+        }); }
       const zb = document.getElementById("callZoomTop");
       if (zb && !zb.dataset.bound){
         zb.dataset.bound = "1";
