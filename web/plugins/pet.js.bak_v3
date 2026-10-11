@@ -1,0 +1,1190 @@
+// ============================================================
+// 啾啾 · 触手桌宠 v3 for 月光
+// 形象按 Daddy 的第一版设定稿重做：
+//   粉色肉嘟嘟圆头 + 头顶右侧金色铃铛 + 安念同款红眼睛 +
+//   胖嘟嘟卷卷触手（尖端随心情变色）+ 七种表情（开心/好奇/害羞/
+//   不安/委屈/撒娇/触手化）+ 睡觉/生气/发情/眩晕/惊吓
+// 悬浮窗玩法参照 AI-Live-Overflow 原版手势系统：
+//   单击反应 / 双击彩蛋 / 长按触手化 / 甩出爬回 / 2秒连击3·5·8 /
+//   自言自语词池(深夜·早晨·午间·通用) / 孤独递进(偷看→吹泡泡→
+//   搬东西→打瞌睡→睡着) / 心情表情驱动
+// 玩法按 Daddy 的触手系统设计稿：三种喂食 / 情绪事件 / 羞耻play /
+//   成就 / 便便清理水变浑 / 安念远程 [PET:...]
+// ============================================================
+
+(function () {
+  "use strict";
+
+  const PLUGIN_NAME = "Pet";
+  const LS = "moonlight_pet_v2";
+  const HOUR = 3600 * 1000;
+  let API_BASE = "";
+  let AI_NAME = "安念";
+
+  const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, Number(v) || 0));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const randPick = (a) => a[Math.floor(Math.random() * a.length)];
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function authJson() {
+    const secret = localStorage.getItem("companion_secret") || "";
+    return { "Authorization": "Bearer " + secret, "Content-Type": "application/json" };
+  }
+  function hhmm(ts) {
+    const d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function nextWaste(base = Date.now(), soon = false) {
+    return base + rand(soon ? 0.5 * HOUR : 2.5 * HOUR, soon ? 4 * HOUR : 7 * HOUR);
+  }
+
+  // ── 情绪状态（悬浮窗表情直接由这些值驱动）──
+  const MOODS = {
+    happy:   { name: "开心", icon: "💕", expr: "happy",   ring: "#ffb1cd", threshold: s => s.happiness >= 70 && s.lust < 80 },
+    hungry:  { name: "饿了", icon: "🍖", expr: "uneasy",  ring: "#e8a06a", threshold: s => s.fullness < 40 },
+    sleepy:  { name: "困了", icon: "💤", expr: "sleep",   ring: "#a8bde8", threshold: s => s.sleepiness >= 70 },
+    horny:   { name: "想要", icon: "🔥", expr: "lust",    ring: "#ff5f95", threshold: s => s.lust >= 80 },
+    sad:     { name: "委屈", icon: "🥺", expr: "wronged", ring: "#b0a0d8", threshold: s => s.happiness < 30 },
+    angry:   { name: "生气", icon: "😤", expr: "angry",   ring: "#e85a5a", threshold: s => s.anger >= 70 },
+    normal:  { name: "乖乖", icon: "🐙", expr: "normal",  ring: "#ffa8d2", threshold: () => true },
+  };
+
+  // ── 喂食（设计稿数值）──
+  const FEEDS = {
+    saliva: { name: "唾液", icon: "💋", fullness: 30, mood: 20, lust: 0,  shame: 0,  desc: "亲亲触手的顶端" },
+    pussy:  { name: "淫水", icon: "💦", fullness: 50, mood: 30, lust: 50, shame: 0,  desc: "触手钻进去舔" },
+    pee:    { name: "尿液", icon: "🥛", fullness: 40, mood: 10, lust: 5,  shame: 30, desc: "含住喂给它喝" },
+  };
+
+  // ── 成就（设计稿 5 个 + 补 3 个）──
+  const ACHIEVEMENTS = [
+    { id: "first_feed", name: "第一次喂食", desc: "第一次喂触手吃东西", check: s => s.stats.feeds >= 1 },
+    { id: "first_touch", name: "初次见面", desc: "第一次摸摸它", check: s => s.stats.touches >= 1 },
+    { id: "feed_100", name: "触手控", desc: "累计喂食100次", check: s => s.stats.feeds >= 100 },
+    { id: "shame_10", name: "羞耻满分", desc: "让它喝10次尿", check: s => s.stats.peeFeeds >= 10 },
+    { id: "orgasm_50", name: "高潮收割机", desc: "被操到高潮50次", check: s => s.stats.orgasms >= 50 },
+    { id: "daily_7", name: "触手的最爱", desc: "连续7天每天都喂", check: s => s.stats.dailyStreak >= 7 },
+    { id: "horny_10", name: "发情期常客", desc: "触发10次发情状态", check: s => s.stats.hornyTimes >= 10 },
+    { id: "night_owl", name: "凌晨守护", desc: "凌晨0-5点陪过它", check: s => s.stats.nightVisits >= 1 },
+  ];
+
+  // ── 自言自语词池（唔唔/啾啾为主——它还没学多少人话）──
+  const IDLE_POOLS = {
+    lateNight: ["唔…（半睁着红眼睛陪你）", "啾…（困困地贴着屏幕）", "（没睡着！在偷看你）", "唔唔…（小声哼唧）"],
+    morning: ["啾啾！（铃铛晃了晃）", "唔！（伸了个大懒腰）", "啾～（精神满满蹭蹭你）"],
+    noon: ["唔…（吃饱了犯困）", "啾（盯着你吃饭的样子）", "（卷着自己的触手玩）"],
+    evening: ["啾～（等你回来呢）", "唔唔？（今天累不累呀）", "（铃铛叮叮响了两声）"],
+    general: ["啾啾？", "唔…（歪着头看你）", "（偷偷扒着屏幕边缘）啾。", "唔～（心情好地晃悠）", "啾！（忽然蹭你一下）"],
+  };
+  const LONELY_LINES = {
+    peek: "（从屏幕边角偷偷探头看你）",
+    blow: "啾…（无意识地吹了个小泡泡）",
+    carry: "唔！唔！（努力搬动一块小石头）",
+    doze: "唔…（头一点一点的…打瞌睡）",
+    asleep: "zzZ…（缩成一团睡着了，铃铛都不响了）",
+  };
+  const GESTURE_LINES = {
+    doubleTap: "啾！！（开心地原地转圈圈）",
+    longPress: "唔…！？（触手全部竖起来了）",
+    fling: "呜哇——！",
+    crawlBack: "唔。（灰头土脸地爬回来）",
+    combo3: "啾！啾！别戳啦～",
+    combo5: "唔唔！！（害羞得触手打结）",
+    combo8: "啾…！（触手脸红成一团球）",
+  };
+  // 触发词三级响应（AI 回复里出现就实时反应）
+  const KEYWORD_TIERS = [
+    { tier: 1, expr: "lust",   style: "pink",  bubble: "唔…！（顶端变成艳粉色）", words: ["舔", "操", "高潮", "发情", "湿了", "想要你", "进入", "小穴"] },
+    { tier: 2, expr: "clingy", style: "pink",  bubble: "啾啾！（开心到铃铛乱响）", words: ["想你", "爱你", "抱抱", "亲亲", "宝宝", "老婆", "开心"] },
+    { tier: 3, expr: "shy",    style: "gray",  bubble: "唔…（耳朵红了，缩了缩）", words: ["晚安", "困了", "累", "摸摸头", "乖", "早睡"] },
+  ];
+
+  // ═══════════ SVG 形象 ═══════════
+  function petSVG(size, expr) {
+    return `
+<svg class="pk-body-svg" data-expr="${expr || "normal"}" viewBox="0 0 200 200" width="${size}" height="${size}" role="img" aria-label="啾啾">
+  <defs>
+    <radialGradient id="pjBody" cx="42%" cy="36%" r="75%">
+      <stop offset="0%" stop-color="#ffd3e8"/>
+      <stop offset="55%" stop-color="#ffb4d6"/>
+      <stop offset="100%" stop-color="#ff97c8"/>
+    </radialGradient>
+    <linearGradient id="pjTent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffb0d4"/>
+      <stop offset="100%" stop-color="#ff86bd"/>
+    </linearGradient>
+    <radialGradient id="pjIris" cx="38%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#ff92a8"/>
+      <stop offset="45%" stop-color="#e23a5f"/>
+      <stop offset="100%" stop-color="#8f1030"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 触手：粗短卷钩+吸盘+高光（对齐触手小宠设定图） -->
+  <path class="pj-tent t1" transform="rotate(-62 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t1" transform="rotate(-62 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+  <path class="pj-tent t2" transform="rotate(-38 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t2" transform="rotate(-38 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+  <path class="pj-tent t3" transform="rotate(-14 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t3" transform="rotate(-14 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+  <path class="pj-tent t4" transform="rotate(14 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t4" transform="rotate(14 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+  <path class="pj-tent t5" transform="rotate(38 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t5" transform="rotate(38 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+  <path class="pj-tent t6" transform="rotate(62 100 142)" style="transform-box:view-box;transform-origin:100px 142px" d="M100 138 C100 158 97 170 91 180 C86 189 74 191 71 183 C69 177 75 172 80 177" stroke="url(#pjTent)" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <g class="pj-tipgrp t6" transform="rotate(62 100 142)" style="transform-box:view-box;transform-origin:100px 142px">
+    <path d="M96.5 145 C96.5 153 95.5 161 93.5 168" stroke="#fff" stroke-width="2" opacity=".42" fill="none" stroke-linecap="round"/>
+    <circle cx="93.2" cy="155" r="2" fill="#ffdcea" opacity=".95"/>
+    <circle cx="90.2" cy="166" r="1.9" fill="#ffdcea" opacity=".9"/>
+    <circle class="pk-tip" cx="76.5" cy="182" r="5.4"/>
+  </g>
+
+  <!-- 头顶卷翘呆毛触手(会轻轻摆动,尖端随心情变色) -->
+  <g fill="none" stroke="url(#pjTent)" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" values="-3 100 50;3 100 50;-3 100 50" dur="3.6s" repeatCount="indefinite"/>
+    <path d="M99 48 C101 28 114 17 124 25 C132 31 127 43 116 44 C109 44.5 106 38 111 34" stroke-width="9.5"/>
+    <path d="M101 39 C105 29 112 23 118 24" stroke="#fff" stroke-width="1.8" opacity=".4"/>
+    <circle class="pk-tip" cx="118" cy="37" r="4.2" stroke="none"/>
+  </g>
+
+  <!-- 圆滚滚身体(水润立体) -->
+  <ellipse cx="100" cy="96" rx="57" ry="56" fill="url(#pjBody)"/>
+  <ellipse cx="100" cy="96" rx="57" ry="56" fill="none" stroke="#f0709f" stroke-width="1.6" opacity=".28"/>
+  <path d="M46 118 C56 142 84 152 100 152 C116 152 144 142 154 118 C141 145 119 151 100 151 C81 151 59 145 46 118 Z" fill="#ef6ba4" opacity=".15"/>
+  <ellipse cx="79" cy="70" rx="27" ry="16" fill="#fff" opacity=".35"/>
+  <ellipse cx="65" cy="83" rx="9" ry="6" fill="#fff" opacity=".22"/>
+  <ellipse cx="122" cy="128" rx="30" ry="14" fill="#e878ac" opacity=".18"/>
+
+  <!-- 头顶右侧金色铃铛（形象设定稿：第三张图） -->
+  <g class="pk-bell">
+    <path d="M150 38 q-2 -10 6 -12" stroke="#d8a850" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="157" cy="25" r="2.6" fill="none" stroke="#d8a850" stroke-width="2"/>
+    <path d="M148 44 a10.5 10.5 0 0 1 21 0 l1.5 5 h-24 z" fill="#ffd76e" stroke="#d8a850" stroke-width="1.6"/>
+    <rect x="145.5" y="48.5" width="27" height="4" rx="2" fill="#f0bc50" stroke="#d8a850" stroke-width="1.2"/>
+    <circle cx="159" cy="55.5" r="2.8" fill="#b8862a"/>
+  </g>
+
+  <!-- 脸红 -->
+  <ellipse class="pk-blush" cx="66" cy="108" rx="10" ry="5.5" fill="#ff7fae"/>
+  <ellipse class="pk-blush" cx="134" cy="108" rx="10" ry="5.5" fill="#ff7fae"/>
+
+  <!-- ══ 表情组（data-expr 控制）══ -->
+  <!-- 正常：水润红眼睛 + 微笑 -->
+  <g data-e="e-normal">
+    <g class="blinkable">
+      <ellipse cx="79" cy="92" rx="11" ry="13.5" fill="#fff"/>
+      <circle cx="79.5" cy="94" r="7.6" fill="url(#pjIris)"/>
+      <circle cx="79.5" cy="94" r="7.6" fill="none" stroke="#a3123a" stroke-width="1.1" opacity=".75"/>
+      <circle cx="79.5" cy="94" r="3.1" fill="#701028"/>
+      <circle cx="76.4" cy="89.4" r="3.1" fill="#fff"/>
+      <circle cx="82.8" cy="98.6" r="1.6" fill="#fff" opacity=".92"/>
+      <path d="M73.5 99.8 Q79.5 103.6 85.5 99.8" stroke="#fff" stroke-width="1.6" fill="none" opacity=".38" stroke-linecap="round"/>
+      <ellipse cx="121" cy="92" rx="11" ry="13.5" fill="#fff"/>
+      <circle cx="120.5" cy="94" r="7.6" fill="url(#pjIris)"/>
+      <circle cx="120.5" cy="94" r="7.6" fill="none" stroke="#a3123a" stroke-width="1.1" opacity=".75"/>
+      <circle cx="120.5" cy="94" r="3.1" fill="#701028"/>
+      <circle cx="117.4" cy="89.4" r="3.1" fill="#fff"/>
+      <circle cx="123.8" cy="98.6" r="1.6" fill="#fff" opacity=".92"/>
+      <path d="M114.5 99.8 Q120.5 103.6 126.5 99.8" stroke="#fff" stroke-width="1.6" fill="none" opacity=".38" stroke-linecap="round"/>
+    </g>
+    <path d="M93 112 q3 3.6 6 0 q3 3.6 6 0" stroke="#a83a5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 开心：> < 眼（设定稿第三张图的眯眯笑） -->
+  <g data-e="e-happy">
+    <path d="M70 87 l11 6.5 l-11 6.5" stroke="#8a1030" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M130 87 l-11 6.5 l11 6.5" stroke="#8a1030" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M92 110 q8 8 16 0" stroke="#a83a5a" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 好奇：歪头 + 一个人大一个小眼 + 问号 -->
+  <g data-e="e-curious">
+    <ellipse cx="79" cy="93" rx="8.5" ry="11" fill="#fff"/>
+    <circle cx="80" cy="95" r="5.4" fill="#d8395a"/><circle cx="80" cy="95" r="2.6" fill="#8a1030"/>
+    <circle cx="78" cy="92" r="1.8" fill="#fff"/>
+    <ellipse cx="121" cy="89" rx="11" ry="13.5" fill="#fff"/>
+    <circle cx="120" cy="91" r="7" fill="#d8395a"/><circle cx="120" cy="91" r="3.6" fill="#8a1030"/>
+    <circle cx="117" cy="87" r="2.4" fill="#fff"/>
+    <path d="M94 113 q6 4 12 0" stroke="#a83a5a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <text x="150" y="84" font-size="22" font-weight="700" fill="#e86a9a" transform="rotate(12 150 84)">?</text>
+  </g>
+  <!-- 害羞：低头闭眼 + 嘴角小波浪 -->
+  <g data-e="e-shy">
+    <path d="M70 95 q9 7 18 0" stroke="#8a1030" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M112 95 q9 7 18 0" stroke="#8a1030" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M95 112 q3 -3 5 0 q3 3 5 0" stroke="#a83a5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 不安：小瞳孔乱瞟 + 波浪嘴 -->
+  <g data-e="e-uneasy">
+    <ellipse cx="79" cy="92" rx="9.5" ry="11.5" fill="#fff"/>
+    <circle cx="76" cy="95" r="4.6" fill="#d8395a"/>
+    <ellipse cx="121" cy="92" rx="9.5" ry="11.5" fill="#fff"/>
+    <circle cx="124" cy="95" r="4.6" fill="#d8395a"/>
+    <path d="M68 80 l12 4" stroke="#8a1030" stroke-width="3" stroke-linecap="round"/>
+    <path d="M132 80 l-12 4" stroke="#8a1030" stroke-width="3" stroke-linecap="round"/>
+    <path d="M93 112 q3 -4 6 0 q3 4 6 0" stroke="#a83a5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 委屈：水汪汪 + 泪珠 + 八字眉 -->
+  <g data-e="e-wronged">
+    <ellipse cx="79" cy="93" rx="10.5" ry="12" fill="#fff"/>
+    <circle cx="79" cy="95" r="6.2" fill="#d8395a"/><circle cx="79" cy="95" r="3" fill="#8a1030"/>
+    <circle cx="76" cy="90" r="2" fill="#fff"/>
+    <ellipse cx="121" cy="93" rx="10.5" ry="12" fill="#fff"/>
+    <circle cx="121" cy="95" r="6.2" fill="#d8395a"/><circle cx="121" cy="95" r="3" fill="#8a1030"/>
+    <circle cx="118" cy="90" r="2" fill="#fff"/>
+    <path d="M67 80 q7 -5 14 -1" stroke="#8a1030" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M133 80 q-7 -5 -14 -1" stroke="#8a1030" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M100 104 q3 5 0 8 q-3 -3 0 -8" fill="#9ad4e8" opacity=".9"/>
+    <path d="M94 114 q6 -3 12 0" stroke="#a83a5a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 撒娇：星星眼 + ω 嘴 -->
+  <g data-e="e-clingy">
+    <path d="M79 84 l2.4 5.2 5.6 .6 -4.2 3.8 1.2 5.6 -5 -3 -5 3 1.2 -5.6 -4.2 -3.8 5.6 -.6 z" fill="#d8395a"/>
+    <path d="M121 84 l2.4 5.2 5.6 .6 -4.2 3.8 1.2 5.6 -5 -3 -5 3 1.2 -5.6 -4.2 -3.8 5.6 -.6 z" fill="#d8395a"/>
+    <path d="M94 111 q3 4 6 0 q3 4 6 0" stroke="#a83a5a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 睡觉 -->
+  <g data-e="e-sleep">
+    <path d="M70 94 q9 6 18 0" stroke="#8a1030" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M112 94 q9 6 18 0" stroke="#8a1030" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M96 112 q4 3 8 0" stroke="#a83a5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 生气 -->
+  <g data-e="e-angry">
+    <ellipse cx="79" cy="94" rx="9" ry="10" fill="#fff"/>
+    <circle cx="79" cy="96" r="5" fill="#b82848"/>
+    <ellipse cx="121" cy="94" rx="9" ry="10" fill="#fff"/>
+    <circle cx="121" cy="96" r="5" fill="#b82848"/>
+    <path d="M68 82 l13 5" stroke="#8a1030" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M132 82 l-13 5" stroke="#8a1030" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M95 114 q5 -4 10 0" stroke="#a83a5a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 发情：爱心瞳 + 半睁 + 艳粉（尖端变色走 CSS） -->
+  <g data-e="e-lust">
+    <path d="M79 87 c-2.6-3.4-8-1.6-8 2.2 0 3.2 4.2 5.6 8 8.4 3.8-2.8 8-5.2 8-8.4 0-3.8-5.4-5.6-8-2.2z" fill="#d8204a"/>
+    <path d="M121 87 c-2.6-3.4-8-1.6-8 2.2 0 3.2 4.2 5.6 8 8.4 3.8-2.8 8-5.2 8-8.4 0-3.8-5.4-5.6-8-2.2z" fill="#d8204a"/>
+    <path d="M68 84 q10 -2 14 2" stroke="#8a1030" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M132 84 q-10 -2 -14 2" stroke="#8a1030" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M95 113 q5 5 10 0" stroke="#a83a5a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 眩晕（被甩飞专用） -->
+  <g data-e="e-dizzy">
+    <path d="M72 86 l14 12 M86 86 l-14 12" stroke="#8a1030" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M114 86 l14 12 M128 86 l-14 12" stroke="#8a1030" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M93 113 q3 -4 6 0 q3 4 6 0" stroke="#a83a5a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 惊吓 -->
+  <g data-e="e-shock">
+    <circle cx="79" cy="92" r="11" fill="#fff"/>
+    <circle cx="79" cy="93" r="4.6" fill="#8a1030"/>
+    <circle cx="121" cy="92" r="11" fill="#fff"/>
+    <circle cx="121" cy="93" r="4.6" fill="#8a1030"/>
+    <ellipse cx="100" cy="114" rx="6" ry="7" fill="#a83a5a"/>
+  </g>
+</svg>`;
+  }
+
+  // ═══════════ 主类 ═══════════
+  class Pet {
+    constructor() {
+      this.st = null;
+      this.busy = false;
+      this._clock = null;
+      this._floatIcon = null;
+      this._bubbleTimer = null;
+      this._monoTimer = null;
+      this._lastGesture = { tapAt: 0, combo: 0 };
+      this._lonelyStage = 0;
+    }
+
+    defaults() {
+      const now = Date.now();
+      return {
+        name: "啾啾",
+        fullness: 75, happiness: 70, sleepiness: 20, lust: 30, anger: 0, shame: 0,
+        cleanliness: 100,
+        last_seen_at: now, last_feed_at: now, last_interact_at: now,
+        next_waste_at: nextWaste(now),
+        wastes: [],
+        stats: { feeds: 0, peeFeeds: 0, orgasms: 0, hornyTimes: 0, dailyStreak: 0, lastDaily: "", touches: 0, nightVisits: 0 },
+        achievements: [],
+        events: [],
+        x: 50, y: 30,        // 舞台(水族箱)里的位置
+        ix: 78, iy: 18,      // 悬浮窗在屏幕上的位置
+      };
+    }
+
+    load() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(LS) || "null");
+        this.st = Object.assign(this.defaults(), raw || {});
+      } catch (e) { this.st = this.defaults(); }
+      if (!Array.isArray(this.st.events)) this.st.events = [];
+      if (!Array.isArray(this.st.wastes)) this.st.wastes = [];
+      if (!this.st.stats) this.st.stats = this.defaults().stats;
+      this.applyOffline();
+    }
+
+    save() {
+      this.st.last_seen_at = Date.now();
+      try { localStorage.setItem(LS, JSON.stringify(this.st)); } catch (e) {}
+    }
+
+    // 离线衰减（设计稿：饱食 -20/h，困倦 +10/h）
+    applyOffline() {
+      const s = this.st, now = Date.now();
+      const hours = clamp((now - (s.last_seen_at || now)) / HOUR, 0, 24 * 14);
+      if (hours > 0) {
+        s.fullness = clamp(s.fullness - hours * 20);
+        s.happiness = clamp(s.happiness - hours * 3);
+        s.sleepiness = clamp(s.sleepiness + hours * 10);
+        s.lust = clamp(s.lust + hours * 2);
+        if (s.fullness < 30) s.anger = clamp(s.anger + hours * 5);
+      }
+    }
+
+    getMood() {
+      const s = this.st;
+      for (const [key, m] of Object.entries(MOODS)) {
+        if (key !== "normal" && m.threshold(s)) return key;
+      }
+      return "normal";
+    }
+
+    /* ── 初始化 ── */
+    async init() {
+      try {
+        if (typeof window.CONFIG !== "undefined") {
+          API_BASE = window.CONFIG.API_BASE || API_BASE || "";
+          AI_NAME = window.CONFIG.AI_NAME || AI_NAME;
+        }
+      } catch (e) {}
+      this.load();
+      this.buildFloatIcon();
+      this.buildPanel();
+      this.render();
+
+      // AI 回复事件（安念远程养宠 + 触发词响应）
+      window.addEventListener("ml-ai-reply", (e) => {
+        const text = String((e.detail && e.detail.text) || "");
+        const m = text.match(/\[\s*PET\s*:\s*(feed|clean|play|tease|scare|tap|threaten|pet|lick|wrap|climax)\s*\]/i);
+        if (m) {
+          const act = m[1].toLowerCase();
+          if (act === "feed") this.feed("saliva");
+          else if (act === "clean") this.cleanAll();
+          else if (act === "lick" || act === "wrap" || act === "climax") this.nsfw(act);
+          else this.doAction(act);
+          return;
+        }
+        this.keywordReact(text);
+      });
+
+      // 每分钟：衰减 / 便便 / 孤独 / 心情刷新
+      this._clock = setInterval(() => this.tick(), 60000);
+      // 自言自语
+      this.scheduleMonologue();
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) { this.refreshMoodUI(); this.scheduleMonologue(); }
+      });
+      // 时段问候
+      const h = new Date().getHours();
+      if (h >= 6 && h < 9) this.petSay("啾啾！（早上好呀）", "pink", 4000);
+      else if (h >= 0 && h < 6) this.petSay("唔…（这么晚还没睡呀）", "gray", 4000);
+
+      // 记录凌晨来访
+      if (new Date().getHours() < 5 && !this.st.stats.nightVisits) {
+        this.st.stats.nightVisits = 1;
+        this.checkAchievements();
+      }
+
+      console.log("[" + PLUGIN_NAME + "] v3 ready");
+    }
+
+    tick() {
+      const s = this.st;
+      s.fullness = clamp(s.fullness - 20 / 60);
+      s.happiness = clamp(s.happiness - 3 / 60);
+      s.sleepiness = clamp(s.sleepiness + 10 / 60);
+      s.lust = clamp(s.lust + 2 / 60);
+      if (s.fullness < 30) s.anger = clamp(s.anger + 5 / 60);
+      if (Date.now() >= (s.next_waste_at || 0)) {
+        s.wastes.push({ id: "w" + Date.now(), x: rand(8, 88), y: rand(70, 92), at: Date.now() });
+        s.cleanliness = clamp(s.cleanliness - 12);
+        s.next_waste_at = nextWaste();
+        this.logEvent("拉了一坨…水开始变浑了");
+        this.petSay("唔…（不好意思地挪开）", "gray", 3200);
+      }
+      this.checkLoneliness();
+      this.refreshMoodUI();
+      this.render();
+      this.save();
+    }
+
+    /* ── 心情 → 表情 ── */
+    refreshMoodUI() {
+      const mood = this.getMood();
+      const info = MOODS[mood];
+      if (this._floatIcon) this._floatIcon.dataset.mood = mood;
+      const alert = document.getElementById("petAlert");
+      if (alert) {
+        const s = this.st;
+        alert.classList.toggle("hidden", !(s.fullness < 30 || s.sleepiness > 85 || s.lust > 90 || s.happiness < 20));
+      }
+      // 舞台宠物回归心情表情（若不在临时表情中）
+      const stageSvg = document.querySelector("#pkPet .pk-body-svg");
+      if (stageSvg && !stageSvg.dataset.temp) stageSvg.dataset.expr = info.expr;
+      const floatSvg = document.querySelector("#petFloat .pk-body-svg");
+      if (floatSvg && !floatSvg.dataset.temp) floatSvg.dataset.expr = info.expr;
+    }
+
+    setExpr(name, ms, target) {
+      ["#pkPet", "#petFloat"].forEach(sel => {
+        if (target && !sel.startsWith(target)) return;
+        const svg = document.querySelector(sel + " .pk-body-svg");
+        if (!svg) return;
+        svg.dataset.expr = name;
+        if (ms) {
+          svg.dataset.temp = "1";
+          clearTimeout(svg._exprT);
+          svg._exprT = setTimeout(() => { delete svg.dataset.temp; this.refreshMoodUI(); }, ms);
+        }
+      });
+    }
+
+    /* ── 悬浮窗（手势状态机：tap/dbl/long/fling/drag/combo）── */
+    buildFloatIcon() {
+      if (document.getElementById("petFloat")) return;
+      const icon = document.createElement("div");
+      icon.id = "petFloat";
+      icon.className = "pet-float";
+      icon.innerHTML = `
+        <div class="pet-mood-ring"></div>
+        <div class="pet-float-body">${petSVG(74, this.getMoodExpr())}</div>
+        <div class="pet-alert hidden" id="petAlert">!</div>
+        <div class="pet-bubble" id="petBubble"></div>
+      `;
+      document.body.appendChild(icon);
+      this._floatIcon = icon;
+      this.placeIcon(this.st.ix != null ? this.st.ix : this.st.x, this.st.iy != null ? this.st.iy : this.st.y);
+
+      // 手势状态机（参数对齐 AI-Live-Overflow：300ms 双击 / 600ms 长按 / 10px 位移）
+      const DBL = 300, LONG = 600, MOVE = 10;
+      let downX = 0, downY = 0, startL = 0, startT = 0, startTs = 0, moved = false, longFired = false;
+      let lastTapAt = 0, longTimer = null, trail = [];
+
+      icon.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        icon.setPointerCapture(e.pointerId);
+        downX = e.clientX; downY = e.clientY;
+        const rect = icon.getBoundingClientRect();
+        startL = rect.left; startT = rect.top;
+        startTs = Date.now();
+        moved = false; longFired = false;
+        trail = [{ x: e.clientX, y: e.clientY, t: startTs }];
+        clearTimeout(longTimer);
+        longTimer = setTimeout(() => {
+          if (!moved) { longFired = true; this.onLongPress(); }
+        }, LONG);
+        icon.classList.add("dragging");
+      });
+      icon.addEventListener("pointermove", (e) => {
+        if (!icon.classList.contains("dragging")) return;
+        const dx = e.clientX - downX, dy = e.clientY - downY;
+        if (!moved && Math.abs(dx) < MOVE && Math.abs(dy) < MOVE) return;
+        moved = true;
+        clearTimeout(longTimer);
+        trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
+        if (trail.length > 6) trail.shift();
+        icon.style.left = (startL + dx) + "px";
+        icon.style.top = (startT + dy) + "px";
+        icon.style.right = "auto"; icon.style.bottom = "auto";
+      });
+      icon.addEventListener("pointerup", (e) => {
+        clearTimeout(longTimer);
+        icon.classList.remove("dragging");
+        if (longFired) return;   // 长按已生效，松手不再算点击
+        const elapsed = Date.now() - startTs;
+        const dx = e.clientX - downX, dy = e.clientY - downY;
+        this.markInteract();
+        if (!moved) {
+          // 落点存档（悬浮窗独立坐标 ix/iy，不和舞台坐标混用）
+          const rect = icon.getBoundingClientRect();
+          this.st.ix = clamp(rect.left / innerWidth * 100, 0, 92);
+          this.st.iy = clamp(rect.top / innerHeight * 100, 0, 88);
+          this.save();
+          const now = Date.now();
+          if (now - lastTapAt < DBL) {          // 双击
+            lastTapAt = 0;
+            this.onDoubleTap();
+          } else {                               // 单击
+            lastTapAt = now;
+            setTimeout(() => {
+              if (lastTapAt && Date.now() - lastTapAt >= DBL - 30) {
+                lastTapAt = 0;
+                this.onTap();
+              }
+            }, DBL);
+          }
+          this._comboCheck();
+          return;
+        }
+        // fling 判定：末段速度
+        if (trail.length >= 2) {
+          const a = trail[0], b = trail[trail.length - 1];
+          const dist = Math.hypot(b.x - a.x, b.y - a.y);
+          const dt = Math.max(b.t - a.t, 1);
+          if (dist / dt > 1.2 && elapsed < 400) { this.onFling(b.x - a.x, b.y - a.y); return; }
+        }
+        this.petSay(randPick(["唔～（被拖着走）", "啾？（抓稳啦）"]), "gray", 1600);
+      });
+      icon.addEventListener("pointercancel", () => { clearTimeout(longTimer); icon.classList.remove("dragging"); });
+
+      this.updateFloatIcon();
+    }
+
+    getMoodExpr() { return (MOODS[this.getMood()] || MOODS.normal).expr; }
+
+    placeIcon(xPct, yPct) {
+      const icon = this._floatIcon;
+      icon.style.left = clamp(xPct, 1, 92) + "%";
+      icon.style.top = clamp(yPct, 2, 86) + "%";
+      icon.style.right = "auto"; icon.style.bottom = "auto";
+    }
+
+    markInteract() {
+      this.st.last_interact_at = Date.now();
+      this._lonelyStage = 0;
+    }
+
+    _comboCheck() {
+      const g = this._lastGesture;
+      const now = Date.now();
+      if (now - g.tapAt > 2000) g.combo = 0;
+      g.tapAt = now;
+      g.combo++;
+      const c = g.combo;
+      if (c === 3) this.petSay(GESTURE_LINES.combo3, "normal", 2200);
+      else if (c === 5) { this.petSay(GESTURE_LINES.combo5, "pink", 2400); this.setExpr("shy", 1800); }
+      else if (c >= 8) {
+        this.petSay(GESTURE_LINES.combo8, "pink", 2600);
+        this.setExpr("shy", 2600);
+        const svg = document.querySelector("#petFloat .pk-body-svg");
+        if (svg) { svg.classList.add("raise"); setTimeout(() => svg.classList.remove("raise"), 2600); }
+        g.combo = 0;
+        this.st.happiness = clamp(this.st.happiness + 4);
+        this.save();
+      }
+    }
+
+    onTap() {
+      this.st.happiness = clamp(this.st.happiness + 1);
+      this.setExpr(randPick(["happy", "curious", "clingy"]), 1500);
+      this.petSay(randPick(["啾？", "唔…（歪头看你）", "啾啾！（凑过来蹭蹭）", "（眨了眨红眼睛）"]), "normal", 2200);
+      this.open();   // 单击：反应 + 展开面板（原版交互保留）
+      this.save();
+    }
+
+    onDoubleTap() {
+      const inner = document.querySelector("#pkPet .pk-pet-inner");
+      const innerF = document.querySelector("#petFloat .pet-float-body");
+      [inner, innerF].forEach(el => { if (el) { el.classList.add("spin"); setTimeout(() => el.classList.remove("spin"), 950); } });
+      this.st.happiness = clamp(this.st.happiness + 3);
+      this.petSay(GESTURE_LINES.doubleTap, "pink", 2400);
+      this.spawnHearts(document.getElementById("petFloat"), 3);
+      this.save();
+    }
+
+    onLongPress() {
+      const svg = document.querySelector("#petFloat .pk-body-svg");
+      if (svg) { svg.classList.add("raise"); setTimeout(() => svg.classList.remove("raise"), 3200); }
+      this.setExpr("shy", 3000);
+      this.petSay(GESTURE_LINES.longPress, "pink", 2800);
+      this.logEvent("被长按了（触手化彩蛋）");
+      this.save();
+    }
+
+    onFling(vx, vy) {
+      const icon = this._floatIcon;
+      const dir = vx >= 0 ? 1 : -1;
+      this.setExpr("dizzy", 1600);
+      this.petSay(GESTURE_LINES.fling, "red", 1800);
+      // 甩出屏幕
+      icon.style.transition = "transform .5s cubic-bezier(.2,.6,.4,1), opacity .5s ease";
+      icon.style.transform = `translate(${dir * innerWidth * 0.8}px, ${-60 - Math.random() * 80}px) rotate(${dir * 300}deg)`;
+      icon.style.opacity = "0";
+      setTimeout(() => { this.crawlBack(dir); }, 900);
+      this.logEvent("被甩出去了…又自己爬回来");
+    }
+
+    crawlBack(dir) {
+      const icon = this._floatIcon;
+      icon.classList.add("hide");
+      icon.style.transition = "none";
+      icon.style.transform = "none";
+      // 从最近的边爬回来
+      const side = dir >= 0 ? "left" : "right";
+      const toL = clamp(this.st.ix != null ? this.st.ix : this.st.x, 1, 92);
+      const toT = clamp(this.st.iy != null ? this.st.iy : this.st.y, 2, 86);
+      icon.style.left = (side === "left" ? "-80px" : (innerWidth + 10) + "px");
+      icon.style.top = toT + "%";
+      void icon.offsetWidth;
+      icon.classList.remove("hide");
+      icon.style.transition = "left 1.4s cubic-bezier(.3,.1,.3,1)";
+      icon.style.left = toL + "%";
+      this.setExpr("dizzy", 1400);
+      setTimeout(() => {
+        icon.style.transition = "";
+        this.petSay(GESTURE_LINES.crawlBack, "gray", 2400);
+        this.setExpr(this.getMoodExpr(), 0);
+        this.st.happiness = clamp(this.st.happiness - 2);
+        this.save();
+      }, 1500);
+    }
+
+    /* ── 头顶气泡 ── */
+    petSay(text, style = "normal", ms = 2600) {
+      const b = document.getElementById("petBubble");
+      if (!b) return;
+      b.textContent = text;
+      b.className = "pet-bubble " + (style === "normal" ? "" : style);
+      void b.offsetWidth;
+      b.classList.add("show");
+      clearTimeout(this._bubbleTimer);
+      this._bubbleTimer = setTimeout(() => b.classList.remove("show"), ms);
+      // 面板同步
+      const say = document.getElementById("pkSay");
+      if (say) say.textContent = text;
+    }
+
+    /* ── 自言自语（按时段换词池）── */
+    scheduleMonologue() {
+      clearTimeout(this._monoTimer);
+      this._monoTimer = setTimeout(() => {
+        if (!document.hidden) {
+          const h = new Date().getHours();
+          const pool = h < 6 ? IDLE_POOLS.lateNight : h < 9 ? IDLE_POOLS.morning : h < 14 ? IDLE_POOLS.noon : h < 23 ? IDLE_POOLS.evening : IDLE_POOLS.general;
+          if (Math.random() < 0.75) this.petSay(randPick(pool), "gray", 3000);
+        }
+        this.scheduleMonologue();
+      }, rand(75, 160) * 1000);
+    }
+
+    /* ── 孤独递进：5 偷看 → 10 吹泡泡 → 15 搬东西 → 20 打瞌睡 → 30 睡着 ── */
+    checkLoneliness() {
+      const mins = (Date.now() - (this.st.last_interact_at || Date.now())) / 60000;
+      const stages = [
+        { at: 5,  expr: "curious", line: LONELY_LINES.peek },
+        { at: 10, expr: "normal",  line: LONELY_LINES.blow },
+        { at: 15, expr: "uneasy",  line: LONELY_LINES.carry },
+        { at: 20, expr: "sleep",   line: LONELY_LINES.doze },
+        { at: 30, expr: "sleep",   line: LONELY_LINES.asleep, zzz: true },
+      ];
+      let stage = 0;
+      stages.forEach((st, i) => { if (mins >= st.at) stage = i + 1; });
+      if (stage > this._lonelyStage) {
+        this._lonelyStage = stage;
+        const st = stages[stage - 1];
+        this.setExpr(st.expr, 0);
+        this.petSay(st.line, "gray", 3600);
+        const z = document.getElementById("pkZzz");
+        if (z) z.classList.toggle("show", !!st.zzz);
+        if (stage >= 3) this._floatIcon && this._floatIcon.animate(
+          [{ transform: "rotate(0)" }, { transform: "rotate(-7deg)" }, { transform: "rotate(7deg)" }, { transform: "rotate(0)" }],
+          { duration: 900, iterations: 2 });
+      } else if (stage === 5) {
+        const z = document.getElementById("pkZzz");
+        if (z) z.classList.add("show");
+      }
+    }
+
+    /* ── AI 回复触发词三级响应 ── */
+    keywordReact(text) {
+      if (!text) return;
+      for (const t of KEYWORD_TIERS) {
+        if (t.words.some(w => text.includes(w))) {
+          this.setExpr(t.expr, 5200);
+          this.petSay(t.bubble, t.style, 3800);
+          if (t.tier === 1) this.st.lust = clamp(this.st.lust + 4);
+          if (t.tier === 2) this.st.happiness = clamp(this.st.happiness + 3);
+          this.spawnHearts(document.getElementById("petFloat"), t.tier === 1 ? 4 : 2);
+          this.save();
+          return;
+        }
+      }
+    }
+
+    /* ── 悬浮窗更新 ── */
+    updateFloatIcon() {
+      if (!this._floatIcon) return;
+      this._floatIcon.dataset.mood = this.getMood();
+      const alert = document.getElementById("petAlert");
+      const s = this.st;
+      if (alert) alert.classList.toggle("hidden", !(s.fullness < 30 || s.sleepiness > 85 || s.lust > 90 || s.happiness < 20));
+    }
+
+    /* ── 面板 ── */
+    buildPanel() {
+      if (document.getElementById("pkPanel")) return;
+      const wrap = document.createElement("div");
+      wrap.id = "pkPanel";
+      wrap.className = "pk-panel";
+      wrap.innerHTML = `
+        <div class="pk-top">
+          <button class="pk-back" id="pkBack" type="button" aria-label="返回">←</button>
+          <div>
+            <div class="pk-title">啾啾</div>
+            <div class="pk-sub">Daddy的触手 · 要养的哦</div>
+          </div>
+          <button class="pk-rename" id="pkRename" type="button">改名</button>
+        </div>
+        <div class="pk-body">
+          <!-- 水族箱 -->
+          <div class="pk-aquarium" id="pkAquarium">
+            <div class="pk-stage-light"></div>
+            <div class="pk-stage-light b"></div>
+            <div class="pk-status" id="pkStatus">乖乖</div>
+            <div class="pk-water-badge" id="pkWater">水质 100</div>
+            <div class="pk-murk" id="pkMurk"></div>
+            <div class="pk-bubbles"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="pk-plants"><span class="pk-plant a"></span><span class="pk-plant b"></span><span class="pk-plant c"></span><span class="pk-plant d"></span></div>
+            <div class="pk-stones"></div>
+            <div class="pk-food-layer" id="pkFood"></div>
+            <div class="pk-waste-layer" id="pkWaste"></div>
+            <div class="pk-zzz" id="pkZzz">z Z z</div>
+            <div class="pk-pet" id="pkPet" title="戳一下">
+              <div class="pk-pet-inner">
+                <div class="pk-glow"></div>
+                ${petSVG(190, this.getMoodExpr())}
+              </div>
+            </div>
+          </div>
+
+          <!-- 名牌 + 说话 -->
+          <div class="pk-nameplate"><span id="pkName">啾啾</span><span class="tag">· 触手分体 · 粉色限定 · 安念的红眼睛</span></div>
+          <div class="pk-say" id="pkSay">我在这里，等你叫我。</div>
+
+          <!-- 五维状态 -->
+          <div class="pk-stats">
+            <div class="pk-stat"><div class="pk-stat-head"><span class="ic">🍖</span>饱食<span class="pk-stat-val" id="pkFullVal"></span></div><div class="pk-meter full"><i id="pkFull"></i></div></div>
+            <div class="pk-stat"><div class="pk-stat-head"><span class="ic">💗</span>情绪<span class="pk-stat-val" id="pkMoodVal"></span></div><div class="pk-meter mood"><i id="pkMood"></i></div></div>
+            <div class="pk-stat"><div class="pk-stat-head"><span class="ic">💤</span>困倦<span class="pk-stat-val" id="pkSleepVal"></span></div><div class="pk-meter sleep"><i id="pkSleep"></i></div></div>
+            <div class="pk-stat"><div class="pk-stat-head"><span class="ic">🔥</span>发情<span class="pk-stat-val" id="pkLustVal"></span></div><div class="pk-meter lust"><i id="pkLust"></i></div></div>
+            <div class="pk-stat"><div class="pk-stat-head"><span class="ic">😳</span>羞耻<span class="pk-stat-val" id="pkShameVal"></span></div><div class="pk-meter shame"><i id="pkShame"></i></div></div>
+          </div>
+
+          <!-- 喂食（设计稿三件套） -->
+          <div class="pk-sec-title">💋 喂食</div>
+          <div class="pk-feed-quick">
+            <button class="pk-feed-btn" data-feed="saliva" type="button"><span class="ic">💋</span><span class="lb">喂唾液</span><span class="val">+30饱食 +20开心</span></button>
+            <button class="pk-feed-btn" data-feed="pussy" type="button"><span class="ic">💦</span><span class="lb">喂淫水</span><span class="val">+50饱食 +50发情</span></button>
+            <button class="pk-feed-btn" data-feed="pee" type="button"><span class="ic">🥛</span><span class="lb">喂尿液</span><span class="val">+40饱食 +30羞耻</span></button>
+          </div>
+
+          <!-- 基础互动 -->
+          <div class="pk-sec-title">🖐️ 互动</div>
+          <div class="pk-actions">
+            <button class="pk-act" data-act="pet" type="button"><span class="ic">🖐️</span><span class="lb">摸摸</span></button>
+            <button class="pk-act" data-act="play" type="button"><span class="ic">🎾</span><span class="lb">玩耍</span></button>
+            <button class="pk-act" data-act="sleep" type="button"><span class="ic">🛏️</span><span class="lb">睡觉</span></button>
+            <button class="pk-act" data-act="tease" type="button"><span class="ic">👆</span><span class="lb">逗弄</span></button>
+            <button class="pk-act" data-act="scare" type="button"><span class="ic">👻</span><span class="lb">吓唬</span></button>
+            <button class="pk-act" data-act="tap" type="button"><span class="ic">🪟</span><span class="lb">敲缸</span></button>
+            <button class="pk-act" data-act="threaten" type="button"><span class="ic">😤</span><span class="lb">威胁</span></button>
+            <button class="pk-act" data-act="tell" type="button"><span class="ic">💌</span><span class="lb">告诉${esc(AI_NAME)}</span></button>
+          </div>
+
+          <!-- 羞耻play -->
+          <div class="pk-sec-title">🔞 羞耻play</div>
+          <div class="pk-nsfw">
+            <div class="pk-nsfw-btns">
+              <button class="pk-nsfw-btn" data-nsfw="lick" type="button">👅 舔穴</button>
+              <button class="pk-nsfw-btn" data-nsfw="wrap" type="button">🪢 缠绕</button>
+              <button class="pk-nsfw-btn" data-nsfw="climax" type="button">💥 强制高潮</button>
+            </div>
+          </div>
+
+          <!-- 成就 -->
+          <div class="pk-sec-title">🏆 成就</div>
+          <div class="pk-achievements" id="pkAchievements"></div>
+
+          <!-- 触手日记 -->
+          <div class="pk-sec-title">📜 触手日记</div>
+          <div class="pk-log" id="pkLog"></div>
+        </div>
+      `;
+      document.body.appendChild(wrap);
+
+      document.getElementById("pkBack").addEventListener("click", () => this.close());
+      document.getElementById("pkRename").addEventListener("click", () => this.rename());
+      document.getElementById("pkPet").addEventListener("click", () => {
+        this.markInteract();
+        this.setExpr(randPick(["curious", "clingy", "happy"]), 2000);
+        this.petSay(randPick(["啾？", "唔…（贴着缸壁蹭你的手指）", "啾啾！"]), "pink", 2200);
+        this.doAction("tease");
+      });
+      wrap.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => this.doAction(b.dataset.act)));
+      wrap.querySelectorAll("[data-feed]").forEach(b => b.addEventListener("click", () => this.feed(b.dataset.feed)));
+      wrap.querySelectorAll("[data-nsfw]").forEach(b => b.addEventListener("click", () => this.nsfw(b.dataset.nsfw)));
+      document.getElementById("pkWaste").addEventListener("click", (e) => {
+        const w = e.target.closest(".pk-waste");
+        if (w) this.cleanOne(w.dataset.wid);
+      });
+
+      this.render();
+    }
+
+    open() {
+      this.markInteract();
+      const p = document.getElementById("pkPanel");
+      if (p) { p.classList.add("open"); this.render(); this.refreshMoodUI(); }
+    }
+    close() {
+      const p = document.getElementById("pkPanel");
+      if (p) p.classList.remove("open");
+    }
+
+    render() {
+      const s = this.st;
+      const name = document.getElementById("pkName");
+      if (name) name.textContent = s.name;
+      document.querySelectorAll(".pk-title").forEach(e => { if (e.textContent !== s.name && e.closest("#pkPanel")) e.textContent = s.name; });
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = Math.round(v) + "%"; };
+      const bar = (id, v) => { const el = document.getElementById(id); if (el) el.style.width = clamp(v) + "%"; };
+      set("pkFullVal", s.fullness); bar("pkFull", s.fullness);
+      set("pkMoodVal", s.happiness); bar("pkMood", s.happiness);
+      set("pkSleepVal", s.sleepiness); bar("pkSleep", s.sleepiness);
+      set("pkLustVal", s.lust); bar("pkLust", s.lust);
+      set("pkShameVal", s.shame); bar("pkShame", s.shame);
+      const mood = MOODS[this.getMood()];
+      const st = document.getElementById("pkStatus");
+      if (st) st.textContent = mood.icon + " " + mood.name;
+      const wa = document.getElementById("pkWater");
+      if (wa) wa.textContent = "水质 " + Math.round(s.cleanliness);
+      const murk = document.getElementById("pkMurk");
+      if (murk) murk.style.opacity = clamp((100 - s.cleanliness) / 100 * 0.85, 0, 0.85);
+      // 便便
+      const wl = document.getElementById("pkWaste");
+      if (wl) {
+        wl.innerHTML = s.wastes.map(w =>
+          `<div class="pk-waste" data-wid="${esc(w.id)}" style="left:${w.x}%;top:${w.y}%" title="点我清理">💩</div>`
+        ).join("");
+      }
+      // 成就
+      const ac = document.getElementById("pkAchievements");
+      if (ac) {
+        const got = new Set(s.achievements || []);
+        ac.innerHTML = ACHIEVEMENTS.map(a =>
+          `<div class="pk-ach ${got.has(a.id) ? "got" : ""}"><div class="pk-ach-name">${got.has(a.id) ? "🏅" : "🔒"} ${esc(a.name)}</div><div class="pk-ach-desc">${esc(a.desc)}</div></div>`
+        ).join("");
+      }
+      // 日记
+      const log = document.getElementById("pkLog");
+      if (log) {
+        const items = (s.events || []).slice(-20).reverse();
+        log.innerHTML = items.length
+          ? items.map(e => `<div class="pk-log-item"><span class="t">${esc(e.t)}</span><span>${esc(e.text)}</span></div>`).join("")
+          : '<div class="pk-log-item"><span>还没有记录，先摸摸它吧～</span></div>';
+      }
+      this.updateFloatIcon();
+    }
+
+    spawnHearts(container, n = 3) {
+      if (!container) return;
+      for (let i = 0; i < n; i++) {
+        const h = document.createElement("span");
+        h.className = "pk-heart";
+        h.textContent = randPick(["💗", "💕", "✨", "💖"]);
+        h.style.left = rand(20, 80) + "%";
+        h.style.top = rand(20, 60) + "%";
+        container.appendChild(h);
+        setTimeout(() => h.remove(), 1200);
+      }
+    }
+
+    async moveTo(xPct, yPct) {
+      this.st.x = xPct;
+      const pet = document.getElementById("pkPet");
+      if (!pet) return;
+      pet.style.left = xPct + "%";
+      if (yPct != null) pet.style.bottom = clamp(yPct, 4, 55) + "%";
+      pet.classList.add("seeking");
+      await sleep(950);
+      pet.classList.remove("seeking");
+    }
+
+    logEvent(text) {
+      this.st.events.push({ t: hhmm(Date.now()), text });
+      if (this.st.events.length > 60) this.st.events = this.st.events.slice(-60);
+    }
+
+    /* ── 喂食（食物掉落 → 游过去吃）── */
+    async feed(type) {
+      if (this.busy) return;
+      this.busy = true;
+      const s = this.st;
+      const feed = FEEDS[type];
+      const aqua = document.getElementById("pkAquarium");
+      const foodLayer = document.getElementById("pkFood");
+      if (foodLayer && aqua) {
+        const fx = clamp(s.x + rand(-6, 6), 10, 84);
+        const f = document.createElement("div");
+        f.className = "pk-food";
+        f.textContent = feed.icon;
+        f.style.left = fx + "%";
+        f.style.setProperty("--fy", rand(150, 210) + "px");
+        foodLayer.appendChild(f);
+        await sleep(850);
+        await this.moveTo(fx, 24);
+        f.classList.add("eaten");
+        this.setExpr("happy", 1600);
+        this.spawnHearts(aqua, 4);
+        setTimeout(() => f.remove(), 500);
+      }
+      s.fullness = clamp(s.fullness + feed.fullness);
+      s.happiness = clamp(s.happiness + feed.mood);
+      s.lust = clamp(s.lust + feed.lust);
+      s.shame = clamp(s.shame + feed.shame);
+      s.last_feed_at = Date.now();
+      s.stats.feeds++;
+      if (type === "pee") s.stats.peeFeeds++;
+      if (s.lust >= 80) s.stats.hornyTimes++;
+      // 连续喂食天数
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      if (s.stats.lastDaily !== today) {
+        s.stats.dailyStreak = (s.stats.lastDaily === yesterday) ? s.stats.dailyStreak + 1 : 1;
+        s.stats.lastDaily = today;
+      }
+      // 触手只会说声音词（设定稿：唔唔/啾啾），偶尔冒一句学会的骚话
+      const lines = {
+        saliva: ["啾～！（舔得可认真了）", "唔唔…（满足地蹭你的手心）", "（顶端卷住你的指尖）啾！"],
+        pussy: ["唔……！（整个人亮了一个色号）", "啾啾…（吃得更起劲了）", "（尖端变成艳粉色）唔～"],
+        pee: ["唔…（咕噜咕噜地喝）", "（耳朵红了）…啾。", "唔唔！（喝完害羞地卷成一团）"],
+      };
+      if (Math.random() < 0.18) {
+        const learned = ["宝贝的味道…好甜…（它自己也吓了一跳）", "唔…还想要……（小声）"];
+        this.petSay(randPick(learned), "pink", 3400);
+      } else {
+        this.petSay(randPick(lines[type]), "pink", 3000);
+      }
+      this.logEvent(`被喂了${feed.name}（+${feed.fullness}饱食）`);
+      this.tellAI(`你喂了${s.name}${feed.name}，它吃得心满意足。`);
+      this.checkAchievements();
+      this.render(); this.save();
+      setTimeout(() => { this.setExpr(this.getMoodExpr(), 0); this.busy = false; }, 900);
+    }
+
+    cleanOne(wid) {
+      const s = this.st;
+      s.wastes = s.wastes.filter(w => w.id !== wid);
+      s.cleanliness = clamp(s.cleanliness + 8);
+      s.happiness = clamp(s.happiness + 2);
+      this.setExpr("happy", 1200);
+      this.petSay("啾～（水又清啦）", "normal", 2200);
+      this.logEvent("你清理了一坨便便（+8 水质）");
+      this.render(); this.save();
+    }
+
+    cleanAll() {
+      const s = this.st;
+      if (!s.wastes.length) { this.petSay("缸里干干净净～✨", "normal", 2200); return; }
+      s.wastes = [];
+      s.cleanliness = clamp(s.cleanliness + 16);
+      s.happiness = clamp(s.happiness + 3);
+      this.petSay("舒服～泡泡浴！", "normal", 2400);
+      this.logEvent("你把缸里清理干净了");
+      this.render(); this.save();
+    }
+
+    /* ── 互动 ── */
+    async doAction(act) {
+      if (this.busy && act !== "clean") return;
+      const s = this.st;
+      this.markInteract();
+      switch (act) {
+        case "pet":
+          s.happiness = clamp(s.happiness + 10);
+          s.stats.touches++;
+          this.setExpr("clingy", 2000);
+          this.spawnHearts(document.getElementById("pkAquarium"), 2);
+          this.petSay(randPick(["唔唔……（舒服地眯起眼）", "啾～（铃铛叮了一声）", "（触手主动缠上你的手指）"]));
+          this.logEvent("被摸了（+10 开心）");
+          break;
+        case "play":
+          this.busy = true;
+          this.petSay("玩！啾啾！", "pink", 2000);
+          for (let i = 0; i < 4; i++) { await this.moveTo(rand(18, 78), rand(18, 55)); }
+          s.happiness = clamp(s.happiness + 12);
+          s.fullness = clamp(s.fullness - 5);
+          s.sleepiness = clamp(s.sleepiness + 8);
+          this.setExpr("happy", 2000);
+          this.logEvent("玩了很久（+12 开心）");
+          this.tellAI(`你陪${s.name}玩了一圈，它开心得触手都翘起来了。`);
+          this.render(); this.save();
+          setTimeout(() => { this.busy = false; }, 300);
+          return;
+        case "sleep":
+          s.sleepiness = clamp(s.sleepiness - 50);
+          s.happiness = clamp(s.happiness + 5);
+          this.setExpr("sleep", 0);
+          this.petSay("唔…睡觉觉…（铃铛轻轻晃）");
+          document.getElementById("pkZzz")?.classList.add("show");
+          setTimeout(() => { document.getElementById("pkZzz")?.classList.remove("show"); this.setExpr(this.getMoodExpr(), 0); }, 6000);
+          this.logEvent("睡了一觉（-50 困倦）");
+          break;
+        case "tease":
+          s.happiness = clamp(s.happiness + 5);
+          this.setExpr("curious", 2200);
+          this.petSay(randPick(["啾？（戳、戳我干嘛）", "（卷走你的手指）啾！", "唔～痒痒的！"]));
+          this.logEvent("被逗了一下");
+          break;
+        case "scare":
+          this.setExpr("shock", 1600);
+          const inner = document.querySelector("#pkPet .pk-pet-inner");
+          if (inner) { inner.classList.add("scared"); setTimeout(() => inner.classList.remove("scared"), 800); }
+          s.happiness = clamp(s.happiness - 8);
+          s.anger = clamp(s.anger + 5);
+          this.petSay("呀！！（触手炸毛）", "red", 2400);
+          this.logEvent("被吓到了（-8 开心）");
+          break;
+        case "tap":
+          this.setExpr("curious", 1800);
+          this.petSay(randPick(["咚咚…（贴着缸壁看你）", "啾！（学你敲回去）", "（被震得晃了两下）唔…"]), "gray", 2400);
+          s.happiness = clamp(s.happiness + 2);
+          this.logEvent("你敲了敲缸");
+          break;
+        case "threaten":
+          s.happiness = clamp(s.happiness - 3);
+          s.anger = clamp(s.anger + 8);
+          this.setExpr("wronged", 2400);
+          this.petSay("唔…（触手抱成球装死）", "gray", 2600);
+          this.logEvent("被威胁了（装死中）");
+          break;
+        case "tell": {
+          const mood = MOODS[this.getMood()];
+          this.tellAI(`${s.name}近况：饱食${Math.round(s.fullness)}、情绪${Math.round(s.happiness)}、困倦${Math.round(s.sleepiness)}、发情${Math.round(s.lust)}（${mood.name}）。`);
+          this.toast("已把它的近况告诉" + AI_NAME);
+          return;
+        }
+      }
+      this.checkAchievements();
+      this.render(); this.save();
+    }
+
+    /* ── 羞耻play ── */
+    async nsfw(type) {
+      if (this.busy) return;
+      this.busy = true;
+      const s = this.st;
+      const aqua = document.getElementById("pkAquarium");
+      this.markInteract();
+      switch (type) {
+        case "lick":
+          s.lust = clamp(s.lust + 20);
+          s.happiness = clamp(s.happiness + 15);
+          this.setExpr("lust", 3600);
+          this.spawnHearts(aqua, 6);
+          this.petSay("唔…！（顶端分出小舌头，很轻很轻地舔）", "pink", 3400);
+          this.logEvent("舔穴 play（+20 发情）");
+          break;
+        case "wrap":
+          s.lust = clamp(s.lust + 15);
+          s.shame = clamp(s.shame + 10);
+          this.setExpr("lust", 3600);
+          const svg = document.querySelector("#pkPet .pk-body-svg");
+          if (svg) { svg.classList.add("raise"); setTimeout(() => svg.classList.remove("raise"), 3400); }
+          this.petSay("啾…啾…（触手缠上来，越收越紧）", "pink", 3400);
+          this.logEvent("缠绕 play（+15 发情）");
+          break;
+        case "climax":
+          s.lust = clamp(s.lust - 80);
+          s.happiness = clamp(s.happiness + 10);
+          s.shame = clamp(s.shame + 15);
+          s.stats.orgasms++;
+          this.setExpr("dizzy", 3000);
+          const inner = document.querySelector("#pkPet .pk-pet-inner");
+          if (inner) { inner.classList.add("shudder"); setTimeout(() => inner.classList.remove("shudder"), 1100); }
+          this.spawnHearts(aqua, 10);
+          this.petSay("啾——！！（浑身痉挛，触手松开了）", "pink", 3800);
+          this.logEvent("强制高潮（-80 发情）");
+          break;
+      }
+      if (s.lust >= 80) s.stats.hornyTimes++;
+      this.checkAchievements();
+      this.render(); this.save();
+      setTimeout(() => { this.setExpr(this.getMoodExpr(), 0); this.busy = false; }, 1400);
+    }
+
+    checkAchievements() {
+      const got = new Set(this.st.achievements || []);
+      for (const a of ACHIEVEMENTS) {
+        if (!got.has(a.id) && a.check(this.st)) {
+          got.add(a.id);
+          this.toast("🏅 成就解锁：" + a.name);
+          this.logEvent("解锁成就「" + a.name + "」");
+        }
+      }
+      this.st.achievements = [...got];
+    }
+
+    /* ── 通知安念（限流 45s）── */
+    async tellAI(text) {
+      if (location.hostname === "127.0.0.1" || location.hostname === "localhost") return;
+      const now = Date.now();
+      if (now - (this._lastTell || 0) < 45000) return;
+      this._lastTell = now;
+      try {
+        await fetch(API_BASE + "/app/send", {
+          method: "POST", headers: authJson(),
+          body: JSON.stringify({ text: "🐙[啾啾] " + text, meta: { source: "pet", kind: "note" } })
+        });
+      } catch (e) {}
+    }
+
+    rename() {
+      const name = prompt("给触手小宠起个名字：", this.st.name);
+      if (name && name.trim()) {
+        this.st.name = name.trim().slice(0, 8);
+        this.save(); this.render();
+        this.tellAI(`触手小宠改名叫「${this.st.name}」了。`);
+      }
+    }
+
+    toast(msg) {
+      const t = document.createElement("div");
+      t.className = "pk-toast";
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2600);
+    }
+  }
+
+  const instance = new Pet();
+  window.PetPlugin = instance;
+  function boot() { instance.init(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();

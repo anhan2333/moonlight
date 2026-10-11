@@ -1,0 +1,65 @@
+/* ============================================================
+   锁屏 · Lock plugin for 月光（IB 同款，可选开启）
+   挂锁 + 大字时钟 + 上滑解锁 + 可选 PIN；配置只存本机。
+   ============================================================ */
+
+.lk-screen{
+  position: fixed; inset: 0; z-index: 99000;
+  display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(180deg, #0d1424 0%, #1a2438 55%, #2a2438 100%);
+  color: #fff; user-select: none;
+  transition: transform .45s cubic-bezier(.22,.9,.3,1), opacity .45s ease;
+}
+.lk-screen.hidden{ display: none; }
+.lk-screen.unlocking{ transform: translateY(-105%); opacity: .3; }
+.lk-clock-wrap{ margin-top: 14vh; text-align: center; }
+.lk-time{
+  font-size: clamp(56px, 16vw, 96px); font-weight: 200; letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #f6e9d2, #cbb089);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lk-date{ font-size: 14px; opacity: .75; margin-top: 4px; letter-spacing: .12em; }
+.lk-lock{ margin-top: 26px; font-size: 26px; opacity: .8; }
+.lk-hint{ margin-top: 8px; font-size: 12px; opacity: .5; }
+.lk-spacer{ flex: 1; }
+.lk-swipe{
+  margin-bottom: calc(30px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: 12px; opacity: .65; cursor: grab;
+  animation: lkBob 2.2s ease-in-out infinite;
+}
+.lk-swipe-bar{ width: 120px; height: 5px; border-radius: 5px; background: rgba(255,255,255,.7); }
+@keyframes lkBob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-8px); } }
+
+/* PIN 键盘 */
+.lk-pin{
+  display: none; flex-direction: column; align-items: center; gap: 14px;
+  margin-bottom: calc(26px + env(safe-area-inset-bottom));
+}
+.lk-pin.on{ display: flex; }
+.lk-dots{ display: flex; gap: 12px; }
+.lk-dot{ width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.6); }
+.lk-dot.fill{ background: #fff; border-color: #fff; }
+.lk-keys{ display: grid; grid-template-columns: repeat(3, 68px); gap: 12px; }
+.lk-key{
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
+  color: #fff; font-size: 24px; font-weight: 300; cursor: pointer;
+}
+.lk-key:active{ background: rgba(255,255,255,.3); }
+.lk-key.fn{ font-size: 13px; background: transparent; border: none; }
+.lk-shake{ animation: lkShake .4s ease; }
+@keyframes lkShake{ 0%,100%{ transform: translateX(0); } 25%{ transform: translateX(-9px); } 75%{ transform: translateX(9px); } }
+
+/* 设置行（注入 profile 设置区） */
+.lk-set-row{ display: flex; align-items: center; gap: 10px; }
+.lk-set-row .segmented{ flex: 1; }
+.lk-pin-form{ display: none; margin-top: 10px; }
+.lk-pin-form.on{ display: block; }
+.lk-pin-input{
+  width: 100%; box-sizing: border-box;
+  background: var(--field-bg, #faf8f4); color: inherit;
+  border: 1px solid rgba(140,120,90,.25); border-radius: 10px;
+  font-size: 16px; letter-spacing: .5em; padding: 9px 12px; outline: none;
+}

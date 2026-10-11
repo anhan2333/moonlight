@@ -16,12 +16,12 @@ function _mlClose(id){
   p.classList.add('hidden');
   p.setAttribute('aria-hidden','true');
 }
-function openLettersPanel(){ _mlOpen('lettersPanel'); }
+function openLettersPanel(){ _mlOpen('lettersPanel'); loadLetters(); }
 function openCalendarPanel(){ _mlOpen('calendarPanel'); }
 function openTarotPanel(){ _mlOpen('tarotPanel'); }
 function openCirclePanel(){ _mlOpen('circlePanel'); }
 function openTeaPanel(){ _mlOpen('teaPanel'); }
-function openDiaryPanel(){ _mlOpen('diaryPanel'); }
+function openDiaryPanel(){ _mlOpen('diaryPanel'); try{ _loadDiary(''); }catch(e){} }
 function openGiftPanel(){
   const p = _mlPanel('giftPanel'); if (p){ _mlOpen('giftPanel'); }
   else if (typeof window.openPluginPanel === 'function'){}
@@ -30,6 +30,24 @@ function openWishPanel(){ _mlOpen('wishPanel'); }
 
 
 /* ---- 书信 Letters ---- */
+async function loadLetters(){
+  const box = document.getElementById('lettersList') || document.getElementById('letterList');
+  if (!box) return;
+  const localOnly = typeof USE_MOCK !== 'undefined' && USE_MOCK;
+  if (localOnly){ box.innerHTML = '<div class="panel-loading">（本地预览）书信存在服务器上。</div>'; return; }
+  try {
+    const r = await fetch(API_BASE + '/app/letters/inbox', { headers: authHeaders() });
+    const d = await r.json();
+    const arr = d.letters || [];
+    if (!arr.length){ box.innerHTML = '<div class="panel-loading">还没有信。在上面写一句，寄给安念吧。</div>'; return; }
+    box.innerHTML = arr.map(function(L){
+      const who = (L.to_name === '安念') ? '你 → 安念' : '安念 → 你';
+      const when = (L.created_at || '').replace('T',' ').slice(0,16);
+      const txt = (L.content || '').replace(/</g,'&lt;');
+      return '<div class="fund-card" style="margin-bottom:10px;"><div class="fund-name" style="font-size:12px;opacity:.6;">'+who+' · '+when+'</div><div style="margin-top:5px;font-size:14px;line-height:1.6;">'+txt+'</div></div>';
+    }).join('');
+  } catch(e){ box.innerHTML = '<div class="panel-loading">加载失败，返回再进一次</div>'; }
+}
 function closeLettersPanel(){ _mlClose('lettersPanel'); }
 async function sendLetter(){
   const inp = document.getElementById('letterInput') || document.getElementById('lettersInput');
@@ -41,10 +59,11 @@ async function sendLetter(){
     const r = await fetch(API_BASE + '/app/letters/send', {
       method: 'POST',
       headers: Object.assign({}, authHeaders(), {'Content-Type': 'application/json'}),
-      body: JSON.stringify({ text: text })
+      body: JSON.stringify({ content: text })
     });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    if (box) box.innerHTML = '<div class="panel-loading">信已寄出，等安念回信…</div>';
+    loadLetters();
     inp.value = '';
   } catch(e){
     if (box) box.innerHTML = '<div class="panel-loading">寄信失败</div>';
@@ -85,14 +104,21 @@ async function _loadCalendar(){
 }
 
 /* ---- 星图 Memory Sky ---- */
-/* ---- 星图 Memory Sky · 打开 ---- */
+/* ---- 星图 Memory Sky · 打开(iframe 记忆银河) ---- */
 function openMemSkyPanel(){
   const p = document.getElementById('memSkyPanel');
   if (!p) return;
   p.classList.remove('hidden');
   p.setAttribute('aria-hidden', 'false');
-  if (typeof loadMemSky === 'function') loadMemSky();
-  else if (typeof memSkyInit === 'function') memSkyInit();
+  const frame = document.getElementById('galaxyFrame');
+  if (frame && !frame.src){
+    frame.src = 'galaxy.html?token=' + encodeURIComponent(secret || '');
+    frame.addEventListener('load', () => {
+      frame.style.display = 'block';
+      const loading = document.getElementById('galaxyLoading');
+      if (loading) loading.style.display = 'none';
+    }, { once: true });
+  }
 }
 function closeMemSkyPanel(){ _mlClose('memSkyPanel'); }
 
@@ -145,7 +171,7 @@ async function _loadCircle(){
   const box = document.getElementById('circleFeed');
   if (!box) return;
   try {
-    const r = await fetch(API_BASE + '/app/circle/list', { headers: authHeaders() });
+    const r = await fetch(API_BASE + '/app/circle/feed', { headers: authHeaders() });
     const d = await r.json();
     const posts = d.posts || d.feed || [];
     if (posts.length){
@@ -220,7 +246,7 @@ async function importDiaryData(file){
 function closeBackupPanel(){ _mlClose('backupPanel'); }
 async function exportBackup(){
   try {
-    const r = await fetch(API_BASE + '/app/backup/export', { headers: authHeaders() });
+    const r = await fetch(API_BASE + '/app/backup', { headers: authHeaders() });
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -236,13 +262,35 @@ function importBackup(inputEl){
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
   file.text().then(text => {
-    return fetch(API_BASE + '/app/backup/import', {
+    return fetch(API_BASE + '/app/restore', {
       method: 'POST',
       headers: Object.assign({}, authHeaders(), {'Content-Type': 'application/json'}),
       body: text
     });
   }).then(() => alert('导入完成')).catch(() => alert('导入失败'));
   inputEl.value = '';
+}
+
+/* ---- 聊天记录导出（只读导出，绝不碰库） ---- */
+async function exportChat(mode){
+  try {
+    const r = await fetch(API_BASE + '/app/export/messages?mode=' + mode, { headers: authHeaders() });
+    if (!r.ok) throw new Error('export ' + r.status);
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename\*=UTF-8''([^;]+)/);
+    const fname = m ? decodeURIComponent(m[1]) : ('moonlight-chat-' + mode + '.txt');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    a.click();
+    URL.revokeObjectURL(url);
+    const msgEl = document.getElementById('backupMsg');
+    if (msgEl) msgEl.textContent = '已导出：' + fname;
+  } catch(e){
+    alert('导出失败');
+  }
 }
 
 /* ---- 眼睛 Eye ---- */
@@ -255,6 +303,12 @@ function closeAllPanels(){
     p.setAttribute('aria-hidden','true');
   });
   stopCamera();
+  // 新增：语音通话面板关闭 = 挂断，清理通话增强（InternalBeyond 同款收尾）
+  try{
+    if (typeof vcStopDuration === 'function') vcStopDuration();
+    if (typeof vcStopSpeak === 'function') vcStopSpeak(true);
+    if (typeof window.__vcCallSummary === 'function') window.__vcCallSummary('');   // 关面板也生成通话记录
+  }catch(e){}
 }
 function toggleCtx(checked){
   try {

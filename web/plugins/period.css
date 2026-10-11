@@ -1,0 +1,46 @@
+/* ============================================================
+   粉月亮 · 生理期插件（IB 同款）
+   填上次开始日+周期 → 自动推算；月历粉点；安念关怀上下文。
+   ============================================================ */
+
+.pm-chip{
+  position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #e88aa8; box-shadow: 0 0 5px rgba(232,138,168,.8);
+}
+.pm-chip.pm-period{ background: #e05c85; box-shadow: 0 0 6px rgba(224,92,133,.9); }
+.pm-chip.pm-fertile{ background: #f0b8d0; opacity: .8; }
+.calendar-day{ position: relative; }
+
+/* 面板卡（注入日历面板顶部） */
+.pm-card{
+  margin: 10px 14px 0;
+  background: linear-gradient(135deg, #fdeef4, #f9e2ec);
+  border: 1px solid rgba(224,92,133,.25);
+  border-radius: 14px; padding: 12px 14px;
+  color: #6e3a4e;
+}
+.pm-card.hidden{ display: none; }
+.pm-head{ display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; }
+.pm-head .moon{ font-size: 16px; }
+.pm-status{ margin-left: auto; font-size: 11px; font-weight: 600; background: rgba(224,92,133,.14); padding: 3px 9px; border-radius: 999px; }
+.pm-body{ font-size: 12px; line-height: 1.8; margin-top: 7px; }
+.pm-row{ display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; align-items: center; }
+.pm-row label{ font-size: 11px; opacity: .75; }
+.pm-row input[type=date]{
+  background: #fff; color: inherit; border: 1px solid rgba(224,92,133,.3);
+  border-radius: 9px; font-size: 12px; padding: 6px 9px; outline: none;
+}
+.pm-row input[type=number]{
+  width: 62px; background: #fff; color: inherit; border: 1px solid rgba(224,92,133,.3);
+  border-radius: 9px; font-size: 12px; padding: 6px 9px; outline: none;
+}
+.pm-save{
+  margin-left: auto; background: linear-gradient(135deg,#e05c85,#e88aa8);
+  border: none; color: #fff; font-size: 12px; font-weight: 600;
+  padding: 7px 15px; border-radius: 10px; cursor: pointer;
+}
+.pm-log{
+  background: rgba(224,92,133,.1); border: 1px solid rgba(224,92,133,.3);
+  color: #a04a68; font-size: 11.5px; padding: 6px 12px; border-radius: 10px; cursor: pointer;
+}

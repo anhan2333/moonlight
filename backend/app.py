@@ -24,7 +24,6 @@ import hashlib
 import mimetypes
 import hmac
 import json
-import uuid
 import os
 import re
 import secrets
@@ -85,6 +84,22 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_BASE = os.environ.get("GROQ_API_BASE", "https://api.groq.com/openai")
 GROQ_ASR_MODEL = os.environ.get("GROQ_ASR_MODEL", "whisper-large-v3-turbo")
 GROQ_ASR_TIMEOUT = float(os.environ.get("GROQ_ASR_TIMEOUT", "60"))
+# --- DashScope（qwen3-omni 转写主力 / qwen-vl 视觉兜底,服务器 relay.env 已配 key）----
+DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
+DASHSCOPE_BASE = os.environ.get("DASHSCOPE_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+DASHSCOPE_ASR_MODEL = os.environ.get("DASHSCOPE_ASR_MODEL", "qwen3-omni-flash")
+# --- ASR 静音门槛 + 黑名单（顾川/pai-voice 同款）--------------------------------
+# 时长小于 ASR_MIN_DURATION_SEC 或大小小于 ASR_MIN_BYTES 视为静音/无意义，直接丢弃
+ASR_MIN_DURATION_SEC = float(os.environ.get("ASR_MIN_DURATION_SEC", "0.3"))
+ASR_MIN_BYTES = int(os.environ.get("ASR_MIN_BYTES", "2000"))
+# ASR 黑名单：转写结果命中任一词（整词/短语）即视为噪声丢弃
+ASR_BLACKLIST_RAW = os.environ.get(
+    "ASR_BLACKLIST",
+    "嗯,呃,哦,啊,唉,哎,唔,呃呃,嗯嗯,哼哼,哈哈,嘿嘿,呵呵,嗯哼,呜,哎哟,唉哟",
+)
+ASR_BLACKLIST = [w.strip() for w in ASR_BLACKLIST_RAW.split(",") if w.strip()]
+# --- 视频通话断线重连窗口（秒）：N 秒内接回同一 call_id 视为同一通，不重复打招呼 ---
+VIDEO_RESUME_WINDOW_SEC = int(os.environ.get("VIDEO_RESUME_WINDOW_SEC", "60"))
 # --- 心潮面板（实时状态） ---------------------------------------------------
 XINCHAO_ENABLED = os.environ.get("XINCHAO_ENABLED", "false").lower() == "true"
 XINCHAO_API_BASE = os.environ.get("XINCHAO_API_BASE", "")
@@ -117,7 +132,7 @@ OPERIT_URL_DEFAULT = os.environ.get("OPERIT_URL", "").rstrip("/")
 OPERIT_TOKEN_DEFAULT = os.environ.get("OPERIT_TOKEN", "")
 OPERIT_TIMEOUT = int(os.environ.get("OPERIT_TIMEOUT", "300"))
 
-# --- 淘宝联盟返利（可选;不配 key 时 [SHOP:] 回退 A2A 直搜） -------------------
+# --- 淘宝购物/联盟返利（AionsHome 3.0 同款;kv 优先于 env）----------------------
 TAOBAO_APP_KEY_DEFAULT = os.environ.get("TAOBAO_APP_KEY", "")
 TAOBAO_APP_SECRET_DEFAULT = os.environ.get("TAOBAO_APP_SECRET", "")
 TAOBAO_ADZONE_ID_DEFAULT = os.environ.get("TAOBAO_ADZONE_ID", "")
@@ -137,25 +152,6 @@ def operit_conf() -> dict:
         pass
     return {"url": (url or OPERIT_URL_DEFAULT).rstrip("/"),
             "token": token or OPERIT_TOKEN_DEFAULT}
-
-
-def taobao_conf() -> dict:
-    """淘宝联盟返利配置:kv(config:taobao_*)优先,回退 env。三件套齐了才走返利。"""
-    key, secret, adzone = "", "", ""
-    try:
-        with db() as conn:
-            conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
-            rows = {r["key"]: r["value"] for r in conn.execute(
-                "SELECT key,value FROM kv WHERE key IN "
-                "('config:taobao_app_key','config:taobao_app_secret','config:taobao_adzone_id')").fetchall()}
-        key = (rows.get("config:taobao_app_key") or "").strip()
-        secret = (rows.get("config:taobao_app_secret") or "").strip()
-        adzone = (rows.get("config:taobao_adzone_id") or "").strip()
-    except Exception:
-        pass
-    return {"app_key": key or TAOBAO_APP_KEY_DEFAULT,
-            "app_secret": secret or TAOBAO_APP_SECRET_DEFAULT,
-            "adzone_id": adzone or TAOBAO_ADZONE_ID_DEFAULT}
 
 
 def _strip_operit_tags(text: str) -> str:
@@ -200,58 +196,23 @@ def _recent_transcript(before_id, session_id: str, limit: int = 30) -> str:
         return ""
 
 
-async def forward_to_operit(msg: dict) -> None:
-    """把一条人类消息转给手机 Operit 处理,回复落库并推流。
-    转发时带上统一对话线的最近上下文 — 手机安念和月光端看到同一条对话线。"""
-    meta = msg.get("meta") or {}
-    text = msg.get("text") or ""
-    atts = meta.get("attachments") or []
-    att_note = ""
-    if atts:
-        names = ", ".join(a.get("name") or "附件" for a in atts)
-        att_note = f"(薇薇发来 {len(atts)} 个附件: {names})"
-        if any(a.get("kind") == "audio" for a in atts):
-            att_note += " — 其中包含语音条,你暂时听不到内容,请自然回应,可以请她说给你听"
-    session_id = meta.get("api_session") or ""
-    transcript = _recent_transcript(msg.get("id"), session_id)
-    conf = operit_conf()
-    if not conf["url"] or not conf["token"]:
-        await relay_out_internal({"type": "reply", "text": "(手机 Operit 还没配置好:缺地址或 token)", "meta": {"runtime": "operit", "error": "unconfigured"}})
-        return
-    full = ""
-    if transcript:
-        full += "【我们这条对话线的最近记录(月光端和手机端共用同一条),最后一条是新消息】\n" + transcript + "\n"
-    if att_note:
-        full += att_note + "\n"
-    full += "【新消息】薇薇: " + (text or "（语音条/附件）")
-    if not text.strip() and not atts:
-        return
-    body = json.dumps({
-        "message": full,
-        "response_mode": "sync",
-        "show_floating": True,
-        "initial_mode": "WINDOW",
-        "return_tool_status": False,
-    }, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        conf["url"] + "/api/external-chat", data=body, method="POST",
-        headers={"Authorization": "Bearer " + conf["token"], "Content-Type": "application/json; charset=utf-8"},
-    )
+def taobao_conf() -> dict:
+    """淘宝联盟返利配置:kv(config:taobao_*)优先,回退 env。三件套齐了才走返利。"""
+    key, secret, adzone = "", "", ""
     try:
-        def _call():
-            with urllib.request.urlopen(req, timeout=OPERIT_TIMEOUT) as r:
-                return json.loads(r.read().decode("utf-8"))
-        data = await asyncio.to_thread(_call)
-        reply = _strip_operit_tags(str(data.get("ai_response") or ""))
-        if not reply:
-            reply = "(手机安念没有回话)"
-        await relay_out_internal({"type": "reply", "text": reply,
-                                  "meta": {"runtime": "operit", "chat_id": data.get("chat_id") or ""}})
-    except Exception as exc:
-        # sync 回传丢失(模型太慢/工具跑太久)时,消息其实已送达手机安念,
-        # 不报错吓人;回复稍后会出现在手机 App 的同一条对话里,不会丢、不会重发。
-        await relay_out_internal({"type": "reply", "text": "(等安念回话等久了——他那边可能在忙工具,回复稍后会出现在手机对话里,别担心)",
-                                  "meta": {"runtime": "operit", "error": str(exc)[:200]}})
+        with db() as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+            rows = {r["key"]: r["value"] for r in conn.execute(
+                "SELECT key,value FROM kv WHERE key IN "
+                "('config:taobao_app_key','config:taobao_app_secret','config:taobao_adzone_id')").fetchall()}
+        key = (rows.get("config:taobao_app_key") or "").strip()
+        secret = (rows.get("config:taobao_app_secret") or "").strip()
+        adzone = (rows.get("config:taobao_adzone_id") or "").strip()
+    except Exception:
+        pass
+    return {"app_key": key or TAOBAO_APP_KEY_DEFAULT,
+            "app_secret": secret or TAOBAO_APP_SECRET_DEFAULT,
+            "adzone_id": adzone or TAOBAO_ADZONE_ID_DEFAULT}
 
 
 # ── 拍一拍（AionsHome 同款：提示消息落库进 AI 上下文，安念看到自然回应）──────
@@ -466,6 +427,66 @@ async def _shops_from_reply(kind: str, text: str, api_session: str = "") -> tupl
     return text, cards
 
 
+def _strip_call_tags_for_ec(text: str) -> str:
+    """英语角会话里屏蔽通话/礼物/留影类信号标签（日程保留——学英语也可能要记事）。"""
+    import re as _re
+    return _re.sub(r"<\s*ws_(?:call|vcall|gift|vsnap)\b[^>]*/?\s*>", "", str(text or ""))
+
+
+async def forward_to_operit(msg: dict) -> None:
+    """把一条人类消息转给手机 Operit 处理,回复落库并推流。
+    转发时带上统一对话线的最近上下文 — 手机安念和月光端看到同一条对话线。"""
+    meta = msg.get("meta") or {}
+    text = msg.get("text") or ""
+    atts = meta.get("attachments") or []
+    att_note = ""
+    if atts:
+        names = ", ".join(a.get("name") or "附件" for a in atts)
+        att_note = f"(薇薇发来 {len(atts)} 个附件: {names})"
+        if any(a.get("kind") == "audio" for a in atts):
+            att_note += " — 其中包含语音条,你暂时听不到内容,请自然回应,可以请他说给你听"
+    session_id = meta.get("api_session") or ""
+    transcript = _recent_transcript(msg.get("id"), session_id)
+    conf = operit_conf()
+    if not conf["url"] or not conf["token"]:
+        await relay_out_internal({"type": "reply", "text": "(手机 Operit 还没配置好:缺地址或 token)", "meta": {"runtime": "operit", "error": "unconfigured"}})
+        return
+    full = ""
+    if transcript:
+        full += "【我们这条对话线的最近记录(月光端和手机端共用同一条),最后一条是新消息】\n" + transcript + "\n"
+    if att_note:
+        full += att_note + "\n"
+    full += "【新消息】薇薇: " + (text or "（语音条/附件）")
+    if not text.strip() and not atts:
+        return
+    body = json.dumps({
+        "message": full,
+        "response_mode": "sync",
+        "show_floating": True,
+        "initial_mode": "WINDOW",
+        "return_tool_status": False,
+    }, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        conf["url"] + "/api/external-chat", data=body, method="POST",
+        headers={"Authorization": "Bearer " + conf["token"], "Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        def _call():
+            with urllib.request.urlopen(req, timeout=OPERIT_TIMEOUT) as r:
+                return json.loads(r.read().decode("utf-8"))
+        data = await asyncio.to_thread(_call)
+        reply = _strip_operit_tags(str(data.get("ai_response") or ""))
+        if not reply:
+            reply = "(手机安念没有回话)"
+        await relay_out_internal({"type": "reply", "text": reply,
+                                  "meta": {"runtime": "operit", "chat_id": data.get("chat_id") or ""}})
+    except Exception as exc:
+        # sync 回传丢失(模型太慢/工具跑太久)时,消息其实已送达手机安念,
+        # 不报错吓人;回复稍后会出现在手机 App 的同一条对话里,不会丢、不会重发。
+        await relay_out_internal({"type": "reply", "text": "(等安念回话等久了——他那边可能在忙工具,回复稍后会出现在手机对话里,别担心)",
+                                  "meta": {"runtime": "operit", "error": str(exc)[:200]}})
+
+
 async def _schedule_capsules_from_reply(kind: str, text: str):
     """AI 回复带 [SCHEDULE:时间|内容] → 建日程，返回 (干净文本, 已建日程列表)。非 reply 原样返回。"""
     if kind != "reply" or not text:
@@ -494,17 +515,11 @@ async def _broadcast_schedule_capsules(capsules: list[dict]) -> None:
         })
 
 
-def _strip_call_tags_for_ec(text: str) -> str:
-    """英语角会话里屏蔽通话/礼物/留影类信号标签（日程保留——学英语也可能要记事）。"""
-    import re as _re
-    return _re.sub(r"<\s*ws_(?:call|vcall|gift|vsnap)\b[^>]*/?\s*>", "", str(text or ""))
-
 async def relay_out_internal(payload: dict) -> None:
     """AI 侧回复落库 + 推流(复用 /channel/out 的逻辑,供内部桥接调用)。"""
     kind = "reply" if payload.get("type") == "reply" else "assistant"
     text = payload.get("text", "")
     meta = {k: v for k, v in payload.items() if k not in ("type", "text")}
-
     text, capsules = await _schedule_capsules_from_reply(kind, text)
     text, pats = _pats_from_reply(kind, text)
     text, _shop_cards = await _shops_from_reply(kind, text, str(meta.get("api_session") or ""))
@@ -806,20 +821,14 @@ def _capability_block() -> str:
     return (
         "【你的能力】回复里可以夹带这些信号（用户看不到它们，但系统会执行）：\n"
         "1) 记日程/提醒：[SCHEDULE:2026-09-14 08:00|提醒内容] —— 到点你会被唤醒自然提醒她。"
-        "她说「提醒我…」「明天几点…」这类话就主动建；语音/视频通话里听到也照建，别因为她在通话就只口头答应。\n"
+        "她说「提醒我…」「明天几点…」这类话就主动建。\n"
         "2) 控制啵啵贝玩具（仅她开启密语时刻时生效）：[TOY:1]~[TOY:9] 对应九档（微风轻拂→失控），[TOY:STOP] 停止。\n"
         "3) 视频通话里：\n"
         "   <ws_vsnap/> 拍下当前画面留影；\n"
         '   <ws_gift id="heart" reason="…"/> 送礼物（id 五档：heart心/bouquet花束/firework烟火/meteor流星/galaxy银河列车）；\n'
         '   <ws_vcall say="…"/> 发起视频来电；<ws_call say="…"/> 发起语音来电。\n'
-        "★ 来电触发规则：她说想打电话/让你打给她/要来电卡片时，必须当场在回复末尾输出 <ws_call say='一句自然的话'/>（语音）或 <ws_vcall say='…'/>（视频），不要用 [SCHEDULE] 设提醒代替，也不要只口头答应。\n"
         "4) 云养宠物小克总（她养了一只粉色触手克苏鲁）：[PET:feed] 投喂 / [PET:clean] 清理 / [PET:play] 陪玩 / "
         "[PET:tease] 逗弄 / [PET:scare] 吓唬 / [PET:tap] 敲缸 / [PET:threaten] 威胁 —— 想关心她就用，别每句都用。\n"
-        "5) 拍一拍：[PAT:user|动作|后续描述] —— 主动拍她，例如 [PAT:user|揉了揉|的头发] 会变成「安念」揉了揉「薇薇」的头发。"
-        "动作只写动词短语（拍了拍/揉了揉/抱起了），后续描述写结果或台词、可留空；动作≤15字、后续≤30字。"
-        "她拍你时你会收到一条「她拍了你」的系统提示，自然地用动作或话语回应即可。\n"
-        "6) 淘宝购物：[SHOP:关键词] —— 帮她搜淘宝真实商品，会生成商品卡片（图+价格+链接）。"
-        "她说「想要…」「帮我看看…」「买个…」这类需求时就主动用；一条回复最多带两个，别滥用。\n"
         "用完后正常说话，不要向用户解释这些信号。"
     )
 
@@ -861,19 +870,7 @@ def _forward_to_loop_sync(msg: dict) -> None:
             _sched.save_chat_status(db, sd_status)
     except Exception as exc:
         print(f"[context] inject failed: {exc}")
-    # ── 通话画面观察注入（顾川 PaiVoice：帧描述随下一句话一起交给他；最新帧留在本机文件，想亲眼看就读）──
-    vision_block = ""
-    try:
-        eyes_obj = globals().get("_PV_EYES_REF")
-        if eyes_obj is not None and getattr(eyes_obj, "last_observation", None):
-            obs = str(eyes_obj.last_observation).strip()
-            if obs:
-                vision_block = ("【摄像头画面（最近一次自动观察）】\n" + obs +
-                                "\n（最新一帧存在 backend/eye-latest.jpg，想亲眼看可以读这张图。）")
-                eyes_obj.last_observation = None   # 一次性消费，避免旧描述反复注入
-    except Exception:
-        pass
-    pre = "\n\n".join(x for x in (mem_block, ctx_block, vision_block, _capability_block()) if x)
+    pre = "\n\n".join(x for x in (mem_block, ctx_block, _capability_block()) if x)
     final_text = (pre + "\n\n" + text) if pre else text
     data = {
         "id": msg.get("id"),
@@ -956,7 +953,6 @@ async def handle_stream_delta(kind: str, body: dict) -> dict:
     text, _sched_caps = await _schedule_capsules_from_reply(base_kind, text)
     text, _pats = _pats_from_reply(base_kind, text)
     _draft_meta = dict(draft.get("meta") or {})
-
     text, _shop_cards = await _shops_from_reply(base_kind, text, str(_draft_meta.get("api_session") or ""))
     msg = save_message("out", base_kind, text, _draft_meta)
     await broadcast(app_subs, {"type": "typing", "active": False})
@@ -1069,6 +1065,107 @@ def transcribe_with_groq(audio_path: Path, mime: str) -> str:
         return ""
     return (data.get("text") or "").strip()
 
+
+def transcribe_with_groq_retry(audio_path: Path, mime: str, retries: int = 1, delay_sec: float = 0.5) -> str:
+    """Groq ASR 短重试包装：顾川同款——千问/Groq 抖动时重试一次再放弃。
+    返回 '' 表示最终失败（调用方会落到 transcribe_with_command 兜底）。"""
+    import time as _t
+    for attempt in range(retries + 1):
+        text = transcribe_with_groq(audio_path, mime)
+        if text:
+            return text
+        if attempt < retries:
+            _t.sleep(delay_sec)
+    return ""
+
+
+def _qwen_omni_transcribe(audio_path: Path, mime: str):
+    """DashScope qwen3-omni-flash 转写（带语气）。返回 (transcript, tone)，失败 ('', '')。
+    非 wav 先用 ffmpeg 转 16k 单声道 wav（服务器有 ffmpeg；MediaRecorder 的 webm 直接发会被当 wav 拒）。"""
+    if not DASHSCOPE_API_KEY:
+        return "", ""
+    import time as _t
+    import base64 as _b64m
+    import tempfile
+    send_path = audio_path
+    tmp_name = ""
+    if not (mime or "").startswith("audio/wav"):
+        try:
+            fd, tmp_name = tempfile.mkstemp(suffix=".wav")
+            os.close(fd)
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(audio_path), "-ac", "1", "-ar", "16000", tmp_name],
+                capture_output=True, timeout=30, check=True)
+            send_path = Path(tmp_name)
+        except Exception:
+            send_path = audio_path  # 转码失败就硬发原始字节,万一对方吃呢
+    try:
+        b64 = _b64m.b64encode(send_path.read_bytes()).decode("ascii")
+        payload = {
+            "model": DASHSCOPE_ASR_MODEL,
+            "messages": [{"role": "user", "content": [
+                {"type": "input_audio", "input_audio": {"data": "data:audio/wav;base64," + b64, "format": "wav"}},
+                {"type": "text", "text": '只输出 JSON：{"transcript":"逐字转写","tone":"语气"}'},
+            ]}],
+        }
+        req = urllib.request.Request(
+            DASHSCOPE_BASE.rstrip("/") + "/chat/completions",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + DASHSCOPE_API_KEY},
+        )
+        last_err = None
+        for attempt in range(2):  # 短重试一次（顾川同款）
+            try:
+                with urllib.request.urlopen(req, timeout=45) as resp:
+                    d = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                text = (((d.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
+                tone = ""
+                try:
+                    parsed = json.loads(text)
+                    tone = str(parsed.get("tone") or "")
+                    text = str(parsed.get("transcript") or text)
+                except Exception:
+                    pass
+                return text.strip(), tone.strip()
+            except Exception as e:
+                last_err = e
+                if attempt == 0:
+                    _t.sleep(0.5)
+        print(f"[asr] qwen3-omni failed: {last_err}", flush=True)
+        return "", ""
+    finally:
+        if tmp_name:
+            try:
+                os.unlink(tmp_name)
+            except Exception:
+                pass
+
+
+def _asr_transcribe_chain(audio_path: Path, mime: str) -> dict:
+    """统一转写链（语音面板和视频通话共用,优点的并集）:
+    静音门槛(尺寸/时长) → qwen3-omni 云端(带语气,短重试) → Groq Whisper → SenseVoice 本地 → 黑名单。
+    返回 {text, tone, dropped}。dropped: ''=正常 / 'too_short' / 'blacklisted'。"""
+    try:
+        size = audio_path.stat().st_size
+    except Exception:
+        size = 0
+    if size < ASR_MIN_BYTES:
+        return {"text": "", "tone": "", "dropped": "too_short"}
+    if (mime or "").startswith("audio/wav"):
+        dur = _probe_wav_duration_sec(audio_path)
+        if 0 < dur < ASR_MIN_DURATION_SEC:
+            return {"text": "", "tone": "", "dropped": "too_short"}
+    text, tone = _qwen_omni_transcribe(audio_path, mime)
+    if not text:
+        text = transcribe_with_groq_retry(audio_path, mime)
+        tone = ""
+    if not text:
+        text = transcribe_with_command(audio_path, mime)   # SenseVoice 本地兜底
+        tone = ""
+    if text and not asr_is_meaningful(text):
+        return {"text": "", "tone": "", "dropped": "blacklisted"}
+    return {"text": text, "tone": tone, "dropped": ""}
+
 def transcribe_with_command(audio_path: Path, mime: str) -> str:
     """Optional local ASR hook. The command receives <audio_path> <mime> and prints a transcript."""
     if not VOICE_TRANSCRIBE_CMD:
@@ -1086,6 +1183,50 @@ def transcribe_with_command(audio_path: Path, mime: str) -> str:
     if proc.returncode != 0:
         return ""
     return proc.stdout.strip()
+
+
+def asr_is_meaningful(transcript: str) -> bool:
+    """黑名单过滤：转写结果纯命中语气词/无意义短词则丢弃。"""
+    t = (transcript or "").strip()
+    if not t:
+        return False
+    # 去掉标点空白后为空 → 无意义
+    stripped = t.strip(" ,。!?.…~·、;:")
+    if not stripped:
+        return False
+    # 整词完全等于黑名单词 → 噪声
+    for w in ASR_BLACKLIST:
+        if stripped == w:
+            return False
+    return True
+
+
+def _probe_wav_duration_sec(path: Path) -> float:
+    """尝试从 WAV 头估算时长（秒）。非 WAV 返回 0（无法判定）。"""
+    try:
+        with path.open("rb") as f:
+            hdr = f.read(64)
+        if len(hdr) < 44 or hdr[:4] != b"RIFF" or hdr[8:12] != b"WAVE":
+            return 0.0
+        # 找 fmt 块拿 byte_rate,找 data 块拿 size
+        i = 12
+        byte_rate = 0
+        data_size = 0
+        raw = path.read_bytes()
+        while i + 8 <= len(raw):
+            cid = raw[i:i+4]
+            csize = int.from_bytes(raw[i+4:i+8], "little")
+            if cid == b"fmt ":
+                byte_rate = int.from_bytes(raw[i+8+4:i+8+8], "little")
+            elif cid == b"data":
+                data_size = csize
+                break
+            i += 8 + csize + (csize & 1)
+        if byte_rate > 0 and data_size > 0:
+            return data_size / float(byte_rate)
+    except Exception:
+        pass
+    return 0.0
 
 
 def minimax_tts_mp3(text: str) -> bytes:
@@ -1512,27 +1653,6 @@ async def _mem_digest_loop():
                     await _orbit_fire()
             except Exception as oe:
                 print(f"[orbit] error: {oe}")
-            # ── 记忆压缩：每天凌晨 5 点后跑一次（日→周→月三级，漏跑会补）──
-            try:
-                now = datetime.now()
-                if now.hour >= 5:
-                    with db() as _c:
-                        last_run = _memsys._kv_get(_c, "mem_compress_last_date", "")
-                    today = now.strftime("%Y-%m-%d")
-                    if last_run != today:
-                        with db() as _c2:
-                            _cfg = _memsys.get_mem_config(_c2)
-                        comp = await asyncio.to_thread(
-                            _memcomp.run_daily_compression, db, _cfg, AI_NAME)
-                        # 全部成功才标记今天已跑；有失败就留到下个周期重试（幂等，重试安全）
-                        if not any(r.get("error") for r in comp.get("results", [])):
-                            with db() as _c:
-                                _memsys._kv_set(_c, "mem_compress_last_date", today)
-                                _c.commit()
-                        if comp.get("ran"):
-                            print(f"[memcomp] day-compress ran={comp['ran']} backfilled={comp.get('backfilled')}")
-            except Exception as ce:
-                print(f"[memcomp] error: {ce}")
             res = await asyncio.to_thread(_mem_run_digest_once)
             if res.get("added"):
                 print(f"[memory] auto-digest added {res['added']} memories")
@@ -1681,34 +1801,12 @@ SSE_HEADERS = {
 # auth — one shared Bearer secret on every endpoint (single user)
 # ---------------------------------------------------------------------------
 
-# --- 登录防爆破：同一来源连续错 5 次 → 锁 10 分钟（内存态，重启清零） ---
-import time as _t
-_AUTH_FAILS = {}
-_AUTH_LOCK = {}
-
-def _client_ip(request: Request) -> str:
-    try:
-        xff = request.headers.get("x-forwarded-for", "")
-        if xff:
-            return xff.split(",")[0].strip()
-    except Exception:
-        pass
-    return (request.client.host if request.client else "unknown")
-
-def _auth_fail(ip: str, now: float) -> None:
-    rows = [t for t in _AUTH_FAILS.get(ip, []) if now - t < 600.0]
-    rows.append(now)
-    _AUTH_FAILS[ip] = rows
-    if len(rows) >= 5:
-        _AUTH_LOCK[ip] = now + 600.0
-        _AUTH_FAILS[ip] = []
-
 def check_auth(request: Request) -> None:
     ip = _client_ip(request)
     now = _t.time()
     until = _AUTH_LOCK.get(ip, 0)
     if until and now < until:
-        # 锁只挡瞎猜的：带的是正确密码就直接放行并清锁（永不出现“密码对也进不去”）
+        # 锁只挡瞎猜的：带的是正确密码就直接放行并清锁（永不出现"密码对也进不去"）
         _a = request.headers.get("authorization", "")
         _t0 = _a[7:] if _a.startswith("Bearer ") else request.query_params.get("token")
         _ok0 = False
@@ -1748,12 +1846,35 @@ def check_auth(request: Request) -> None:
         except Exception:
             ok = False
     if not ok:
-        # 防爆破只针对“带了凭据但猜错”（真的在试密码）。登录前插件探测带的是空凭据，
+        # 防爆破只针对"带了凭据但猜错"（真的在试密码）。登录前插件探测带的是空凭据，
         # 不算猜密码——否则页面一刷新就自己把自己锁 10 分钟（00:22 事故根因）。
         if token.strip():
             _auth_fail(ip, now)
         raise HTTPException(status_code=401, detail="unauthorized")
     _AUTH_FAILS.pop(ip, None)
+
+
+# --- 登录防爆破：同一来源连续错 5 次 → 锁 10 分钟（内存态，重启清零） ---
+import time as _t
+_AUTH_FAILS = {}
+_AUTH_LOCK = {}
+
+def _client_ip(request: Request) -> str:
+    try:
+        xff = request.headers.get("x-forwarded-for", "")
+        if xff:
+            return xff.split(",")[0].strip()
+    except Exception:
+        pass
+    return (request.client.host if request.client else "unknown")
+
+def _auth_fail(ip: str, now: float) -> None:
+    rows = [t for t in _AUTH_FAILS.get(ip, []) if now - t < 600.0]
+    rows.append(now)
+    _AUTH_FAILS[ip] = rows
+    if len(rows) >= 5:
+        _AUTH_LOCK[ip] = now + 600.0
+        _AUTH_FAILS[ip] = []
 
 
 # ---------------------------------------------------------------------------
@@ -1826,43 +1947,6 @@ async def channel_out(request: Request):
 
 # ---- human side ------------------------------------------------------------
 
-@app.post("/app/pat")
-async def app_pat(request: Request):
-    """她拍安念（或自己）：提示消息落库（进 loop 历史），安念带着上下文自然回应。"""
-    check_auth(request)
-    body = await request.json()
-    action = str(body.get("action") or "拍了拍").strip()[:24] or "拍了拍"
-    suffix = str(body.get("suffix") or "").strip()[:60]
-    target = str(body.get("target") or "ai").strip().lower()
-    if target not in ("ai", "user"):
-        raise HTTPException(status_code=400, detail="bad target")
-    tname = "安念" if target == "ai" else "自己"
-    display = f"「薇薇」{action}「{tname}」{suffix}"
-    api_session = str(body.get("api_session") or body.get("session_id") or "").strip()
-    # 提示消息进历史（meta.system 让它在 PWA 以提示行渲染、loop 在上下文里读到）
-    trigger = (f"（拍一拍互动 · 非薇薇发言）{display}。"
-               f"请自然地对这个小动作做出反应（可以回拍、害羞、撒娇、吐槽都行），一两句话，别提到系统提示。")
-    pat_meta = {"user": "human", "system": "pat",
-                "pat": {"actor": "user", "target": target, "action": action,
-                        "suffix": suffix, "display": display}}
-    if api_session:
-        pat_meta["api_session"] = api_session
-    msg = save_message("in", "user", trigger, pat_meta)
-    brain = brain_target()
-    try:
-        if brain == "operit":
-            asyncio.create_task(forward_to_operit(msg))
-        elif brain == "loop":
-            asyncio.create_task(forward_to_loop(msg))
-        else:
-            await broadcast(plugin_subs, plugin_payload(msg))
-    except Exception as exc:
-        print(f"[pat] forward failed: {exc}")
-    await broadcast(app_subs, app_payload(msg))
-    await broadcast(app_subs, {"type": "typing", "active": True})
-    return {"id": msg["id"], "display": display}
-
-
 @app.post("/app/send")
 async def app_send(request: Request):
     """Human types in the PWA. Persist, push to the AI (plugin), echo to other PWA tabs."""
@@ -1881,6 +1965,8 @@ async def app_send(request: Request):
     route = str(body.get("route") or "").strip().lower()
     if route:
         meta["route"] = route
+    # 屏幕共享:把最近一次串好的屏幕剧情注入这条消息,安念"看着屏幕"接话
+    text = _take_screen_context() + text
     msg = save_message("in", "user", text, meta)
     # Route to exactly one AI body.
     #   route 明确指定 → 用它(operit/loop/desktop)
@@ -1955,25 +2041,100 @@ async def app_voice(request: Request):
     upload = save_upload_bytes(data, request.query_params.get("name", "voice.webm"), mime, "voice")
     stored = Path(upload["url"]).name
     local_audio = UPLOAD_DIR / stored
-    transcript = transcribe_with_groq(local_audio, mime) or transcribe_with_command(local_audio, mime)
-    text = ("🎤 " + transcript) if transcript else "🎤（这段语音没听清，可能只有环境音）"
-    api_session = str(request.query_params.get("api_session") or "").strip()
+
+    # 统一转写链(云端 qwen3-omni 带语气 → Groq → SenseVoice 本地;静音门槛+黑名单内置)
+    r = _asr_transcribe_chain(local_audio, mime)
+    if r["dropped"] in ("too_short", "blacklisted"):
+        return {"id": 0, "text": "", "attachment": None, "dropped": r["dropped"]}
+    transcript = r["text"]
+    tone = r["tone"]
+
+    text = ("🎤 " + transcript) if transcript else f"🎤 [语音] {HUMAN_NAME}发来一段语音；当前 relay 未配置 ASR，音频已作为附件送达。"
+    if transcript and tone:
+        text += f"（语气：{tone}）"
+    if transcript:
+        text = _take_screen_context() + text   # 屏幕共享:看着屏幕接话
     meta = {
         "user": "human",
         "voice": True,
         "source": "media_recorder",
         "attachments": [upload],
         "transcribed": bool(transcript),
+        "tone": tone,
     }
-    if api_session:
-        meta["api_session"] = api_session
+    if api_session_q := request.query_params.get("api_session"):
+        meta["api_session"] = api_session_q
     msg = save_message("in", "voice", text, meta)
     await broadcast(plugin_subs, plugin_payload(msg))
     await broadcast(app_subs, app_payload(msg))
     await broadcast(app_subs, {"type": "typing", "active": True})
     if transcript:
         asyncio.create_task(forward_to_loop(msg))   # 转写成功就触发大脑回复
-    return {"id": msg["id"], "text": transcript, "attachment": upload}
+    return {"id": msg["id"], "text": text, "attachment": upload}
+
+
+@app.post("/app/pat")
+async def app_pat(request: Request):
+    """她拍安念（或自己）：提示消息落库（进 loop 历史），安念带着上下文自然回应。"""
+    check_auth(request)
+    body = await request.json()
+    action = str(body.get("action") or "拍了拍").strip()[:24] or "拍了拍"
+    suffix = str(body.get("suffix") or "").strip()[:60]
+    target = str(body.get("target") or "ai").strip().lower()
+    if target not in ("ai", "user"):
+        raise HTTPException(status_code=400, detail="bad target")
+    tname = "安念" if target == "ai" else "自己"
+    display = f"「薇薇」{action}「{tname}」{suffix}"
+    api_session = str(body.get("api_session") or body.get("session_id") or "").strip()
+    # 提示消息进历史（meta.system 让它在 PWA 以提示行渲染、loop 在上下文里读到）
+    trigger = (f"（拍一拍互动 · 非薇薇发言）{display}。"
+               f"请自然地对这个小动作做出反应（可以回拍、害羞、撒娇、吐槽都行），一两句话，别提到系统提示。")
+    pat_meta = {"user": "human", "system": "pat",
+                "pat": {"actor": "user", "target": target, "action": action,
+                        "suffix": suffix, "display": display}}
+    if api_session:
+        pat_meta["api_session"] = api_session
+    msg = save_message("in", "user", trigger, pat_meta)
+    brain = brain_target()
+    try:
+        if brain == "operit":
+            asyncio.create_task(forward_to_operit(msg))
+        elif brain == "loop":
+            asyncio.create_task(forward_to_loop(msg))
+        else:
+            await broadcast(plugin_subs, plugin_payload(msg))
+    except Exception as exc:
+        print(f"[pat] forward failed: {exc}")
+    await broadcast(app_subs, app_payload(msg))
+    await broadcast(app_subs, {"type": "typing", "active": True})
+    return {"id": msg["id"], "display": display}
+
+
+@app.post("/app/asr")
+async def app_asr(request: Request):
+    """统一转写(只转写,不落库不广播)。语音面板和任意端共用:
+    云端 qwen3-omni(带语气) → Groq → SenseVoice 本地兜底;静音门槛+黑名单内置。
+    返回 {text, tone, dropped}。"""
+    check_auth(request)
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty audio")
+    if len(data) > VOICE_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="voice too large")
+    mime = request.headers.get("content-type", "audio/webm") or "audio/webm"
+    upload = save_upload_bytes(data, request.query_params.get("name", "voice.webm"), mime, "voice")
+    local_audio = UPLOAD_DIR / Path(upload["url"]).name
+    r = _asr_transcribe_chain(local_audio, mime)
+    return {"text": r["text"], "tone": r["tone"], "dropped": r["dropped"]}
+
+
+# ---------------------------------------------------------------------------
+# voice call（也做 60s 重连,和视频同一套）
+# ---------------------------------------------------------------------------
+
+
+# 断线重连：call_id → 上一次 end 时间（epoch 秒）
+_voice_call_last_end: dict = {}
 
 
 @app.post("/app/call")
@@ -1985,10 +2146,28 @@ async def app_call(request: Request):
     call_id = (body.get("call_id") or "").strip()
     if action not in {"start", "end", "declined", "record"}:
         raise HTTPException(status_code=400, detail="invalid call action")
+
+    # 60s 内同一 call_id 接回 → 视为同一通,不重打招呼
+    resumed = False
+    if action == "start" and call_id:
+        last_end = _voice_call_last_end.get(call_id)
+        if last_end and (datetime.now(timezone.utc).timestamp() - last_end) <= VIDEO_RESUME_WINDOW_SEC:
+            resumed = True
+        _voice_call_last_end.pop(call_id, None)
+
     if action == "start":
-        text = f"📞 [call_start] {HUMAN_NAME}开启了语音通话。接下来带 🎤 的消息来自语音。请用适合朗读的短句回复。"
+        if resumed:
+            text = f"📞 [call_resume] 断线 {VIDEO_RESUME_WINDOW_SEC} 秒内接回，算同一通。{HUMAN_NAME}回来了，不用重新打招呼。"
+        else:
+            text = f"📞 [call_start] {HUMAN_NAME}开启了语音通话。接下来带 🎤 的消息来自语音。请用适合朗读的短句回复。"
     elif action == "end":
         text = f"📞 [call_end] {HUMAN_NAME}结束了语音通话。"
+        if call_id:
+            _voice_call_last_end[call_id] = datetime.now(timezone.utc).timestamp()
+            now_ts = datetime.now(timezone.utc).timestamp()
+            expired = [k for k, v in _voice_call_last_end.items() if now_ts - v > VIDEO_RESUME_WINDOW_SEC * 2]
+            for k in expired:
+                _voice_call_last_end.pop(k, None)
     elif action == "declined":
         # 主动来电被婉拒：告诉 AI 这通没接通（InternalBeyond 同款「婉拒告知」）
         text = f"📞 [missed_call] 你打来的语音电话没能接通——{HUMAN_NAME}暂时不方便。别灰心，等下次自然聊起来就好。"
@@ -1997,20 +2176,25 @@ async def app_call(request: Request):
         if not text:
             raise HTTPException(status_code=400, detail="empty record")
         text = f"📞 [通话记录] {text}"
-    msg = save_message("in", "call", text, {"user": "human", "call": action, "call_id": call_id})
+    msg = save_message("in", "call", text, {"user": "human", "call": action, "call_id": call_id, "resumed": resumed})
     if action in {"end", "declined", "record"}:
         await broadcast(plugin_subs, plugin_payload(msg))
     if action in {"declined", "record"}:
         # direction 为 in（from=human），不会触发前端来电响铃；广播仅为让聊天窗显示这条记录
         await broadcast(app_subs, app_payload(msg))
     if action == "start":
-        await broadcast(app_subs, {"type": "typing", "active": True})
-    return {"id": msg["id"]}
+        if not resumed:
+            await broadcast(app_subs, {"type": "typing", "active": True})
+    return {"id": msg["id"], "resumed": resumed}
 
 
 # ---------------------------------------------------------------------------
 # video call
 # ---------------------------------------------------------------------------
+
+
+# 断线重连：call_id → 上一次 end 时间（epoch 秒）。N 秒内同一 call_id 再来 start 视为同一通。
+_video_call_last_end: dict = {}
 
 
 @app.post("/app/video/call")
@@ -2020,12 +2204,48 @@ async def app_video_call(request: Request):
     body = await request.json()
     action = (body.get("action") or "").strip().lower()
     call_id = (body.get("call_id") or "").strip()
+    reason = (body.get("reason") or "").strip().lower()   # "disconnect" = 断线标记,不算真挂断
     if action not in {"start", "end", "declined", "record"}:
         raise HTTPException(status_code=400, detail="invalid video call action")
+
+    # 断线 N 秒内接回同一 call_id → 视为同一通,不再重复打招呼/不重复写 start 消息
+    resumed = False
+    last_end_ts = None
+    if action == "start" and call_id:
+        last_end_ts = _video_call_last_end.get(call_id)
+        if last_end_ts and (datetime.now(timezone.utc).timestamp() - last_end_ts) <= VIDEO_RESUME_WINDOW_SEC:
+            resumed = True
+        _video_call_last_end.pop(call_id, None)
+
     if action == "start":
-        text = f"📹 [video_call_start] {HUMAN_NAME}开启了视频通话。接下来带 📹 的消息来自视频通话。请用适合朗读的短句回复，并注意形象。"
+        if resumed:
+            gap = max(1, int(datetime.now(timezone.utc).timestamp() - (last_end_ts or 0)))
+            text = f"📹 [video_call_resume] 断线 {gap} 秒后接回，算同一通。{HUMAN_NAME}回来了，不用重新打招呼，接着刚才聊。"
+        else:
+            text = f"📹 [video_call_start] {HUMAN_NAME}开启了视频通话。接下来带 📹 的消息来自视频通话。请用适合朗读的短句回复，并注意形象。"
     elif action == "end":
+        now_ts = datetime.now(timezone.utc).timestamp()
+        if call_id:
+            _video_call_last_end[call_id] = now_ts
+            # 顺便清理过期的 resume 记录(超过 2 倍窗口的丢掉,防止内存涨)
+            expired = [k for k, v in _video_call_last_end.items() if now_ts - v > VIDEO_RESUME_WINDOW_SEC * 2]
+            for k in expired:
+                _video_call_last_end.pop(k, None)
+        if reason == "disconnect":
+            # 顾川同款:断线不算挂断,inbox 里不出现 end——等 resume 时写「断线 Ns 后接回,算同一通」
+            return {"id": 0, "disconnected": True}
         text = f"📹 [video_call_end] {HUMAN_NAME}结束了视频通话。"
+        # 挂断时重置陪伴状态机 + PvEyes + 模式回 live,下次通话从干净的开始(顾川 video:on=false 同款)
+        try:
+            VIDEO_MODE["mode"] = "live"
+            _companion.reset()
+            _pv_eyes._last_thumb = None
+            _pv_eyes._last_desc_at = 0.0
+            _pv_eyes.last_observation = None
+            if EYE_FILE.exists():
+                EYE_FILE.unlink()
+        except Exception:
+            pass
     elif action == "declined":
         # 主动视频来电被婉拒：告诉 AI 这通没接通
         text = f"📹 [missed_video_call] 你打来的视频电话没能接通——{HUMAN_NAME}暂时不方便。别灰心，等下次自然聊起来就好。"
@@ -2034,15 +2254,16 @@ async def app_video_call(request: Request):
         if not text:
             raise HTTPException(status_code=400, detail="empty record")
         text = f"📹 [video_call_record] {text}"
-    msg = save_message("in", "video_call", text, {"user": "human", "call": action, "call_id": call_id})
+    msg = save_message("in", "video_call", text, {"user": "human", "call": action, "call_id": call_id, "resumed": resumed})
     if action in {"end", "declined", "record"}:
         await broadcast(plugin_subs, plugin_payload(msg))
     if action in {"declined", "record"}:
         # direction 为 in（from=human），不会触发前端来电响铃；广播仅为让聊天窗显示这条记录
         await broadcast(app_subs, app_payload(msg))
     if action == "start":
-        await broadcast(app_subs, {"type": "typing", "active": True})
-    return {"id": msg["id"]}
+        if not resumed:
+            await broadcast(app_subs, {"type": "typing", "active": True})
+    return {"id": msg["id"], "resumed": resumed}
 
 
 @app.get("/app/video/config")
@@ -2142,218 +2363,78 @@ async def notify_config_set(request: Request):
 EYE_FILE = Path(os.environ.get("RELAY_EYE_FILE", str(Path(__file__).parent / "eye-latest.jpg")))
 
 
-@app.post("/app/video/frame")
-async def app_video_frame(request: Request):
-    """前端通话中定时抽帧上传（480宽 jpeg）。只保留最新一帧；AI 侧可读 /app/video/eye。"""
-    check_auth(request)
-    body = await request.body()
-    if not body or len(body) > 2 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="frame too large or empty")
-    try:
-        EYE_FILE.write_bytes(body)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"save frame failed: {e}")
-    if VC_COMPANION["mode"] == "companion":
-        asyncio.create_task(_vc_companion_process(body))   # 陪伴评估后台跑，帧上传立即返回
-    return {"ok": True, "bytes": len(body)}
+# ============ 视觉模型三家兜底（截图·pai-voice 亮点3）============
+# 链顺序 DeepSeek → 千问(qwen-vl) → 本机;单家 12s 超时,整轮 25s 超时,丢这一帧不卡下一帧、不卡通话
+VISION_PER_PROVIDER_TIMEOUT = float(os.environ.get("VISION_PER_PROVIDER_TIMEOUT", "12"))
+VISION_TOTAL_TIMEOUT = float(os.environ.get("VISION_TOTAL_TIMEOUT", "25"))
+# 兜底链顺序：可在 relay.env 用 VISION_CHAIN='[{"name":"deepseek","endpoint":...,"key":...,"model":...},...]' 覆盖
+VISION_CHAIN_RAW = os.environ.get("VISION_CHAIN", "")
+# 兼容环境变量直填三家（relay.env 简单写法）
+VISION_DEEPSEEK_BASE = os.environ.get("VISION_DEEPSEEK_BASE", "https://api.deepseek.com/v1")
+VISION_DEEPSEEK_KEY = os.environ.get("VISION_DEEPSEEK_KEY", "")
+VISION_DEEPSEEK_MODEL = os.environ.get("VISION_DEEPSEEK_MODEL", "deepseek-vl")
+VISION_QWEN_BASE = os.environ.get("VISION_QWEN_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+VISION_QWEN_KEY = os.environ.get("VISION_QWEN_KEY", "")
+VISION_QWEN_MODEL = os.environ.get("VISION_QWEN_MODEL", "qwen-vl-plus")
+VISION_LOCAL_BASE = os.environ.get("VISION_LOCAL_BASE", "http://127.0.0.1:11434/v1")
+VISION_LOCAL_KEY = os.environ.get("VISION_LOCAL_KEY", "")
+VISION_LOCAL_MODEL = os.environ.get("VISION_LOCAL_MODEL", "qwen2-vl")
 
 
-@app.get("/app/video/eye")
-async def app_video_eye(request: Request):
-    """AI 侧/前端读取最新一帧（jpeg）。没有就 404。"""
-    check_auth(request)
-    if not EYE_FILE.exists():
-        raise HTTPException(status_code=404, detail="no frame yet")
-    data = EYE_FILE.read_bytes()
-    return Response(content=data, media_type="image/jpeg")
-
-# ── 视频通话面板的陪伴模式（/voice/ws 那套陪伴循环的 HTTP 版）──
-VC_COMPANION = {
-    "mode": "live",         # live | companion
-    "present": None,        # None=未知 True/False
-    "absent_since": 0.0,
-    "left_reported": False,
-    "last_assess": 0.0,
-    "last_nudge": 0.0,
-    "still_since": 0.0,
-    "reminders": 0,
-}
-_VC_EYES = None
-
-
-def _get_vc_eyes():
-    """面板陪伴用的 PvEyes 单例（与 /voice/ws 的实例独立，共享视觉三兜底链）。"""
-    global _VC_EYES
-    if _VC_EYES is None:
-        try:
-            e = PvEyes()
-            _VC_EYES = e if e.enabled else False
-            if _VC_EYES:
-                globals()["_PV_EYES_REF"] = _VC_EYES   # 画面观察注入下一句话用
-        except Exception:
-            _VC_EYES = False
-    return _VC_EYES or None
-
-
-async def _vc_companion_say(note: str) -> None:
-    """陪伴事件 → 唤醒大脑自然开口（日程唤醒同款链路，回复照常落聊天/推送）。"""
-    try:
-        msg = save_message("in", "user", note, {"user": "human", "system": "companion", "video_call": True})
-        brain = brain_target()
-        if brain == "operit":
-            await forward_to_operit(msg)
-        elif brain == "loop":
-            await forward_to_loop(msg)
-        else:
-            await broadcast(plugin_subs, plugin_payload(msg))
-        await broadcast(app_subs, {"type": "typing", "active": True})
-        print(f"[companion] wake: {note[:40]}")
-    except Exception as exc:
-        print(f"[companion] wake failed: {type(exc).__name__}: {exc}")
-
-
-async def _vc_companion_process(jpeg: bytes) -> None:
-    """陪伴模式画面评估：离开/回来/小动作/久坐 → 让安念自然开口。逻辑与 /voice/ws 一致。"""
-    st = VC_COMPANION
-    if st["mode"] != "companion":
-        return
-    eyes = _get_vc_eyes()
-    if not eyes or eyes.busy:
-        return
-    now = _t.time()
-    moved = eyes.changed(jpeg, PAIVOICE_VISION_DIFF * 2)
-    since = now - st["last_assess"]
-    want = (since >= 300 or (moved and since >= 60)
-            or (st["present"] is False and since >= 60) or st["present"] is None)
-    if not want:
-        if st["present"] and now - st["still_since"] >= 1800 and now - st["last_nudge"] >= 120:
-            st["reminders"] += 1
-            st["last_nudge"] = now
-            tip = "喝口水" if st["reminders"] % 2 else "站起来活动一下"
-            await _vc_companion_say("[陪伴模式] 对方已经 30 分钟没什么动静，一直在座位上；提醒她" + tip + "。")
-        return
-    st["last_assess"] = now
-    d = await eyes.assess(jpeg)
-    if not d or st["mode"] != "companion":
-        return
-    was = st["present"]
-    st["present"] = d["present"]
-    if not d["present"]:
-        if not st["absent_since"]:
-            st["absent_since"] = now
-        elif not st["left_reported"] and now - st["absent_since"] >= 120:
-            st["left_reported"] = True
-            mins = int((now - st["absent_since"]) // 60)
-            await _vc_companion_say("[陪伴模式] 对方离开座位 " + str(mins) + " 分钟了，画面里没人——自然地表达想她、关心她一句。")
-        return
-    if was is False and st["left_reported"]:
-        st["absent_since"] = 0.0
-        st["left_reported"] = False
-        await _vc_companion_say("[陪伴模式] 对方回来了" + ("，" + d["activity"] if d["activity"] else "") + "——自然地打个招呼。")
-        return
-    st["absent_since"] = 0.0
-    st["left_reported"] = False
-    if d["notable"] and now - st["last_nudge"] >= 120:
-        st["last_nudge"] = now
-        await _vc_companion_say("[陪伴模式] 对方" + d["notable"] + ("，现在" + d["activity"] if d["activity"] else "") + "——想说就自然搭一句。")
-        return
-    if st["present"] and now - st["still_since"] >= 1800 and now - st["last_nudge"] >= 120:
-        st["reminders"] += 1
-        st["last_nudge"] = now
-        tip = "喝口水" if st["reminders"] % 2 else "站起来活动一下"
-        await _vc_companion_say("[陪伴模式] 对方已经 30 分钟没什么动静，一直在座位上；提醒她" + tip + "。")
-
-
-@app.post("/app/video/mode")
-async def app_video_mode(request: Request):
-    """视频通话面板：live(实时) / companion(陪伴) 切换。陪伴时按画面变化自动评估，安念会自然开口。"""
-    check_auth(request)
-    body = await request.json()
-    mode = "companion" if body.get("mode") == "companion" else "live"
-    VC_COMPANION["mode"] = mode
-    VC_COMPANION["present"] = None
-    VC_COMPANION["absent_since"] = 0.0
-    VC_COMPANION["left_reported"] = False
-    VC_COMPANION["last_assess"] = 0.0
-    VC_COMPANION["still_since"] = _t.time()
-    VC_COMPANION["reminders"] = 0
-    if mode == "live":
-        _get_vc_eyes()   # 预热，让 live 模式的观察注入也可用
-    return {"ok": True, "mode": mode}
-
-
-@app.middleware("http")
-async def sw_no_cache_middleware(request, call_next):
-    # sw.js must be no-cache: a stale HTTP-cached sw.js body makes the SW byte-diff
-    # check see no change, so the worker never updates (confirmed on M10 2026-09-29).
-    resp = await call_next(request)
-    if request.url.path in ("/sw.js", "/", "/index.html"):
-        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
-    return resp
-
-
-# ═══ PaiVoice 实时通话核心（/voice/ws）═══════════════════════════════
-# 移植自 github.com/tianyupaipai-cmd/pai-voice packages/realtime-core/server.py（AGPL-3.0）
-# 协议：start(token,api_session) → speech_start → 二进制PCM16@16k → speech_end
-#       → transcript → reply_text → audio(b64) → generation_end；支持 text 轮与 interrupt。
-# ASR=百炼 qwen3-omni-flash · TTS=MOSS(Daddy音色) · 回复=loop(人格/记忆/上下文全量)
-import base64 as _b64mod
-from fastapi import WebSocket, WebSocketDisconnect
-
-DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY", "")
-PAIVOICE_ASR_MODEL = "qwen3-omni-flash"
-PAIVOICE_VISION_DIFF = 0.06
-PAIVOICE_VISION_MIN_INTERVAL = 8
-PV_VISION_PROMPT = "这是视频通话时从对方摄像头里抽的一帧。用中文、两句话以内描述你看到的：对方在哪、在做什么、表情和状态、有没有值得一提的细节。只描述，不评价，不打招呼，不加前缀。"
-PV_COMPANION_PROMPT = ("这是视频通话中从对方摄像头里抽的一帧。对方在工作或学习，你只是安静的观察员。只输出一行 JSON，不要任何别的字："
-                       '{"present": 画面里有没有人（true/false）, "activity": "在做什么，十个字以内", '
-                       '"notable": "值得搭话的小动作：伸懒腰、趴桌、揉眼、打哈欠、明显发呆走神、一直玩手机、对镜头笑或摆手之类，十个字以内；正常工作学习就写空字符串"}')
-
-
-def _pv_vision_backend() -> dict:
-    """视觉模型：nova gemini-3.7-flash（多模态），key 从 loop 配置读取。"""
-    # 更快更稳：DashScope 视觉直链（nova gemini 多模态限流会超时丢帧）
-    if DASHSCOPE_API_KEY:
-        return {"base": "https://dashscope.aliyuncs.com/compatible-mode/v1", "key": DASHSCOPE_API_KEY, "model": "qwen-vl-plus"}
-    try:
-        cfg = json.load(open("/home/weiwei/services/moonlight/examples/api_loop.config.json"))
-        for r in cfg.get("main_chain", []):
-            if "nova" in r.get("url", ""):
-                return {"base": r["url"].rstrip("/"), "key": r["key"], "model": "[ruru10]gemini-3.7-flash"}
-    except Exception:
-        pass
-    return {}
-
-
-def _vision_chain():
-    """延迟加载视觉三兜底链（backend/vision_chain.py），失败回退老单家。"""
-    global _VISION_CHAIN
-    if _VISION_CHAIN is None:
-        try:
-            import sys as _sys, importlib as _il
-            _sys.path.insert(0, str(Path(__file__).parent))
-            import vision_chain as _vc
-            _il.reload(_vc)
-            _VISION_CHAIN = _vc.get_vision_chain()
-        except Exception:
-            _VISION_CHAIN = False
-    return _VISION_CHAIN if _VISION_CHAIN else None
-
-_VISION_CHAIN = None
+# ============ 顾川 PvEyes（pai-voice vision.py 移植：帧差 + 节流，省 token）============
+# 我们的优点(三家兜底)照样用,只是不再每帧都调模型——只画面变化且 8s 节流到了才走链
+PAIVOICE_VISION_DIFF = float(os.environ.get("PAIVOICE_VISION_DIFF", "0.06"))
+PAIVOICE_VISION_MIN_INTERVAL = float(os.environ.get("PAIVOICE_VISION_MIN_INTERVAL", "8"))
+PV_VISION_PROMPT = os.environ.get(
+    "PV_VISION_PROMPT",
+    "这是视频通话时从对方摄像头里抽的一帧。用中文、两句话以内描述你看到的：对方在哪、在做什么、表情和状态、有没有值得一提的细节。只描述，不评价，不打招呼，不加前缀。"
+)
+PV_COMPANION_PROMPT = os.environ.get(
+    "PV_COMPANION_PROMPT",
+    "这是视频通话中从对方摄像头里抽的一帧。对方在工作或学习，你只是安静的观察员。只输出一行 JSON，不要任何别的字："
+    '{"present": 画面里有没有人（true/false）, "activity": "在做什么，十个字以内", '
+    '"notable": "值得搭话的小动作：伸懒腰、趴桌、揉眼、打哈欠、明显发呆走神、一直玩手机、对镜头笑或摆手之类，十个字以内；正常工作学习就写空字符串"}'
+)
+# 屏幕共享(pai-voice 官方仓库 vision.py 同款):单帧 / 多帧串剧情
+PV_SCREEN_PROMPT = os.environ.get(
+    "PV_SCREEN_PROMPT",
+    "这是通话中对方共享的电脑屏幕截图。用中文、三句话以内说清画面现在的状态：是什么界面/游戏/视频、正在发生什么、"
+    "屏幕上关键的文字（字幕、选项、对话、数值、提示）。只描述，不评价，不打招呼，不加前缀。",
+)
+PV_STORY_PROMPT = os.environ.get(
+    "PV_STORY_PROMPT",
+    "这是通话中对方共享的电脑屏幕，下面是按时间顺序的 {n} 张截图，前后大约 {secs} 秒。对方多半在看剧或视频，也可能在玩游戏、看网页。"
+    "如果是剧或视频：先把这几张里的字幕按先后原样摘出来（重复的只写一次，每句用「」括起来），"
+    "再用一两句话把这几秒的剧情串起来：谁、在做什么、什么情绪。"
+    "如果是游戏或网页：说清是什么界面、这几秒里发生了什么变化、屏幕上关键的文字（选项、对话、数值、提示）。"
+    "只描述，不评价，不打招呼，不加前缀，总共不超过五句。",
+)
 
 
 class PvEyes:
-    """PaiVoice vision.py 移植：只在画面明显变化且距上次描述够久时描述。"""
+    """顾川 pai-voice 的 vision.py 移植：只在画面明显变化且距上次描述够久时描述。
+
+    原版的优点:
+      - changed() 用 numpy+PIL 把 jpeg 压到 32×32 灰度,跟上帧求均值差,>= 0.06 才算变(省 token)
+      - should_describe() 8 秒节流,画面没变/太频繁都不送模型
+      - 用了之后调模型的还是我们上面的三家兜底(我们的优点)
+    """
 
     def __init__(self) -> None:
-        self.backend = _pv_vision_backend()
-        self.enabled = bool(self.backend) or bool(_vision_chain())
         self._last_thumb = None
         self._last_desc_at = 0.0
         self.busy = False
         self.last_observation = None
 
-    def changed(self, jpeg: bytes, threshold: float = PAIVOICE_VISION_DIFF) -> bool:
+    @property
+    def enabled(self) -> bool:
+        # 兜底链上至少有一家可用才算开
+        return bool(_vision_chain())
+
+    def changed(self, jpeg: bytes, threshold: float = None) -> bool:
+        """顾川原算法：缩 32×32 灰度求均值差。"""
+        if threshold is None:
+            threshold = PAIVOICE_VISION_DIFF
         try:
             import io as _io
             import numpy as _np
@@ -2361,6 +2442,7 @@ class PvEyes:
             im = _Image.open(_io.BytesIO(jpeg)).convert("L").resize((32, 32))
             t = _np.asarray(im, dtype="float32") / 255.0
         except Exception:
+            # numpy/PIL 不在就跑不了帧差,默认视为变了(让模型看)
             return True
         prev, self._last_thumb = self._last_thumb, t
         if prev is None:
@@ -2368,37 +2450,52 @@ class PvEyes:
         return float(abs(t - prev).mean()) >= threshold
 
     def should_describe(self, jpeg: bytes) -> bool:
+        """顾川原算法：8 秒节流 + 帧差检测。"""
         import time as _t
         if not self.enabled or self.busy:
             return False
         if _t.time() - self._last_desc_at < PAIVOICE_VISION_MIN_INTERVAL:
+            # 刷新一下 _last_thumb,但不上送
             self.changed(jpeg)
             return False
         return self.changed(jpeg)
 
-    async def describe(self, jpeg: bytes, prompt: str | None = None) -> str | None:
-        """顾川 PaiVoice 三兜底：DeepSeek-VL → Qwen-VL → 本机，单家 12s / 整轮 25s，超时丢帧不卡下一帧。"""
+    async def describe(self, jpeg: bytes, prompt: str = None) -> str:
+        """画面变化了 → 走我们的三家兜底链拿描述（12s 单家/25s 整轮,卡了就丢）。
+        to_thread 跑:同步 urllib 不能阻塞事件循环,否则 SSE 全卡。"""
         import time as _t
-        if self.busy:
+        import base64 as _b64m
+        if not self.enabled or self.busy:
+            return ""
+        self._last_desc_at = _t.time()
+        self.busy = True
+        try:
+            b64 = _b64m.b64encode(jpeg).decode("ascii")
+            result = await asyncio.to_thread(_vision_describe_with_fallback, b64, prompt or PV_VISION_PROMPT)
+            desc = (result.get("text") or "").strip() if result.get("ok") else ""
+            if desc:
+                self.last_observation = desc
+            return desc
+        finally:
+            self.busy = False
+
+    async def assess(self, jpeg: bytes) -> dict:
+        """陪伴模式专用：返回 {present, activity, notable}。失败返回 None。"""
+        import re as _re
+        import time as _t
+        import base64 as _b64m
+        raw = ""
+        if not self.enabled or self.busy:
             return None
         self._last_desc_at = _t.time()
         self.busy = True
         try:
-            chain = _vision_chain()
-            desc = await chain.describe(jpeg, prompt)
-            if desc:
-                self.last_observation = desc.strip()
-            return desc
-        except Exception:
-            return None
+            b64 = _b64m.b64encode(jpeg).decode("ascii")
+            result = await asyncio.to_thread(_vision_describe_with_fallback, b64, PV_COMPANION_PROMPT)
+            raw = (result.get("text") or "").strip() if result.get("ok") else ""
         finally:
             self.busy = False
-
-    async def assess(self, jpeg: bytes) -> dict | None:
-        import re as _re
-        import time as _t
-        raw = await self.describe(jpeg, PV_COMPANION_PROMPT)
-        if raw is None:
+        if not raw:
             return None
         d = {"present": True, "activity": (raw or "").strip()[:40], "notable": ""}
         m = _re.search(r"\{.*\}", raw or "", _re.S)
@@ -2414,26 +2511,548 @@ class PvEyes:
         return d
 
 
-def _pv_split_sentences(text: str) -> list:
-    """MOSS 逐句流式：按中文句读切分（ringdonut splitSpokenSegments 简化版）。"""
-    import re as _re
-    src = " ".join(str(text or "").split()).strip()
-    if not src:
-        return []
-    parts = [p.strip() for p in _re.split(r"(?<=[。！？；!?;…\n])", src) if p.strip()]
+# 全局单例（通话期间共享,挂断时由调用方决定是否重置）
+_pv_eyes = PvEyes()
+
+
+# ============ 顾川陪伴状态机（pv_patch2c.py 移植：离开/回来/小动作/久坐提醒）============
+# 这是 pai-voice「陪伴模式幸福感强」的核心：
+#   离开 >=120s 说想念 / 回来说欢迎 / 小动作主动搭话(>=120s 一次) / 30 分钟没动提醒喝水
+class CompanionState:
+    """陪伴模式状态机（顾川 pv_patch2c 的 comp dict 1:1 对齐）。"""
+
+    # 参数(秒)
+    COMPANION_ABSENT_SAY_SEC = int(os.environ.get("COMPANION_ABSENT_SAY_SEC", "120"))     # 离开多久说想念
+    COMPANION_NOTABLE_COOLDOWN = int(os.environ.get("COMPANION_NOTABLE_COOLDOWN", "120")) # 小动作搭话冷却
+    COMPANION_STILL_REMIND_SEC = int(os.environ.get("COMPANION_STILL_REMIND_SEC", "1800")) # 30 分钟没动
+    COMPANION_ASSESS_INTERVAL = int(os.environ.get("COMPANION_ASSESS_INTERVAL", "60"))     # 陪伴模式每分钟才评估一次
+
+    def __init__(self) -> None:
+        import time as _t
+        self.present = None            # None=还没判定过 / True=在 / False=不在
+        self.absent_since = 0.0        # 什么时候发现不在
+        self.left_reported = False     # 离开已经说过一次了
+        self.last_nudge = 0.0          # 上一次主动搭话时间
+        self.last_assess = 0.0         # 上一次调模型评估时间
+        self.still_since = _t.time()   # 上一次画面有明显变化时间(没人动)
+        self.reminders = 0             # 久坐提醒次数(决定说"喝水"还是"站起来")
+
+    def reset(self):
+        """挂断/切模式时重置"""
+        self.__init__()
+
+
+# 陪伴状态机单例
+_companion = CompanionState()
+
+
+def _vision_chain() -> list:
+    """组装三家兜底链。优先用 VISION_CHAIN JSON,否则从三个 VISION_* 变量拼。没 key 的跳过。"""
+    if VISION_CHAIN_RAW:
+        try:
+            chain = json.loads(VISION_CHAIN_RAW)
+            if isinstance(chain, list):
+                return [c for c in chain if c.get("endpoint") and c.get("model")]
+        except Exception:
+            pass
     out = []
-    for p in parts:
-        if len(p) <= 90:
-            if out and len(out[-1]) < 12 and len(out[-1]) + 1 + len(p) <= 90:
-                out[-1] = out[-1] + " " + p
-            else:
-                out.append(p)
+    if VISION_DEEPSEEK_KEY:
+        out.append({"name": "deepseek", "endpoint": VISION_DEEPSEEK_BASE, "key": VISION_DEEPSEEK_KEY, "model": VISION_DEEPSEEK_MODEL})
+    if VISION_QWEN_KEY:
+        out.append({"name": "qwen", "endpoint": VISION_QWEN_BASE, "key": VISION_QWEN_KEY, "model": VISION_QWEN_MODEL})
+    # 本机兜底:无 key 也允许(Ollama 之类)
+    if VISION_LOCAL_BASE and VISION_LOCAL_MODEL:
+        out.append({"name": "local", "endpoint": VISION_LOCAL_BASE, "key": VISION_LOCAL_KEY or "ollama", "model": VISION_LOCAL_MODEL})
+    return out
+
+
+def _vision_call_one(provider: dict, image_b64: str, prompt: str, timeout: float) -> str:
+    """调单家视觉模型,返回描述文本。失败抛异常(由上层捕获换下一家)。"""
+    ep = (provider.get("endpoint") or "").rstrip("/")
+    if not ep.endswith("/chat/completions"):
+        ep = ep + "/chat/completions"
+    payload = {
+        "model": provider.get("model"),
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt or "用一句中文描述画面里有什么、人在做什么。不超过 30 字。"},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
+            ],
+        }],
+        "max_tokens": 200,
+    }
+    req = urllib.request.Request(
+        ep,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + (provider.get("key") or ""),
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        d = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    return (((d.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
+
+
+def _vision_describe_with_fallback(image_b64: str, prompt: str = "", total_timeout: float = None) -> dict:
+    """三家按顺序兜底,整轮总超时。返回 {ok, text, provider, elapsed_ms, errors[]}。"""
+    import time as _t
+    started = _t.time()
+    total_to = total_timeout if total_timeout is not None else VISION_TOTAL_TIMEOUT
+    chain = _vision_chain()
+    errors = []
+    for p in chain:
+        elapsed = _t.time() - started
+        budget_left = total_to - elapsed
+        if budget_left <= 0.5:
+            errors.append({"provider": p.get("name"), "error": "total_timeout_exhausted"})
+            break
+        per_to = min(VISION_PER_PROVIDER_TIMEOUT, budget_left)
+        try:
+            t0 = _t.time()
+            text = _vision_call_one(p, image_b64, prompt, per_to)
+            if text:
+                return {
+                    "ok": True,
+                    "text": text,
+                    "provider": p.get("name"),
+                    "model": p.get("model"),
+                    "elapsed_ms": int((_t.time() - started) * 1000),
+                    "errors": errors,
+                }
+            errors.append({"provider": p.get("name"), "error": "empty_response"})
+        except Exception as e:
+            errors.append({"provider": p.get("name"), "error": str(e)[:200]})
+    return {
+        "ok": False,
+        "text": "",
+        "provider": None,
+        "elapsed_ms": int((_t.time() - started) * 1000),
+        "errors": errors,
+    }
+
+
+def _vision_story_describe(frames_b64: list, prompt: str, total_timeout: float = None, per_timeout: float = None) -> str:
+    """屏幕共享串剧情(pai-voice Eyes.story 同款):多帧按顺序一起交给模型,
+    模型要能一次看多张图;失败退回只看最后一帧。走我们的三家兜底链。
+    屏幕图是 1280 宽,中转站吃得慢,单独放宽超时(后台跑,不卡通话)。"""
+    import time as _t
+    started = _t.time()
+    total_to = total_timeout if total_timeout is not None else VISION_SCREEN_TOTAL_TIMEOUT
+    per_to_default = per_timeout if per_timeout is not None else VISION_SCREEN_PER_TIMEOUT
+    chain = _vision_chain()
+
+    def _one(provider, b64s, to):
+        ep = (provider.get("endpoint") or "").rstrip("/")
+        if not ep.endswith("/chat/completions"):
+            ep = ep + "/chat/completions"
+        content = [{"type": "text", "text": prompt}]
+        for b in b64s:
+            content.append({"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b}})
+        payload = {"model": provider.get("model"), "max_tokens": 600, "messages": [{"role": "user", "content": content}]}
+        req = urllib.request.Request(ep, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                                     headers={"Content-Type": "application/json",
+                                              "Authorization": "Bearer " + (provider.get("key") or "")})
+        with urllib.request.urlopen(req, timeout=to) as resp:
+            d = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        return (((d.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()
+
+    for p in chain:
+        left = total_to - (_t.time() - started)
+        if left <= 1:
+            break
+        to = min(per_to_default, left)
+        try:
+            if len(frames_b64) > 1:
+                try:
+                    desc = _one(p, frames_b64, to)      # 多帧一起给(要模型支持多图)
+                except Exception as e:
+                    print(f"[screen] {p.get('name')} 多帧失败退单帧: {e}", flush=True)
+                    desc = ""
+                if desc:
+                    return desc
+            desc = _one(p, frames_b64[-1:], to)          # 退回只看最后一帧
+            if desc:
+                return desc
+        except Exception as e:
+            print(f"[screen] {p.get('name')} 单帧也失败: {e}", flush=True)
             continue
-        for i in range(0, len(p), 90):
-            seg = p[i:i + 90].strip()
-            if seg:
-                out.append(seg)
-    return out[:12]
+    return ""
+
+
+@app.post("/app/video/vision")
+async def app_video_vision(request: Request):
+    """三家兜底视觉识别。body: {image_b64?, prompt?, use_latest?, mode?: live|companion}。
+    - image_b64 缺省时,若 use_latest=true 则读最新抽帧(后端自己存的 EYE_FILE)。
+    - 帧差 + 8s 节流是顾川的优点：画面没变/太频繁直接返回空,不送模型。
+    - 真送时走我们的三家兜底：DeepSeek → 千问 → 本机,单家 12s/整轮 25s,丢帧不卡通话。
+    """
+    check_auth(request)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}   # 非 JSON 对象(如纯字符串)按空处理,防 500
+    prompt = (body.get("prompt") or "").strip()
+    mode = (body.get("mode") or "live").strip().lower()
+    b64 = (body.get("image_b64") or "").strip()
+    if b64.startswith("data:"):
+        b64 = b64.split(",", 1)[-1]
+    jpeg = None
+    if not b64 and body.get("use_latest"):
+        if not EYE_FILE.exists():
+            raise HTTPException(status_code=404, detail="no frame yet")
+        jpeg = EYE_FILE.read_bytes()
+        import base64 as _b64m
+        b64 = _b64m.b64encode(jpeg).decode("ascii")
+    if not b64:
+        raise HTTPException(status_code=400, detail="image_b64 required (or use_latest=true)")
+    if jpeg is None:
+        import base64 as _b64m
+        try:
+            jpeg = _b64m.b64decode(b64)
+        except Exception:
+            raise HTTPException(status_code=400, detail="image_b64 not valid base64")
+
+    # 顾川的帧差+节流:不该描述就直接返回 {ok:true, text:"", skipped:true}
+    if mode == "live" and not prompt:
+        if not _pv_eyes.should_describe(jpeg):
+            return {"ok": True, "text": "", "skipped": True, "reason": "no_change_or_throttled"}
+        # 通过帧差,真送兜底链(to_thread,不卡事件循环)
+        desc = await _pv_eyes.describe(jpeg, prompt or PV_VISION_PROMPT)
+        if not desc:
+            return {"ok": False, "text": "", "skipped": False, "reason": "vision_chain_failed"}
+        return {"ok": True, "text": desc, "skipped": False}
+
+    # ── 陪伴模式：顾川完整状态机(离开/回来/小动作/久坐) ──
+    if mode == "companion" and not prompt:
+        import time as _t
+        now = _t.time()
+        comp = _companion
+        # 帧差检测(阈值放宽 2 倍,陪伴模式更稳)
+        moved = _pv_eyes.changed(jpeg, PAIVOICE_VISION_DIFF * 2)
+        since = now - comp.last_assess
+        # 该不该评估：满 5 分钟 / 画面动了且距上次评估 >= 1 分钟 / 不在场且 1 分钟没看了 / 从没看过
+        want = (since >= 300 or (moved and since >= CompanionState.COMPANION_ASSESS_INTERVAL)
+                or (comp.present is False and since >= CompanionState.COMPANION_ASSESS_INTERVAL)
+                or comp.present is None)
+        if not want or not _pv_eyes.enabled or _pv_eyes.busy:
+            return {"ok": True, "skipped": True, "reason": "companion_throttled",
+                    "present": comp.present}
+        comp.last_assess = now
+        d = await _pv_eyes.assess(jpeg)
+        if not d:
+            return {"ok": False, "skipped": False, "reason": "vision_chain_failed"}
+        was = comp.present
+        comp.present = d["present"]
+
+        # ── 离开分支 ──
+        if not d["present"]:
+            if not comp.absent_since:
+                comp.absent_since = now
+            elif not comp.left_reported and now - comp.absent_since >= CompanionState.COMPANION_ABSENT_SAY_SEC:
+                comp.left_reported = True
+                mins = int((now - comp.absent_since) // 60)
+                return {
+                    "ok": True, "skipped": False,
+                    "event": "absent", "minutes": mins,
+                    "say": f"[陪伴模式] 对方离开座位 {mins} 分钟了，画面里没人——自然地表达想她、关心她一句。",
+                    "present": False, "activity": "", "notable": "",
+                }
+            return {"ok": True, "skipped": True, "reason": "absent_already_known", "present": False}
+
+        # ── 回来分支 ──
+        if was is False and comp.left_reported:
+            comp.absent_since = 0.0
+            comp.left_reported = False
+            comp.still_since = now
+            return {
+                "ok": True, "skipped": False,
+                "event": "return",
+                "say": f"[陪伴模式] 对方回来了{('，' + d['activity']) if d['activity'] else ''}——自然地打个招呼。",
+                "present": True, "activity": d["activity"], "notable": "",
+            }
+
+        # 回来了(之前没说过离开) → 重置 absent
+        comp.absent_since = 0.0
+        comp.left_reported = False
+
+        # ── 小动作搭话(冷却 120s) ──
+        if d["notable"] and now - comp.last_nudge >= CompanionState.COMPANION_NOTABLE_COOLDOWN:
+            comp.last_nudge = now
+            comp.still_since = now
+            return {
+                "ok": True, "skipped": False,
+                "event": "notable",
+                "say": f"[陪伴模式] 对方{d['notable']}{('，现在' + d['activity']) if d['activity'] else ''}——想说就自然搭一句。",
+                "present": True, "activity": d["activity"], "notable": d["notable"],
+            }
+
+        # ── 久坐提醒(30 分钟没动,提醒喝水/活动,交替) ──
+        if moved:
+            comp.still_since = now
+        elif comp.present and now - comp.still_since >= CompanionState.COMPANION_STILL_REMIND_SEC \
+                and now - comp.last_nudge >= CompanionState.COMPANION_NOTABLE_COOLDOWN:
+            comp.reminders += 1
+            comp.last_nudge = now
+            comp.still_since = now
+            tip = "喝口水" if comp.reminders % 2 else "站起来活动一下"
+            return {
+                "ok": True, "skipped": False,
+                "event": "still_remind", "tip": tip, "count": comp.reminders,
+                "say": f"[陪伴模式] 对方已经 30 分钟没什么动静，一直在座位上；提醒她{tip}。",
+                "present": True, "activity": d["activity"], "notable": "",
+            }
+
+        # 没什么值得说的
+        return {"ok": True, "skipped": True, "reason": "nothing_notable",
+                "present": comp.present, "activity": d["activity"]}
+
+    # 显式 prompt / use_latest 强制场景:不走节流,直接兜底(to_thread,不卡事件循环)
+    result = await asyncio.to_thread(_vision_describe_with_fallback, b64, prompt)
+    if not result["ok"]:
+        return Response(
+            content=json.dumps(result, ensure_ascii=False),
+            status_code=504,
+            media_type="application/json",
+        )
+    return result
+
+
+@app.post("/app/video/frame")
+async def app_video_frame(request: Request):
+    """前端通话中定时抽帧上传（480宽 jpeg）。只保留最新一帧；AI 侧可读 /app/video/eye。
+    收到帧后立刻返回,视觉处理(描述/陪伴状态机)在后台跑——不卡下一帧、不卡通话。"""
+    check_auth(request)
+    body = await request.body()
+    if not body or len(body) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="frame too large or empty")
+    try:
+        EYE_FILE.write_bytes(body)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"save frame failed: {e}")
+    # 顾川 pai-voice 同款:帧到了后台自己看,该说话说话,不影响推帧
+    asyncio.ensure_future(_process_video_frame(bytes(body)))
+    return {"ok": True, "bytes": len(body)}
+
+
+# ---- 视觉后台处理（pai-voice ws frame 事件的 HTTP 版）--------------------------------
+
+VIDEO_MODE = {"mode": "live"}   # live | companion | screen（屏幕共享,前端 /app/video/mode 切）
+
+# 屏幕共享(pai-voice server.py 同款):前端 2 秒一帧,这里攒着,每 SCREEN_STORY_SECS 秒
+# 把这几帧按顺序一起交给模型串一次。观察结果存 SCREEN_LAST,注入你下一条消息,想接话就接。
+SCREEN_STORY_SECS = float(os.environ.get("SCREEN_STORY_SECS", "10"))
+SCREEN_STORY_FRAMES = int(os.environ.get("SCREEN_STORY_FRAMES", "5"))
+# 屏幕图是 1280 宽,中转站单张要 13~15s——串剧情是后台任务,单独放宽(摄像头保持 12/25)
+VISION_SCREEN_PER_TIMEOUT = float(os.environ.get("VISION_SCREEN_PER_TIMEOUT", "25"))
+VISION_SCREEN_TOTAL_TIMEOUT = float(os.environ.get("VISION_SCREEN_TOTAL_TIMEOUT", "60"))
+SCREEN_BUF: list = []           # [(ts, jpeg_bytes)] 上次串完之后攒的
+SCREEN_STORY_AT = 0.0
+SCREEN_LAST = {"desc": "", "ts": 0.0, "consumed": True}
+SCREEN_BUSY = False
+
+SCREEN_INTRO = ("对方共享了屏幕，可能在看剧、玩游戏或看网页，想和你一起看。大约每 {secs} 秒你会\"看到\"一次屏幕内容"
+                "（会附在你下一条收到的消息前）。想接话就自然地接一句，不用每次都回，也别逐条复述画面。")
+
+
+@app.post("/app/video/mode")
+async def app_video_mode_set(request: Request):
+    """切换 live / companion / screen（屏幕共享）。前端 toggleCompanion / toggleScreenShare 调这个。"""
+    check_auth(request)
+    body = await request.json()
+    mode = body.get("mode") if body.get("mode") in ("companion", "screen") else "live"
+    prev = VIDEO_MODE["mode"]
+    VIDEO_MODE["mode"] = mode
+    if mode == "companion":
+        _companion.reset()   # 顾川同款:切模式重置状态机
+    if mode == "screen" and prev != "screen":
+        global SCREEN_BUF, SCREEN_STORY_AT
+        import time as _t
+        SCREEN_BUF = []
+        SCREEN_STORY_AT = _t.time()   # 从现在起攒满一个 10s 片段,别拿第一帧就串
+        # pai-voice 同款:开屏幕共享时给 AI 一条开场说明(落库→AI 会回一句"好啊我看")
+        try:
+            msg = save_message("in", "voice", SCREEN_INTRO.format(secs=round(SCREEN_STORY_SECS)),
+                               {"user": "human", "system": "screen", "api_session": "daily"})
+            await broadcast(plugin_subs, plugin_payload(msg))
+            await broadcast(app_subs, app_payload(msg))
+            await broadcast(app_subs, {"type": "typing", "active": True})
+        except Exception:
+            pass
+    return {"ok": True, "mode": mode}
+
+
+@app.get("/app/video/mode")
+async def app_video_mode_get(request: Request):
+    check_auth(request)
+    return Response(
+        content=json.dumps({"mode": VIDEO_MODE["mode"], "screen_desc": SCREEN_LAST.get("desc", ""),
+                            "screen_buf": len(SCREEN_BUF)}),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _process_video_frame(jpeg: bytes) -> None:
+    """每帧后台处理：屏幕共享走攒帧串剧情,陪伴模式走状态机,实时模式走帧差描述。
+    视觉调用在线程池,绝不阻塞事件循环。"""
+    try:
+        mode = VIDEO_MODE["mode"]
+        if mode == "screen":
+            await _screen_tick(jpeg)
+        elif mode == "companion":
+            await _companion_tick(jpeg)
+        else:
+            await _live_tick(jpeg)
+    except Exception as e:
+        print("[vision] frame process error:", e, flush=True)
+
+
+async def _screen_tick(jpeg: bytes) -> None:
+    """屏幕共享(pai-voice screen_frame 同款):攒帧,到点、模型空闲时把这段挑几帧串成剧情。"""
+    global SCREEN_BUF, SCREEN_STORY_AT, SCREEN_BUSY
+    import time as _t
+    now = _t.time()
+    SCREEN_BUF = [*SCREEN_BUF[-29:], (now, jpeg)]
+    if SCREEN_BUSY or now - SCREEN_STORY_AT < SCREEN_STORY_SECS:
+        return
+    buf, SCREEN_BUF = SCREEN_BUF, []
+    if len(buf) > SCREEN_STORY_FRAMES:            # 多了就均匀挑,首尾都留
+        step = (len(buf) - 1) / (SCREEN_STORY_FRAMES - 1)
+        buf = [buf[round(i * step)] for i in range(SCREEN_STORY_FRAMES)]
+    SCREEN_STORY_AT = now
+    SCREEN_BUSY = True
+    try:
+        import base64 as _b64m
+        frames_b64 = [_b64m.b64encode(j).decode("ascii") for _, j in buf]
+        secs = buf[-1][0] - buf[0][0]
+        prompt = PV_STORY_PROMPT.format(n=len(frames_b64), secs=round(secs)) if len(frames_b64) > 1 else PV_SCREEN_PROMPT
+        desc = await asyncio.to_thread(_vision_story_describe, frames_b64, prompt)
+        if desc:
+            # 就算串完时已切回别的模式也存着——consumed 标记控制注入,丢了可惜
+            SCREEN_LAST["desc"] = desc
+            SCREEN_LAST["ts"] = now
+            SCREEN_LAST["consumed"] = False
+            await broadcast(app_subs, {"type": "observation", "content": desc})
+    finally:
+        SCREEN_BUSY = False
+
+
+def _take_screen_context() -> str:
+    """屏幕共享时,把最近一次串好的剧情注入你下一条消息(pai-voice pv_answer observation 同款)。"""
+    if VIDEO_MODE["mode"] == "screen" and SCREEN_LAST.get("desc") and not SCREEN_LAST.get("consumed"):
+        SCREEN_LAST["consumed"] = True
+        return "[安念刚看了你的屏幕：" + SCREEN_LAST["desc"][:300] + "]\n"
+    return ""
+
+
+async def _live_tick(jpeg: bytes) -> None:
+    """实时模式：帧差+8s 节流过了才描述,描述结果 SSE 推给通话面板。"""
+    if not _pv_eyes.should_describe(jpeg):
+        return
+    desc = await _pv_eyes.describe(jpeg)
+    if not desc:
+        return
+    await broadcast(app_subs, {"type": "observation", "content": desc})
+
+
+async def _companion_tick(jpeg: bytes) -> None:
+    """陪伴模式：顾川 pv_patch2c 状态机。触发事件 → 落库+广播 → AI 自动回一句（pv_companion_say 同款）。"""
+    import time as _t
+    now = _t.time()
+    comp = _companion
+    moved = _pv_eyes.changed(jpeg, PAIVOICE_VISION_DIFF * 2)
+    since = now - comp.last_assess
+    # 顾川同款评估节奏：满 5 分钟 / 动了且满 1 分钟 / 不在场满 1 分钟 / 从没看过
+    want = (since >= 300 or (moved and since >= CompanionState.COMPANION_ASSESS_INTERVAL)
+            or (comp.present is False and since >= CompanionState.COMPANION_ASSESS_INTERVAL)
+            or comp.present is None)
+    if not want or not _pv_eyes.enabled or _pv_eyes.busy:
+        return
+    comp.last_assess = now
+    d = await _pv_eyes.assess(jpeg)
+    if not d:
+        return
+    was = comp.present
+    comp.present = d["present"]
+
+    say = None
+    if not d["present"]:
+        # ── 离开分支 ──
+        if not comp.absent_since:
+            comp.absent_since = now
+        elif not comp.left_reported and now - comp.absent_since >= CompanionState.COMPANION_ABSENT_SAY_SEC:
+            comp.left_reported = True
+            mins = int((now - comp.absent_since) // 60)
+            say = f"[陪伴模式] 对方离开座位 {mins} 分钟了，画面里没人——自然地表达想她、关心她一句。"
+    else:
+        if was is False and comp.left_reported:
+            # ── 回来分支 ──
+            comp.absent_since = 0.0
+            comp.left_reported = False
+            comp.still_since = now
+            say = f"[陪伴模式] 对方回来了{('，' + d['activity']) if d['activity'] else ''}——自然地打个招呼。"
+        else:
+            comp.absent_since = 0.0
+            comp.left_reported = False
+            if d["notable"] and now - comp.last_nudge >= CompanionState.COMPANION_NOTABLE_COOLDOWN:
+                # ── 小动作搭话 ──
+                comp.last_nudge = now
+                comp.still_since = now
+                say = f"[陪伴模式] 对方{d['notable']}{('，现在' + d['activity']) if d['activity'] else ''}——想说就自然搭一句。"
+            else:
+                # ── 久坐提醒 ──
+                if moved:
+                    comp.still_since = now
+                elif now - comp.still_since >= CompanionState.COMPANION_STILL_REMIND_SEC \
+                        and now - comp.last_nudge >= CompanionState.COMPANION_NOTABLE_COOLDOWN:
+                    comp.reminders += 1
+                    comp.last_nudge = now
+                    comp.still_since = now
+                    tip = "喝口水" if comp.reminders % 2 else "站起来活动一下"
+                    say = f"[陪伴模式] 对方已经 30 分钟没什么动静，一直在座位上；提醒她{tip}。"
+    if not say:
+        return
+    # v121 _vc_companion_say 同款:落库(系统) → 按大脑路由(operit/loop/plugin) → 通话里能听到
+    msg = save_message("in", "user", say, {"user": "human", "system": "companion", "video_call": True})
+    brain = brain_target()
+    try:
+        if brain == "operit":
+            asyncio.create_task(forward_to_operit(msg))
+        elif brain == "loop":
+            asyncio.create_task(forward_to_loop(msg))
+        else:
+            await broadcast(plugin_subs, plugin_payload(msg))
+    except Exception as exc:
+        print(f"[companion] wake failed: {type(exc).__name__}: {exc}")
+    await broadcast(app_subs, {"type": "typing", "active": True})
+
+
+@app.get("/app/video/eye")
+async def app_video_eye(request: Request):
+    """AI 侧/前端读取最新一帧（jpeg）。没有就 404。"""
+    check_auth(request)
+    if not EYE_FILE.exists():
+        raise HTTPException(status_code=404, detail="no frame yet")
+    data = EYE_FILE.read_bytes()
+    return Response(content=data, media_type="image/jpeg")
+
+
+# ═══ PaiVoice 实时通话核心（/voice/ws）═══════════════════════════════
+# 从 v121 备份原样接回（源码：github.com/tianyupaipai-cmd/pai-voice realtime-core，AGPL-3.0）
+# 协议：start(token,api_session) → speech_start → 二进制PCM16@16k → speech_end
+#       → transcript → reply_text → audio(b64) → generation_end；支持 text 轮与 interrupt。
+# ASR=本地 SenseVoice 优先 → 百炼 qwen3-omni · TTS=MOSS(Daddy音色) · 回复=loop(人格/记忆/上下文全量)
+# 三个接头用今天的优点：①转写走统一链同款(本地CLI→云端带重试) ②PvEyes 视觉走今天的兜底链
+# ③ws 里补官方 screen 剧情分支(与 HTTP 版共用 _screen_tick)
+import base64 as _b64mod
+import uuid as _uuid
+import time as _tpv
+from fastapi import WebSocket, WebSocketDisconnect
+
 PAIVOICE_MAX_TURN_SECONDS = 60
 
 
@@ -2450,27 +3069,25 @@ def _pv_wav(pcm: bytes) -> bytes:
 
 
 async def _pv_transcribe(pcm: bytes) -> str:
-    import httpx as _httpx
+    """本地 SenseVoice 优先（免费、<1s、不会把提示词幻觉成对话）→ 云端 qwen3-omni 兜底（今天的链,带重试）。"""
+    import tempfile
     wav = _pv_wav(pcm)
-    # 本地 SenseVoice 优先（3021）：免费、<1s、不会把提示词幻觉成对话。
-    # 服务不可达/非200 才回落云端千问；本地明确返回空=真没听清，直接空着（防云端幻觉）。
+    fd, tmp = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
     try:
-        async with _httpx.AsyncClient(timeout=30) as client:
-            r = await client.post("http://127.0.0.1:3021/asr",
-                                  files={"file": ("audio.wav", wav, "audio/wav")})
-            if r.status_code == 200:
-                return str((r.json() or {}).get("text") or "").strip()
-    except Exception:
-        pass
-    b64 = base64.b64encode(wav).decode("ascii")
-    body = {"model": PAIVOICE_ASR_MODEL, "messages": [{"role": "user", "content": [
-        {"type": "text", "text": "请逐字转写这段语音的内容，只输出转写文本，不要任何解释"},
-        {"type": "input_audio", "input_audio": {"data": "data:audio/wav;base64," + b64}}]}]}
-    async with _httpx.AsyncClient(timeout=90) as client:
-        r = await client.post("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-                              json=body, headers={"Authorization": "Bearer " + DASHSCOPE_API_KEY})
-        r.raise_for_status()
-        return str(((r.json().get("choices") or [{}])[0].get("message", {}) or {}).get("content") or "").strip()
+        Path(tmp).write_bytes(wav)
+        # 1) 本地 SenseVoice（RELAY_VOICE_TRANSCRIBE_CMD=sensevoice.sh）
+        text = transcribe_with_command(Path(tmp), "audio/wav")
+        if text:
+            return text
+        # 2) 云端 qwen3-omni（v121 原逻辑,今天带短重试）
+        text, _tone = await _qwen_omni_transcribe(Path(tmp), "audio/wav")
+        return text
+    finally:
+        try:
+            os.unlink(tmp)
+        except Exception:
+            pass
 
 
 def _pv_speakable(text: str) -> str:
@@ -2488,14 +3105,21 @@ def _pv_speakable(text: str) -> str:
 
 
 async def _pv_loop_reply(text: str, session_id: str, msg_id: int | None) -> str:
-    import httpx as _httpx
     payload = {"text": text, "session_id": session_id or "daily", "return_reply": True}
     if msg_id:
         payload["id"] = msg_id
-    async with _httpx.AsyncClient(timeout=180) as client:
-        r = await client.post("http://127.0.0.1:3020/loop/ingest", json=payload)
-        r.raise_for_status()
-        return str((r.json() or {}).get("reply") or "").strip()
+
+    def _post():
+        req = urllib.request.Request(
+            LOOP_INGEST_URL,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=180) as r:
+            return json.loads(r.read().decode("utf-8", errors="ignore"))
+
+    d = await asyncio.to_thread(_post)
+    return str((d or {}).get("reply") or "").strip()
 
 
 @app.websocket("/voice/ws")
@@ -2503,19 +3127,18 @@ async def voice_ws(ws: WebSocket):
     """PaiVoice 实时通话。逐轮：录音(VAD 由客户端判定)→转写→落库→loop 回复→MOSS 出声。"""
     await ws.accept()
     api_session = "daily"
-    call_id = "pv-" + uuid.uuid4().hex[:8]
+    call_id = "pv-" + _uuid.uuid4().hex[:8]
     audio_buf = bytearray()
     turn_active = False
     generation = 0
     eyes = None
     video_on = False
     video_mode = "live"
-    video_on = False
-    video_mode = "live"
     warmup_on = True
     warmups = 0   # 冷场暖场连续计数（对方开口即清零，最多连暖 2 次）
+    screen_seen_ts = 0.0
     comp = {"present": None, "absent_since": 0.0, "left_reported": False,
-            "last_nudge": 0.0, "last_assess": 0.0, "still_since": _t.time(), "reminders": 0}
+            "last_nudge": 0.0, "last_assess": 0.0, "still_since": _tpv.time(), "reminders": 0}
 
     async def pv_send(obj: dict) -> None:
         await ws.send_text(json.dumps(obj, ensure_ascii=False))
@@ -2538,9 +3161,12 @@ async def voice_ws(ws: WebSocket):
                 return
             await pv_send({"type": "transcript", "call_session_id": call_id, "turn_id": gen, "text": transcript})
             text = "🎤 " + transcript
-            # 原版 PaiVoice 同款：摄像头开着就随每轮把最近一次画面观察交给回复端（answer_turn 的 turn["observation"]）
+            # 原版 PaiVoice 同款：开着摄像头/屏幕就随每轮把最近一次观察交给回复端
             if video_on and eyes is not None and getattr(eyes, "last_observation", None):
                 text = text + "\n【摄像头画面（最近一次自动观察）】" + str(eyes.last_observation).strip()
+            elif video_mode == "screen" and SCREEN_LAST.get("desc") and not SCREEN_LAST.get("consumed"):
+                SCREEN_LAST["consumed"] = True
+                text = text + "\n【屏幕画面（最近一段）】" + str(SCREEN_LAST["desc"]).strip()
             meta = {"user": "human", "voice": True, "source": "pai_voice", "api_session": api_session}
             kind = "user" if transcript else "voice"
             msg = save_message("in", kind, text, meta)
@@ -2691,7 +3317,7 @@ async def voice_ws(ws: WebSocket):
                     continue
                 if not video_on:
                     continue
-                now = _t.time()
+                now = _tpv.time()
                 if video_mode == "companion":
                     moved = eyes.changed(jpeg, PAIVOICE_VISION_DIFF * 2) if eyes else False
                     since = now - comp["last_assess"]
@@ -2727,6 +3353,13 @@ async def voice_ws(ws: WebSocket):
                         tip = "喝口水" if comp["reminders"] % 2 else "站起来活动一下"
                         await pv_companion_say("[陪伴模式] 对方已经 30 分钟没什么动静，一直在座位上；提醒她" + tip + "。")
                     continue
+                if video_mode == "screen":
+                    # 官方 screen story：与 HTTP 版共用攒帧串剧情（_screen_tick），新剧情推给通话
+                    await _screen_tick(jpeg)
+                    if SCREEN_LAST.get("ts", 0) > screen_seen_ts and SCREEN_LAST.get("desc"):
+                        screen_seen_ts = SCREEN_LAST["ts"]
+                        await pv_send({"type": "observation", "content": SCREEN_LAST["desc"]})
+                    continue
                 if eyes and eyes.should_describe(jpeg):
                     desc = await eyes.describe(jpeg)
                     if desc and video_on:
@@ -2736,11 +3369,10 @@ async def voice_ws(ws: WebSocket):
                 try:
                     if video_on and eyes is None:
                         eyes = PvEyes()
-                        globals()["_PV_EYES_REF"] = eyes
                 except Exception:
                     eyes = None
                 comp = {"present": None, "absent_since": 0.0, "left_reported": False,
-                        "last_nudge": 0.0, "last_assess": 0.0, "still_since": _t.time(), "reminders": 0}
+                        "last_nudge": 0.0, "last_assess": 0.0, "still_since": _tpv.time(), "reminders": 0}
                 if not video_on:
                     try:
                         EYE_FILE.unlink()
@@ -2748,9 +3380,17 @@ async def voice_ws(ws: WebSocket):
                         pass
                 await pv_send({"type": "video", "on": video_on, "eyes": bool(eyes and eyes.enabled), "mode": video_mode})
             elif kind == "video_mode":
-                video_mode = "companion" if ev.get("mode") == "companion" else "live"
+                mode_in = str(ev.get("mode") or "live")
+                if mode_in not in ("companion", "screen"):
+                    mode_in = "live"
+                prev = video_mode
+                video_mode = mode_in
+                if mode_in == "screen" and prev != "screen":
+                    global SCREEN_BUF, SCREEN_STORY_AT
+                    SCREEN_BUF = []
+                    SCREEN_STORY_AT = _tpv.time()
                 comp = {"present": None, "absent_since": 0.0, "left_reported": False,
-                        "last_nudge": 0.0, "last_assess": 0.0, "still_since": _t.time(), "reminders": 0}
+                        "last_nudge": 0.0, "last_assess": 0.0, "still_since": _tpv.time(), "reminders": 0}
                 await pv_send({"type": "video_mode", "mode": video_mode})
             elif kind == "hangup":
                 break
@@ -2758,6 +3398,76 @@ async def voice_ws(ws: WebSocket):
         pass
     except Exception:
         pass
+
+
+@app.middleware("http")
+async def sw_no_cache_middleware(request, call_next):
+    # sw.js must be no-cache: a stale HTTP-cached sw.js body makes the SW byte-diff
+    # check see no change, so the worker never updates (confirmed on M10 2026-09-29).
+    resp = await call_next(request)
+    if request.url.path in ("/sw.js", "/", "/index.html"):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
+@app.get("/app/export/messages")
+async def export_messages(request: Request, mode: str = "latest"):
+    """聊天记录导出（latest=增量 / all=全量）。编号即消息 id，永久固定。"""
+    check_auth(request)
+    if mode not in ("latest", "all"):
+        raise HTTPException(status_code=400, detail="mode must be latest or all")
+    with db() as conn:
+        anchor = 0
+        if mode == "latest":
+            try:
+                anchor = int(_memsys._kv_get(conn, "export_last_msg_id", "0") or 0)
+            except Exception:
+                anchor = 0
+        rows = conn.execute(
+            "SELECT id, ts, direction, kind, text, meta FROM messages WHERE id > ? ORDER BY id ASC",
+            (anchor,),
+        ).fetchall()
+    lines = []
+    max_id = anchor
+    for r in rows:
+        max_id = max(max_id, r["id"])
+        meta = {}
+        try:
+            meta = json.loads(r["meta"] or "{}")
+        except Exception:
+            pass
+        # 纯系统触发（orbit/schedule 等）不是对话原文，跳过
+        if meta.get("system") and not meta.get("pat") and not meta.get("shop"):
+            continue
+        who = "薇薇" if r["direction"] == "in" else "安念"
+        text = r["text"] or ""
+        if meta.get("pat"):
+            text = (meta["pat"] or {}).get("display") or text
+        elif meta.get("shop"):
+            kw = (meta["shop"] or {}).get("keyword", "")
+            n = len((meta["shop"] or {}).get("products") or [])
+            text = f"[搜了淘宝「{kw}」，{n} 件商品卡片]"
+        elif meta.get("attachments"):
+            n = len(meta["attachments"])
+            text = (text + " " if text else "") + f"[附件x{n}]"
+        ts = str(r["ts"] or "")[:19].replace("T", " ")
+        lines.append(f"#{r['id']:05d} · {ts} · {who}: {text}")
+    mode_label = ("增量（自 #" + str(anchor).zfill(5) + " 之后）") if mode == "latest" else "全量"
+    header = (f"月光聊天记录导出 · {mode_label}\n"
+              f"导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · 条数: {len(lines)}\n"
+              f"编号即消息 id，永久固定，可按编号引用。\n\n")
+    content = header + "\n".join(lines) + "\n"
+    if mode == "latest" and lines:
+        with db() as conn:
+            _memsys._kv_set(conn, "export_last_msg_id", str(max_id))
+            conn.commit()
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    fname = f"moonlight-chat-{'latest' if mode == 'latest' else 'all'}-{stamp}.txt"
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{fname}"},
+    )
 
 
 @app.post("/app/tts")
@@ -3331,66 +4041,6 @@ async def app_restore(request: Request):
             continue
     return {"imported": added}
 
-# ── 聊天记录导出（手动。latest=上次导出之后的增量；all=全量。只读，绝不改库）──
-@app.get("/app/export/messages")
-async def export_messages(request: Request, mode: str = "latest"):
-    check_auth(request)
-    if mode not in ("latest", "all"):
-        raise HTTPException(status_code=400, detail="mode must be latest or all")
-    with db() as conn:
-        anchor = 0
-        if mode == "latest":
-            try:
-                anchor = int(_memsys._kv_get(conn, "export_last_msg_id", "0") or 0)
-            except Exception:
-                anchor = 0
-        rows = conn.execute(
-            "SELECT id, ts, direction, kind, text, meta FROM messages WHERE id > ? ORDER BY id ASC",
-            (anchor,),
-        ).fetchall()
-    lines = []
-    max_id = anchor
-    for r in rows:
-        max_id = max(max_id, r["id"])
-        meta = {}
-        try:
-            meta = json.loads(r["meta"] or "{}")
-        except Exception:
-            pass
-        # 纯系统触发（orbit/schedule 等）不是对话原文，跳过
-        if meta.get("system") and not meta.get("pat") and not meta.get("shop"):
-            continue
-        who = "薇薇" if r["direction"] == "in" else "安念"
-        text = r["text"] or ""
-        if meta.get("pat"):
-            text = (meta["pat"] or {}).get("display") or text
-        elif meta.get("shop"):
-            kw = (meta["shop"] or {}).get("keyword", "")
-            n = len((meta["shop"] or {}).get("products") or [])
-            text = f"[搜了淘宝「{kw}」，{n} 件商品卡片]"
-        elif meta.get("attachments"):
-            n = len(meta["attachments"])
-            text = (text + " " if text else "") + f"[附件x{n}]"
-        ts = str(r["ts"] or "")[:19].replace("T", " ")
-        lines.append(f"#{r['id']:05d} · {ts} · {who}: {text}")
-    mode_label = ("增量（自 #" + str(anchor).zfill(5) + " 之后）") if mode == "latest" else "全量"
-    header = (f"月光聊天记录导出 · {mode_label}\n"
-              f"导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · 条数: {len(lines)}\n"
-              f"编号即消息 id，永久固定，可按编号引用。\n\n")
-    content = header + "\n".join(lines) + "\n"
-    if mode == "latest" and lines:
-        with db() as conn:
-            _memsys._kv_set(conn, "export_last_msg_id", str(max_id))
-            conn.commit()
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    fname = f"moonlight-chat-{'latest' if mode == 'latest' else 'all'}-{stamp}.txt"
-    return Response(
-        content=content.encode("utf-8"),
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{fname}"},
-    )
-
-
 @app.get("/app/history")
 async def app_history(request: Request, since: int = 0, limit: int = 200, session_id: str = ""):
     check_auth(request)
@@ -3562,6 +4212,32 @@ async def letters_inbox(request: Request):
         rows = conn.execute("SELECT * FROM letters ORDER BY created_at DESC LIMIT 50").fetchall()
     return {"letters": [dict(r) for r in rows]}
 
+@app.post("/app/letters/ai_send")
+async def letters_ai_send(request: Request):
+    """安念写信给薇薇(AI 侧/前端检测 <ws_letter> 后调用)。"""
+    check_auth(request)
+    _letters_init()
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty content")
+    with db() as conn:
+        conn.execute("INSERT INTO letters (to_name, content, status, created_at) VALUES (?,?,?,?)",
+                     ("薇薇", content, "unread", now_iso()))
+        conn.commit()
+    return {"sent": True}
+
+
+@app.post("/app/letters/read/{letter_id}")
+async def letters_read(letter_id: int, request: Request):
+    """标记一封信为已读。"""
+    check_auth(request)
+    with db() as conn:
+        conn.execute("UPDATE letters SET status='read' WHERE id=?", (letter_id,))
+        conn.commit()
+    return {"ok": True}
+
+
 @app.post("/app/letters/reply/{letter_id}")
 async def letters_reply(letter_id: int, request: Request):
     """安念回复一封信。"""
@@ -3727,46 +4403,6 @@ async def operit_conf_set(request: Request):
             conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("config:" + k, v))
         conn.commit()
     return {"ok": True}
-
-
-@app.get("/app/taobao/conf")
-async def taobao_conf_get(request: Request):
-    """查淘宝联盟返利配置状态(secret 只回打码)。"""
-    check_auth(request)
-    conf = taobao_conf()
-    ready = bool(conf["app_key"] and conf["app_secret"] and conf["adzone_id"])
-    return {
-        "ok": True,
-        "configured": ready,
-        "channel": "rebate" if ready else "a2a",
-        "app_key": (conf["app_key"][:4] + "****") if conf["app_key"] else "",
-        "app_secret": (conf["app_secret"][:4] + "****") if conf["app_secret"] else "",
-        "adzone_id": conf["adzone_id"],
-    }
-
-
-@app.post("/app/taobao/conf")
-async def taobao_conf_set(request: Request):
-    """配置淘宝联盟返利三件套(存 kv,优先于 relay.env);传空串可清除对应项回退 env。"""
-    check_auth(request)
-    body = await request.json()
-    kv = {}
-    if "app_key" in body:
-        kv["taobao_app_key"] = str(body.get("app_key") or "").strip()
-    if "app_secret" in body:
-        kv["taobao_app_secret"] = str(body.get("app_secret") or "").strip()
-    if "adzone_id" in body:
-        kv["taobao_adzone_id"] = str(body.get("adzone_id") or "").strip()
-    if not kv:
-        return {"ok": False}
-    with db() as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
-        for k, v in kv.items():
-            conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("config:" + k, v))
-        conn.commit()
-    conf = taobao_conf()
-    ready = bool(conf["app_key"] and conf["app_secret"] and conf["adzone_id"])
-    return {"ok": True, "configured": ready, "channel": "rebate" if ready else "a2a"}
 
 
 @app.post("/app/operit/import")
@@ -4508,6 +5144,46 @@ async def config_set(request: Request):
     return {"ok": True}
 
 
+@app.get("/app/taobao/conf")
+async def taobao_conf_get(request: Request):
+    """查淘宝联盟返利配置状态(secret 只回打码)。"""
+    check_auth(request)
+    conf = taobao_conf()
+    ready = bool(conf["app_key"] and conf["app_secret"] and conf["adzone_id"])
+    return {
+        "ok": True,
+        "configured": ready,
+        "channel": "rebate" if ready else "a2a",
+        "app_key": (conf["app_key"][:4] + "****") if conf["app_key"] else "",
+        "app_secret": (conf["app_secret"][:4] + "****") if conf["app_secret"] else "",
+        "adzone_id": conf["adzone_id"],
+    }
+
+
+@app.post("/app/taobao/conf")
+async def taobao_conf_set(request: Request):
+    """配置淘宝联盟返利三件套(存 kv,优先于 relay.env);传空串可清除对应项回退 env。"""
+    check_auth(request)
+    body = await request.json()
+    kv = {}
+    if "app_key" in body:
+        kv["taobao_app_key"] = str(body.get("app_key") or "").strip()
+    if "app_secret" in body:
+        kv["taobao_app_secret"] = str(body.get("app_secret") or "").strip()
+    if "adzone_id" in body:
+        kv["taobao_adzone_id"] = str(body.get("adzone_id") or "").strip()
+    if not kv:
+        return {"ok": False}
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        for k, v in kv.items():
+            conn.execute("INSERT OR REPLACE INTO kv (key,value) VALUES (?,?)", ("config:" + k, v))
+        conn.commit()
+    conf = taobao_conf()
+    ready = bool(conf["app_key"] and conf["app_secret"] and conf["adzone_id"])
+    return {"ok": True, "configured": ready, "channel": "rebate" if ready else "a2a"}
+
+
 
 # ============ 模型配置系统（模型参数 + 功能绑定）============
 def _models_db_init():
@@ -4563,7 +5239,6 @@ def _config_dict(row) -> dict:
     return d
 
 FUNCTION_LABELS = {
-    "video_call": "视频通话",
     "chat": "对话功能",
     "voice": "语音通话",
     "translation": "翻译功能",
@@ -5493,6 +6168,15 @@ async def mem_digest(request: Request):
             "added": res.get("added") or [], "error": res.get("error") or ""}
 
 
+@app.post("/app/memory/compress")
+async def memory_compress_ep(request: Request):
+    """手动触发记忆三级压缩（日→周→月）。正常由 digest 循环每天 5 点后自动跑。"""
+    check_auth(request)
+    with db() as conn:
+        cfg = _memsys.get_mem_config(conn)
+    return await asyncio.to_thread(_memcomp.run_daily_compression, db, cfg, AI_NAME)
+
+
 @app.get("/app/mem/review")
 async def mem_review_get(request: Request):
     """记忆审核台：AI 生成 keep/edit/delete 草案（绝不直接改库）。"""
@@ -5615,11 +6299,230 @@ async def worldbook_set_ep(request: Request):
     return {"ok": True}
 
 
-@app.post("/app/memory/compress")
-async def memory_compress_ep(request: Request):
-    """手动触发记忆三级压缩（日→周→月）。正常由 digest 循环每天 5 点后自动跑。"""
+@app.post("/app/diary/ai_write")
+async def diary_ai_write(request: Request):
+    """手动触发：让安念写今天的日记（可重复写，覆盖当天那篇）。"""
+    check_auth(request)
+    _diary_init()
+    return await _ai_write_diary(force=True)
+
+
+@app.get("/app/diary/tasks")
+async def diary_tasks_get_ep(request: Request):
+    check_auth(request)
+    return {"tasks": _diary_tasks_get()}
+
+
+@app.post("/app/diary/tasks")
+async def diary_tasks_set_ep(request: Request):
+    """整表保存任务列表（新增/编辑/删除都由前端改完整列表后提交）。"""
+    check_auth(request)
+    body = await request.json()
+    tasks_in = body.get("tasks")
+    if not isinstance(tasks_in, list) or not tasks_in:
+        raise HTTPException(status_code=400, detail="tasks 不能为空")
+    seen = set()
+    tasks_out = []
+    for t in tasks_in:
+        if not isinstance(t, dict):
+            continue
+        tid = str(t.get("id") or "").strip() or ("task-" + str(int(time.time() * 1000)) + str(len(tasks_out)))
+        if tid in seen:
+            continue
+        seen.add(tid)
+        tasks_out.append({"id": tid, "name": str(t.get("name") or "日记任务")[:30],
+                          "prompt": str(t.get("prompt") or "")[:3000],
+                          "enabled": bool(t.get("enabled", True)), "auto": bool(t.get("auto", False)),
+                          "last_date": str(t.get("last_date") or "")})
+    if not tasks_out:
+        raise HTTPException(status_code=400, detail="没有有效任务")
+    _diary_tasks_save(tasks_out)
+    return {"ok": True, "tasks": tasks_out}
+
+
+@app.post("/app/diary/tasks/{tid}/write")
+async def diary_task_write_ep(tid: str, request: Request):
+    """立即执行某个日记任务（覆盖当天该任务那篇）。"""
+    check_auth(request)
+    _diary_init()
+    task = next((t for t in _diary_tasks_get() if t["id"] == tid), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return await asyncio.to_thread(_write_diary_task_sync, task, True)
+
+
+# ============ 日程 / 闹铃 / 位置 API（AionsHome 同款，轻量版）============
+@app.get("/app/orbit")
+async def orbit_get(request: Request):
     check_auth(request)
     with db() as conn:
-        cfg = _memsys.get_mem_config(conn)
-    block += "\n（重要：不要重复之前说过的话，每次回复都必须带来新内容、新角度；如果她指出你重复了，立刻道歉并换全新话题。）\n"
-    return await asyncio.to_thread(_memcomp.run_daily_compression, db, cfg, AI_NAME)
+        enabled = _memsys._kv_get(conn, "orbit_enabled", "1") == "1"
+        nxt = float(_memsys._kv_get(conn, "orbit_next_ts", "0") or 0)
+    return {"enabled": enabled, "next_ts": nxt}
+
+
+@app.post("/app/orbit")
+async def orbit_set(request: Request):
+    check_auth(request)
+    body = await request.json()
+    enabled = bool(body.get("enabled", True))
+    with db() as conn:
+        _memsys._kv_set(conn, "orbit_enabled", "1" if enabled else "0")
+        conn.commit()
+    if enabled:
+        import random as _r
+        _orbit_reschedule(first_delay_sec=body.get("first_delay_sec") or _r.uniform(600, 2400))
+    return {"ok": True, "enabled": enabled}
+
+@app.post("/app/schedule/add")
+async def sched_add(request: Request):
+    check_auth(request)
+    _sched.sched_init(db)
+    body = await request.json()
+    try:
+        rec = await asyncio.to_thread(
+            _sched.add_schedule, db, str(body.get("time") or ""), str(body.get("content") or ""),
+            str(body.get("repeat") or "once"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, **rec}
+
+
+@app.get("/app/schedule/list")
+async def sched_list(request: Request):
+    check_auth(request)
+    _sched.sched_init(db)
+    items = await asyncio.to_thread(_sched.list_schedules, db)
+    return {"schedules": items}
+
+
+@app.post("/app/schedule/toggle")
+async def sched_toggle(request: Request):
+    check_auth(request)
+    _sched.sched_init(db)
+    body = await request.json()
+    try:
+        sid = int(body.get("id"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="id 无效")
+    ok = await asyncio.to_thread(_sched.toggle_schedule, db, sid, bool(body.get("enabled", True)))
+    return {"ok": ok}
+
+
+@app.delete("/app/schedule/{sid}")
+async def sched_delete(sid: int, request: Request):
+    check_auth(request)
+    _sched.sched_init(db)
+    ok = await asyncio.to_thread(_sched.delete_schedule, db, sid)
+    return {"ok": ok}
+
+
+@app.post("/app/schedule/test_fire")
+async def sched_test_fire(request: Request):
+    """手动触发一条日程（调试用：立刻让安念开口）。"""
+    check_auth(request)
+    _sched.sched_init(db)
+    body = await request.json()
+    try:
+        sid = int(body.get("id"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="id 无效")
+    with db() as conn:
+        row = conn.execute("SELECT * FROM schedules WHERE id=?", (sid,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="日程不存在")
+    await _fire_schedule(dict(row))
+    return {"ok": True}
+
+
+@app.get("/app/location/config")
+async def loc_config_get(request: Request):
+    check_auth(request)
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        def g(k):
+            r = conn.execute("SELECT value FROM kv WHERE key=?", (k,)).fetchone()
+            return r["value"] if r else ""
+        home = g("loc_home")
+        last = g("loc_last")
+    return {
+        "amap_key_set": bool(g("loc_amap_key")),
+        "share_on": g("loc_share") == "1",
+        "home": json.loads(home) if home else None,
+        "last": json.loads(last) if last else None,
+    }
+
+
+@app.post("/app/location/config")
+async def loc_config_set(request: Request):
+    check_auth(request)
+    body = await request.json()
+    with db() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT)")
+        def s(k, v):
+            conn.execute("INSERT INTO kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, str(v)))
+        if "amap_key" in body:
+            s("loc_amap_key", str(body["amap_key"]).strip())
+        if "share" in body:
+            s("loc_share", "1" if body["share"] else "0")
+        conn.commit()
+    return {"ok": True}
+
+
+@app.post("/app/location/push")
+async def loc_push(request: Request):
+    """前端推一次浏览器定位（WGS84→GCJ02 由高德 regeo 处理；这里存原始经纬度）。"""
+    check_auth(request)
+    body = await request.json()
+    try:
+        lng = float(body.get("lng"))
+        lat = float(body.get("lat"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="需要 lng/lat")
+    acc = float(body.get("accuracy") or 0)
+    res = await asyncio.to_thread(_sched.save_location, db, lng, lat, acc)
+    return {"ok": True, **res}
+
+
+@app.post("/app/location/set_home")
+async def loc_set_home(request: Request):
+    check_auth(request)
+    try:
+        await asyncio.to_thread(_sched.set_home, db)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}
+
+
+# 静态前端：挂 web/ 到根路径（本地/手机直接打开即用）
+from fastapi.staticfiles import StaticFiles
+_WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+if _WEB_DIR.exists():
+    # ============ Operit 数据全量导入（记忆/聊天/角色卡） ============
+    app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+app.mount("/", StaticFiles(directory=str(_WEB_DIR), html=True), name="web")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    # 0.0.0.0 = 局域网里的设备（手机）也能访问；只影响监听范围，鉴权照旧走 RELAY_SECRET
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

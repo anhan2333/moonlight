@@ -30,3 +30,6 @@ Thumbs.db
 *.bak-*
 .idea/
 .vscode/
+backend/tools/models/
+*.onnx
+*.tar.bz2

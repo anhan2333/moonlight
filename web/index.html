@@ -28,18 +28,18 @@
 <link rel="stylesheet" href="plugins/blog.css">
 <link rel="stylesheet" href="plugins/letters.css">
 <link rel="stylesheet" href="plugins/icode.css">
-<link rel="stylesheet" href="plugins/video_call.css?v=70">
-<link rel="stylesheet" href="plugins/cinema.css?v=68">
-<link rel="stylesheet" href="plugins/automemory.css?v=68">
-<link rel="stylesheet" href="plugins/diy.css?v=68">
-<link rel="stylesheet" href="plugins/circle.css?v=68">
-<link rel="stylesheet" href="plugins/coread.css?v=68">
-<link rel="stylesheet" href="plugins/lock.css?v=68">
-<link rel="stylesheet" href="plugins/period.css?v=68">
-<link rel="stylesheet" href="plugins/music.css?v=68">
-<link rel="stylesheet" href="plugins/memory-manager.css?v=68">
-<link rel="stylesheet" href="plugins/schedule.css?v=68">
-<link rel="stylesheet" href="plugins/pet.css?v=70">
+<link rel="stylesheet" href="plugins/video_call.css?v=141">
+<link rel="stylesheet" href="plugins/cinema.css?v=51">
+<link rel="stylesheet" href="plugins/automemory.css?v=51">
+<link rel="stylesheet" href="plugins/diy.css?v=51">
+<link rel="stylesheet" href="plugins/circle.css?v=51">
+<link rel="stylesheet" href="plugins/coread.css?v=51">
+<link rel="stylesheet" href="plugins/lock.css?v=51">
+<link rel="stylesheet" href="plugins/period.css?v=51">
+<link rel="stylesheet" href="plugins/music.css?v=51">
+<link rel="stylesheet" href="plugins/memory-manager.css?v=51">
+<link rel="stylesheet" href="plugins/schedule.css?v=51">
+<link rel="stylesheet" href="plugins/pet.css?v=141">
 <script src="intro_gate.js?v=51"></script>
 <link rel="preload" href="chat-light.webp" as="image" fetchpriority="high">
 <link rel="preload" href="avatar-sea.png" as="image">
@@ -2560,10 +2560,6 @@
 .side-panel-title{ margin:0; font-size:clamp(20px,5vw,24px); font-weight:600; color:var(--text); letter-spacing:.01em; }
 .side-panel-sub{ margin:4px 0 0; font-size:clamp(12px,3vw,14px); color:var(--text-soft); letter-spacing:.02em; }
 .side-panel-body{ flex:1; overflow-y:auto; padding:20px 24px; }
-.side-panel{ flex-direction:column; }
-/* 兜底：任何插件往面板根节点乱塞的卡片一律绝对定位，不许把全屏面板挤扁（日历被粉月亮挤成半屏的教训） */
-.side-panel > :not(.side-panel-backdrop):not(.side-panel-content){ position:absolute; left:0; right:0; width:100%; z-index:0; }
-.side-panel > .side-panel-content{ z-index:1; }
 .panel-loading, .panel-error{ text-align:center; padding:40px 20px; color:var(--text-soft); font-size:clamp(14px,3.5vw,16px); }
 .panel-error small{ display:block; margin-top:8px; font-size:clamp(11px,2.8vw,13px); color:var(--text-faint); }
 
@@ -2612,6 +2608,36 @@
 .toy-stop-btn{ width:100%; padding:14px; border:1px solid rgba(255,99,99,.4); border-radius:14px; background:rgba(255,99,99,.08); color:#FF6363; font-size:15px; font-weight:600; cursor:pointer; }
 
 /* 密语时刻（AionsHome 同款：9 级预设 + AI 标记控制 + 密语开关）*/
+/* 拍一拍提示行（微信同款居中灰字） */
+.pat-notice-row{ text-align:center; margin:6px 0; }
+.pat-notice{
+  display:inline-block; font-size:12px; padding:4px 12px; border-radius:999px;
+  background:rgba(20,16,10,.06); border:1px solid var(--card-line); color:var(--text-faint);
+  animation:patPop .3s ease;
+}
+@keyframes patPop{ 0%{ transform:scale(.8); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+.bubble.pat-shake{ animation:patShake .4s ease; }
+@keyframes patShake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-4px); } 50%{ transform:translateX(4px); } 75%{ transform:translateX(-2px); } }
+/* 淘宝商品卡片 */
+.shop-card-row{ margin:10px 4px; }
+.shop-card-head{ font-size:13px; font-weight:600; color:var(--text-soft); margin-bottom:8px; }
+.shop-card-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+.shop-item{
+  display:block; text-decoration:none; border-radius:14px; overflow:hidden;
+  background:var(--card-bg); border:1px solid var(--card-line);
+  transition:transform .15s ease, box-shadow .2s ease;
+}
+.shop-item:active{ transform:scale(.97); }
+.shop-item-img{ width:100%; aspect-ratio:1; object-fit:cover; display:block; background:#f0ebe2; }
+.shop-item-body{ padding:8px 10px 10px; }
+.shop-item-title{
+  font-size:12.5px; color:var(--text); line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.shop-item-foot{ display:flex; align-items:baseline; justify-content:space-between; margin-top:6px; gap:6px; }
+.shop-item-price{ font-size:14px; font-weight:700; color:#c2554f; }
+.shop-item-commission{ font-size:10px; font-weight:600; color:#b8860b; background:rgba(184,134,11,.12); border-radius:6px; padding:1px 5px; white-space:nowrap; }
+.shop-item-shop{ font-size:10.5px; color:var(--text-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .toy-whisper-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--card-bg); border:1px solid var(--card-line); border-radius:14px; margin-bottom:16px; }
 .toy-whisper-label{ font-size:14px; font-weight:600; color:var(--text); }
 .toy-whisper-hint{ font-size:11px; color:var(--text-faint); margin-top:2px; }
@@ -2644,36 +2670,6 @@
   background:linear-gradient(135deg, rgba(224,92,133,.14), rgba(255,138,168,.1));
   border:1px solid rgba(224,92,133,.3); color:#b04a68;
 }
-/* 拍一拍提示行（微信同款居中灰字） */
-.pat-notice-row{ text-align:center; margin:6px 0; }
-.pat-notice{
-  display:inline-block; font-size:12px; padding:4px 12px; border-radius:999px;
-  background:rgba(20,16,10,.06); border:1px solid var(--card-line); color:var(--text-faint);
-  animation:patPop .3s ease;
-}
-@keyframes patPop{ 0%{ transform:scale(.8); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
-.bubble.pat-shake{ animation:patShake .4s ease; }
-@keyframes patShake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-4px); } 50%{ transform:translateX(4px); } 75%{ transform:translateX(-2px); } }
-/* 淘宝商品卡片 */
-.shop-card-row{ margin:10px 4px; }
-.shop-card-head{ font-size:13px; font-weight:600; color:var(--text-soft); margin-bottom:8px; }
-.shop-card-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
-.shop-item{
-  display:block; text-decoration:none; border-radius:14px; overflow:hidden;
-  background:var(--card-bg); border:1px solid var(--card-line);
-  transition:transform .15s ease, box-shadow .2s ease;
-}
-.shop-item:active{ transform:scale(.97); }
-.shop-item-img{ width:100%; aspect-ratio:1; object-fit:cover; display:block; background:#f0ebe2; }
-.shop-item-body{ padding:8px 10px 10px; }
-.shop-item-title{
-  font-size:12.5px; color:var(--text); line-height:1.4;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-}
-.shop-item-foot{ display:flex; align-items:baseline; justify-content:space-between; margin-top:6px; gap:6px; }
-.shop-item-price{ font-size:14px; font-weight:700; color:#c2554f; }
-.shop-item-commission{ font-size:10px; font-weight:600; color:#b8860b; background:rgba(184,134,11,.12); border-radius:6px; padding:1px 5px; white-space:nowrap; }
-.shop-item-shop{ font-size:10.5px; color:var(--text-faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 
 /* 插件面板（月光 v0.5）*/
@@ -3480,6 +3476,7 @@
         <button class="menu-item" type="button" data-menu="chatroom"><span class="menu-ic">👥</span><span class="menu-copy"><span class="menu-name">聊天室</span><span class="menu-sub">三个窗口在一起</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="english"><span class="menu-ic">🗣</span><span class="menu-copy"><span class="menu-name">英语角</span><span class="menu-sub">和安念练英语</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="voice"><span class="menu-ic">☎️</span><span class="menu-copy"><span class="menu-name">语音通话</span><span class="menu-sub">和安念说话</span></span><span class="menu-chev">›</span></button>
+        <button class="menu-item" type="button" data-menu="video_call"><span class="menu-ic">📹</span><span class="menu-copy"><span class="menu-name">视频通话</span><span class="menu-sub">和安念视频</span></span><span class="menu-chev">›</span></button>
         <div class="menu-group-label">我们的世界</div>
         <button class="menu-item" type="button" data-menu="xinchao"><span class="menu-ic">💗</span><span class="menu-copy"><span class="menu-name">心潮</span><span class="menu-sub">安念的实时心跳</span></span><span class="menu-chev">›</span></button>
         <button class="menu-item" type="button" data-menu="abebei"><span class="menu-ic">🧸</span><span class="menu-copy"><span class="menu-name">阿贝贝</span><span class="menu-sub">共感玩偶</span></span><span class="menu-chev">›</span></button>
@@ -3521,10 +3518,10 @@
   </div>
   <div class="call-scrim" id="callScrim"></div>
   <div class="call-sheet" role="dialog" aria-modal="true" aria-label="语音通话">
-    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起通话" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;width:38px;height:38px;background:rgba(255,255,255,.35);border:1px solid rgba(150,120,80,.25);border-radius:12px;z-index:5;display:flex;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M9 20h8"/></svg>
+    <button class="call-minimize-top" id="callMinimize" type="button" aria-label="收起">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
-    <div style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;display:flex;flex-direction:column;gap:8px;z-index:5;">
+        <div style="position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;display:flex;flex-direction:column;gap:8px;z-index:5;">
       <button id="callZoomTop" type="button" aria-label="缩小/放大画面" style="width:38px;height:38px;border-radius:12px;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
@@ -3538,8 +3535,6 @@
       <button id="callTypeSend" type="button" style="padding:10px 16px;border-radius:999px;border:none;background:#a5586c;color:#fff;cursor:pointer;">发送</button>
     </div>
     <button id="callTypeBtn" type="button" aria-label="打字" style="position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom) + 200px);width:38px;height:38px;border-radius:50%;border:1px solid rgba(150,120,80,.3);background:rgba(255,255,255,.5);cursor:pointer;font-size:15px;z-index:6;">⌨</button>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </button>
     <div class="call-avatar-stage">
       <div class="call-vu call-vu-left" id="callVuLeft" aria-hidden="true"></div>
       <div class="call-avatar-ring" id="callAvatarRing">
@@ -3559,24 +3554,33 @@
       <span class="call-quote-text" id="callQuoteText"></span>
       <span class="call-quote-mark">”</span>
     </div>
-    <div id="callTranscript" aria-live="polite" style="display:none;"></div>
+    <div class="call-transcript-section">
+      <div class="call-transcript-label">
+        <span class="call-transcript-cap">实时字幕 · live transcript</span>
+      </div>
+      <div class="call-transcript-bar" id="callTranscript" aria-live="polite"></div>
+    </div>
     <div class="call-controls">
       <button class="call-ctrl-btn" id="callMuteBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.75" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/><line x1="3.8" y1="3" x2="20.2" y2="20.4" class="mute-slash"/></svg>
-        
+        <span>静音</span>
       </button>
-      <button class="call-ctrl-btn" id="callCamBtn" type="button">
+            <button class="call-ctrl-btn" id="callCamBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="13" height="11" rx="3"/><path d="M15.5 10.5 21 7.5v9l-5.5-3"/></svg>
         
       </button>
+      <button class="call-ctrl-btn" id="callPrivateBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.25" width="15" height="10.25" rx="3.2"/><path d="M8 10.25V7.5a4 4 0 0 1 8 0v2.75"/><circle cx="12" cy="14.7" r="1.45" fill="currentColor" stroke="none"/><line x1="12" y1="15.7" x2="12" y2="17.4"/></svg>
+        <span>私密模式</span>
+      </button>
       <button class="call-ctrl-btn" id="callSpeakerBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.2h3.3L12 5v14l-4.7-4.2H4z" fill="currentColor" stroke-width="1.2"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6"/><path d="M18.2 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>
-        
+        <span>扬声器</span>
       </button>
-      <button id="callHangup" type="button" aria-label="挂断" style="width:56px;height:56px;border-radius:50%;border:none;background:#b56a7a;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(181,106,122,.4);"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true" style="width:24px;height:24px;"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.996.996 0 0 0-1.01.24l-1.57 1.97a15.045 15.045 0 0 1-6.59-6.59l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
     </div>
-    <div hidden></div>
-    
+    <button class="call-hangup" id="callHangup" type="button" aria-label="挂断">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.996.996 0 0 0-1.01.24l-1.57 1.97a15.045 15.045 0 0 1-6.59-6.59l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+    </button>
   </div>
 </div>
 
@@ -3614,10 +3618,6 @@
   <div class="msg-menu-scrim" id="msgMenuScrim"></div>
   <!-- 抬起的气泡克隆由 JS 插在这里 -->
   <div class="msg-menu-actions" id="msgMenuActions" role="menu" aria-label="消息操作">
-    <button class="msg-act" type="button" data-act="pat" role="menuitem">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12V7a2 2 0 1 1 4 0v4"/><path d="M12 11V6a2 2 0 1 1 4 0v6"/><path d="M8 12l-1.5-1.5a2 2 0 0 0-3 2.5L8 18a6 6 0 0 0 6 4h1a6 6 0 0 0 6-6v-4a2 2 0 1 0-4 0"/></svg>
-      <span>拍一拍</span>
-    </button>
     <button class="msg-act" type="button" data-act="copy" role="menuitem">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
       <span>Copy</span>
@@ -3647,9 +3647,22 @@ const CONFIG = {
 const AI_NAME = CONFIG.AI_NAME, HUMAN_NAME = CONFIG.HUMAN_NAME, APP_NAME = CONFIG.APP_NAME;
 
 const API_BASE = "";       // 月光本地直连：后端直接挂在同源根路径（无nginx反代）；留空=跟随当前访问地址，手机/电脑各自同源
+const APP_VER   = "v144";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
+/* 登录页右上角版本号：一眼看出是不是旧缓存 */
+try {
+  const _vtag = () => {
+    if (document.getElementById("verTag")) return;
+    const d = document.createElement("div");
+    d.id = "verTag";
+    d.textContent = APP_VER;
+    d.style.cssText = "position:fixed;top:10px;right:14px;font-size:11px;letter-spacing:.5px;color:rgba(230,225,215,.4);z-index:999;pointer-events:none;";
+    document.body.appendChild(d);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _vtag);
+  else _vtag();
+} catch (e) {}
 const USE_MOCK  = (location.hostname === "127.0.0.1" || location.hostname === "localhost") && ["8090", "8091"].includes(location.port);  // 仅纯静态预览端口用假数据；3011 等真后端地址照常联网
 const LS_KEY    = "companion_secret";
-  const APP_VER   = "v121";   // 每次部署改这里+sw.js CACHE，登录页右上角可见
 
 /* 安全 storage：Edge 的 Tracking Prevention 会拦 http://127.0.0.1 的 storage 访问（报错导致登录卡死）。
    被拦时降级为内存变量——本次会话内登录照常可用，只是关页后要重输密钥。 */
@@ -3893,6 +3906,7 @@ if (menuPanel){
     else if (item.dataset.menu === "gift") openGiftPanel();
     else if (item.dataset.menu === "abebei") openAbebeiPanel();     // 阿贝贝面板
     else if (item.dataset.menu === "voice") openVoicePanel();        // 语音通话
+        else if (item.dataset.menu === "video_call"){ closeMenu(); if (window.VideoCallPlugin) window.VideoCallPlugin.open(); }  // 视频通话
     else if (item.dataset.menu === "toy") openToyPanel();           // 啵啵贝面板
     else if (item.dataset.menu === "plugin") openPluginManager();   // 插件管理
     else if (item.dataset.menu === "worldbook") openWorldbookPanel();   // 世界书
@@ -3974,8 +3988,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
   let open = false;
   let minimized = false;
   let muted = false;
-  let pai = null, paiActive = false;   // PaiVoice 实时模式（wss 双工：VAD/流式/打断）
-  let paiRetry = 0;                    // 本通通话内实时通道重连次数（最多 1 次，再失败走兜底）
   let privateMode = false;
   let audioSenseInterval = null;
   let secs = 0, tickId = null, hideId = null, rafId = null;
@@ -4031,32 +4043,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     if (lines.length >= 2) return lines;
     return text.split(/(?<=[，,；;])\s*/g).filter(function(s){ return s.trim(); });
   }
-
-  /* 双侧对话流字幕（顾川 PaiVoice 2.0 同款）：左=安念的句子，右=你的话 */
-  function capFlow(who, text){
-    if (!transcript || !transcript.parentElement) return;
-    let box = document.getElementById("callCapFlow");
-    if (!box){
-      box = document.createElement("div");
-      box.id = "callCapFlow";
-      box.style.cssText = "flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;width:100%;display:flex;flex-direction:column;gap:8px;padding:6px 2px;";
-      const ctrl = document.querySelector("#callOverlay .call-controls");
-      (ctrl ? ctrl.parentElement : document.body).insertBefore(box, ctrl || null);   // 面板内部：头像下方、控制条上方
-    }
-    try {
-      if (transcript) transcript.style.display = "none";
-      if (typeof callQuoteText !== "undefined" && callQuoteText) callQuoteText.parentElement.style.display = "none";
-    } catch (e) {}
-    const b = document.createElement("div");
-    const mine = who === "me";
-    b.style.cssText = "max-width:86%;padding:7px 11px;border-radius:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;" +
-      (mine ? "align-self:flex-end;font-size:12px;opacity:.6;color:#8a7455;"
-            : "align-self:flex-start;font-size:14px;font-weight:600;color:#c2557a;text-shadow:0 1px 0 rgba(255,255,255,.6);");
-    b.textContent = text;
-    box.appendChild(b);
-    while (box.children.length > 40) box.removeChild(box.firstChild);
-    box.scrollTop = box.scrollHeight;
-  }
   function setQuote(text, opts){
     opts = opts || {};
     if (!callQuoteText) return;
@@ -4081,7 +4067,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
         callQuoteText.appendChild(span);
       });
     }
-    if (!opts.hint && text) capFlow("ai", String(text));
     callQuoteText.scrollTop = 0;
   }
   function peerTyping(active){
@@ -4101,7 +4086,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     const span  = document.createElement("span");
     span.textContent = text || "";
     transcript.appendChild(span);
-    if (/^你[:：]/.test(text || "")) capFlow("me", String(text).replace(/^你[:：]\s*/, ""));
     if (!caretOn) return;
     const caret = document.createElement("span");
     caret.className = "caret";
@@ -4277,7 +4261,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
       setTranscript("我在听。你可以直接说。", true);
     };
     recognition.onresult = (event) => {
-      recognition._gotAny = true;
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++){
         const piece = (event.results[i][0] && event.results[i][0].transcript || "").trim();
@@ -4301,14 +4284,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     };
     try{
       recognition.start();
-      // 网络型识别无声兜底：1.6s 内没出任何识别文字 → 自动落录音兜底（服务器 ASR）
-      recognition._fallbackT = setTimeout(() => {
-        try{
-          if (open && !mediaRecorder && !recognition._gotAny){
-            startRecorderFallback();
-          }
-        }catch(e){}
-      }, 1600);
       return true;
     }catch(e){
       return false;
@@ -4328,7 +4303,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
   }
 
   async function startRecorderFallback(){
-    if (window.__paiActive) return;   // 实时通话活着就绝不走录音兜底（防止双重录入+刷屏语音条）
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){
       setTranscript("这个浏览器不支持网页录音。", false);
       return;
@@ -4341,78 +4315,23 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
         await startWaveMeter(mediaStream);
       }
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-      // 9/3 成功版同款：每段录音 stop 后产出一个「完整的 webm 文件」（自带头），再立刻开下一段。
-      // 之前用 start(8000) 切块——非首块没有 webm 头，服务器 ffmpeg 解不开 → 转写必空。
-      let vcChunks = [];
-      let recDiscard = false;   // 他说话期间录到的段：直接丢弃（不偷录他的声音）
-      let segStartAt = Date.now();
       mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mime });
-      mediaRecorder.ondataavailable = (event) => { if (event.data && event.data.size) vcChunks.push(event.data); };
-      mediaRecorder.onstop = async () => {
-        const segDur = Date.now() - segStartAt;
-        const drop = recDiscard || segDur < 1500;
-        recDiscard = false;
-        const blob = (!open || drop) ? null : new Blob(vcChunks, { type: mime });
-        vcChunks = [];
-        if (blob && blob.size >= 1200){
-          // 静音门禁：整段 RMS 太低（没人说话/纯环境音）就不发——顾川式 VAD，不刷屏
-          let loud = true;
-          try {
-            const actx = (typeof ensureTtsCtx === "function") ? ensureTtsCtx() : null;
-            if (actx){
-              const ab = await actx.decodeAudioData(await blob.arrayBuffer());
-              const ch = ab.getChannelData(0);
-              let sum = 0, n = 0;
-              for (let i = 0; i < ch.length; i += 16){ sum += ch[i]*ch[i]; n++; }
-              const rms = Math.sqrt(sum / Math.max(n, 1));
-              loud = rms > 0.008;   // ≈ -42dBFS；正常说话远高于此
-            }
-          } catch (e) { loud = true; }   // 解码失败宁可放行，别吞真语音
-          if (loud){
-            try {
-              const d = await apiVoiceBlob(blob, mime, { call_id: callId });
-              if (d && d.text) setTranscript("你: " + String(d.text).replace(/^🎤\s*/, ""), true);
-            } catch (e) {
-              setTranscript("录音发送失败，重试中。", false);
-            }
-          }
-        }
-        // 继续下一段；他还在说话就等 1 秒再试
-        if (open && mediaRecorder) {
-          if (window.__aiSpeaking) {
-            setTimeout(() => {
-              if (open && mediaRecorder && mediaRecorder.state === "inactive" && !window.__aiSpeaking){
-                try { segStartAt = Date.now(); mediaRecorder.start(); } catch(e){}
-              }
-            }, 1000);
-          } else {
-            try { segStartAt = Date.now(); mediaRecorder.start(); } catch(e){}
-          }
-        }
+      mediaRecorder.ondataavailable = (event) => {
+        if (!open || !event.data || event.data.size < 1200) return;
+        apiVoiceBlob(event.data, mime, { call_id: callId }).catch(() => {
+          setTranscript("录音片段发送失败。", false);
+        });
       };
-      try { segStartAt = Date.now(); mediaRecorder.start(); } catch(e){}
-      // 每 9 秒切一段完整录音；他正在说话时立刻停录并丢弃当前段
-      mediaRecorder._segTimer = setInterval(() => {
-        if (!open) return;
-        if (window.__aiSpeaking) {
-          if (mediaRecorder && mediaRecorder.state === "recording") {
-            recDiscard = true;
-            try { mediaRecorder.stop(); } catch(e){}
-          }
-          return;
-        }
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          try { mediaRecorder.stop(); } catch(e){}
-        }
-      }, 9000);
+      mediaRecorder.start(4500);
       setCaption("recording");
-      setTranscript("我在听。说话就好，每句自动发给" + AI_NAME + "。", true);
+      setTranscript("正在录音分段发送。若服务器配置了 ASR," + AI_NAME + "会收到转写。", true);
     }catch(e){
       setTranscript("麦克风启动失败。请检查浏览器权限。", false);
     }
   }
 
   async function startVoiceInput(){
+    if (window.__paiActive) return;   // 实时通话活着就绝不走录音兜底(防双重录)
     setCaption("listening");
     setTranscript("正在连接麦克风…", true);
     if (!mediaStream) {
@@ -4421,8 +4340,7 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
         await startWaveMeter(mediaStream);
       } catch(e) {}
     }
-    // 9/3 成功版同款：只走「整段录音 → 服务器 qwen 转写」，不再用会幻觉的浏览器识别
-    await startRecorderFallback();
+    if (!startRecognition()) await startRecorderFallback();
   }
 
   let ttsCtx = null;
@@ -4455,6 +4373,9 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
     overlay.classList.remove("minimized");
   }
 
+  let pai = null, paiActive = false;   // PaiVoice 实时模式（wss 双工：VAD/流式/打断）
+  let paiRetry = 0;                    // 本通通话内实时通道重连次数（最多 1 次，再失败走兜底）
+  let paiRetry = 0;
   async function openCall(){
     if (open) return;
     open = true;
@@ -4497,7 +4418,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
       await startVoiceInput();
     }
   }
-
   async function startPai(){
     const mod = await import("./vendor/paivoice-voice-call.js?v=2");   // v2=token修复，防旧缓存
     const token = (localStorage.getItem("companion_secret") || "");
@@ -4669,6 +4589,31 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
           if (pai && pai._send) pai._send({ type: "warmup", on: warmOn });
         });
         row.appendChild(wu);
+        const sb = document.createElement("button");
+        sb.id = "paiScreenBtn";
+        sb.textContent = "🖥 共享屏幕";
+        sb.style.cssText = "padding:9px 16px;border-radius:999px;border:1.5px solid rgba(150,180,255,.5);background:rgba(255,255,255,.12);color:inherit;font-size:13px;cursor:pointer;";
+        let scrOn = false;
+        sb.addEventListener("click", async () => {
+          if (!pai) return;
+          try {
+            if (!scrOn){ await pai.enableScreen(); scrOn = true; sb.textContent = "🖥 停止共享"; }
+            else { pai.disableVideo(); scrOn = false; sb.textContent = "🖥 共享屏幕"; }
+          } catch (e) { sb.textContent = "🖥 共享屏幕"; if (typeof showToast === "function") showToast("屏幕共享：" + (e.message || e)); }
+        });
+        row.appendChild(sb);
+        const cb2 = document.createElement("button");
+        cb2.id = "paiModeBtn";
+        cb2.textContent = "❤️ 陪伴";
+        cb2.style.cssText = "padding:9px 16px;border-radius:999px;border:1.5px solid rgba(224,92,133,.5);background:rgba(255,255,255,.12);color:inherit;font-size:13px;cursor:pointer;";
+        let compOn = true;   // startPai 默认 companion(顾川 2.0 同款)
+        cb2.addEventListener("click", () => {
+          if (!pai) return;
+          compOn = !compOn;
+          pai.setVideoMode(compOn ? "companion" : "live");
+          cb2.textContent = compOn ? "❤️ 陪伴中" : "⚡ 实时";
+        });
+        row.appendChild(cb2);
         window._paiCamBtn = cam;
         const speaker = document.getElementById("callSpeakerBtn");
         if (speaker && speaker.parentElement) speaker.parentElement.insertBefore(row, speaker.parentElement.children[0]);
@@ -4676,14 +4621,9 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
       }
     } catch(e){}
   }
+
   function closeCall(){
     if (!open) return;
-    try {
-      const cb = document.getElementById("callCapFlow");
-      if (cb) cb.remove();
-      if (transcript) transcript.style.display = "";
-      if (typeof callQuoteText !== "undefined" && callQuoteText) callQuoteText.parentElement.style.display = "";
-    } catch (e) {}
     if (pai) { try { pai.hangup(); } catch(e){} pai = null; }
     paiActive = false;
     window.__paiActive = false;
@@ -4726,7 +4666,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
   async function drainSpeakQueue(){
     if (speakBusy || !speakQueue.length || !open) return;
     speakBusy = true;
-    window.__aiSpeaking = true;   // 他开始说话：录音兜底停止收录
     stopRecognition();
     while (speakQueue.length && open){
       const text = speakQueue.shift();
@@ -4739,7 +4678,6 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
       }
     }
     speakBusy = false;
-    window.__aiSpeaking = false;   // 他说完了：恢复收录
     if (open && !mediaRecorder){
       setCaption("listening");
       setQuote(HINT_LISTENING, { hint: true });
@@ -4810,8 +4748,8 @@ if (themeSeg) themeSeg.addEventListener("click", e => {
   if (miniBar) miniBar.addEventListener("click", expandCall);
   if (callMuteBtn) callMuteBtn.addEventListener("click", () => {
     muted = !muted;
+    if (mediaStream) mediaStream.getAudioTracks().forEach(t => { t.enabled = !muted; });
     if (paiActive && pai) { pai.setMuted(muted); }
-    else if (mediaStream) mediaStream.getAudioTracks().forEach(t => { t.enabled = !muted; });
     callMuteBtn.classList.toggle("active", muted);
   });
   if (callPrivateBtn) callPrivateBtn.addEventListener("click", () => {
@@ -5395,15 +5333,11 @@ async function apiUpload(blob, name, mime){
 async function apiVoiceText(text, meta = {}){
   const clean = String(text || "").trim();
   if (!clean) return null;
-  // 双链路去重：浏览器 ASR 同内容 2.5s 内不发第二遍
-  const now = Date.now();
-  if (clean === _lastVoiceText && now - _lastVoiceTs < 2500) return { skipped: true };
-  _lastVoiceText = clean; _lastVoiceTs = now;
   if (USE_MOCK) return Mock.send(clean);
   const r = await fetch(`${API_BASE}/app/voice`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ text: clean, api_session: (typeof effectiveApiSession === "function" ? effectiveApiSession() : "daily"), ...meta })
+    body: JSON.stringify({ text: clean, ...meta })
   });
   if (r.status === 401){ handle401(); throw new Error("401"); }
   if (!r.ok) throw new Error("voice " + r.status);
@@ -5415,8 +5349,6 @@ async function apiVoiceBlob(blob, mime, meta = {}){
   if (USE_MOCK) return Mock.send("[语音通话] " + fmtSize(blob.size));
   const qs = new URLSearchParams({ name: "voice.webm" });
   if (meta.call_id) qs.set("call_id", meta.call_id);
-  // 语音必须带会话号：不带会被 loop 落到它的活动会话（英语角），回复回到别的窗口，通话里就不出声
-  try { qs.set("api_session", (typeof effectiveApiSession === "function" ? effectiveApiSession() : "") || "daily"); } catch (e) { qs.set("api_session", "daily"); }
   const r = await fetch(`${API_BASE}/app/voice?${qs.toString()}`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": mime || blob.type || "audio/webm" },
@@ -5425,17 +5357,7 @@ async function apiVoiceBlob(blob, mime, meta = {}){
   if (r.status === 401){ handle401(); throw new Error("401"); }
   if (r.status === 413) throw new Error("413");
   if (!r.ok) throw new Error("voice " + r.status);
-  const d = await r.json();
-  // 与浏览器 ASR 双链路去重：同内容 2.5s 内不发第二遍
-  if (d && d.text){
-    const t = String(d.text).replace(/^🎤\s*/, "").trim();
-    const now = Date.now();
-    if (t && t === _lastVoiceText && now - _lastVoiceTs < 2500){
-      return { skipped: true, text: d.text };
-    }
-    _lastVoiceText = t; _lastVoiceTs = now;
-  }
-  return d;
+  return await r.json();
 }
 
 async function apiCallEvent(action, meta = {}){
@@ -5508,20 +5430,6 @@ function openStream(){
   document.addEventListener("visibilitychange", () => { document.hidden ? stop() : start(); });
   if (!document.hidden) start();
 })();
-
-/* 登录页右上角版本号：一眼看出是不是旧缓存 */
-try {
-  const _vtag = () => {
-    if (document.getElementById("verTag")) return;
-    const d = document.createElement("div");
-    d.id = "verTag";
-    d.textContent = APP_VER;
-    d.style.cssText = "position:fixed;top:10px;right:14px;font-size:11px;letter-spacing:.5px;color:rgba(230,225,215,.4);z-index:999;pointer-events:none;";
-    document.body.appendChild(d);
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _vtag);
-  else _vtag();
-} catch (e) {}
 
 /* ════════════ 锁屏通知 (Web Push) ════════════ */
 /* opt-in,默认关。开 → 要权限 + pushManager.subscribe + 上报 relay;关 → 退订 + 通知 relay 删。
@@ -5730,7 +5638,7 @@ function escapeHtml(s){
 function renderText(t){
   let s = String(t == null ? "" : t);
   s = s.replace(_VC_CALL_TAG_PAIR, "").replace(_VC_CALL_TAG_SELF, "").replace(_VC_IB_TAG, "");   // 来电/留影/回礼标签只作信号用，气泡里不显示
-  s = s.replace(_TOY_MARK_RE, "").replace(_PET_MARK_RE_STRIP, "").replace(_PAT_MARK_RE_STRIP, "").replace(_SHOP_MARK_RE_STRIP, "");   // [TOY:x]/[PET:x]/[PAT:...]/[SHOP:...] 信号只作触发用，气泡里不显示（AionsHome 同款）
+  s = s.replace(_TOY_MARK_RE, "").replace(_PET_MARK_RE_STRIP, "");   // [TOY:x]/[PET:x] 信号只作触发用，气泡里不显示（AionsHome 同款）
   s = escapeHtml(s);
   s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -6153,26 +6061,6 @@ function buildVirtualRows(){
   let lastDayKey = null;
   let prevBubble = null;
   sortedMessages().forEach((m) => {
-    if (m.meta && m.meta.system === "pat" && m.meta.pat){   // 拍一拍：进历史 + 居中提示行展示
-      const k = dayKey(m.ts);
-      if (k !== lastDayKey){
-        lastDayKey = k;
-        rows.push({ type:"day", key:`day:${k}:${m._key}`, text:fmtDay(m.ts) });
-      }
-      rows.push({ type:"pat", key:`m:${m._key}`, message:m });
-      prevBubble = null;
-      return;
-    }
-    if (m.meta && m.meta.system === "shop" && m.meta.shop){   // 淘宝商品卡片
-      const k = dayKey(m.ts);
-      if (k !== lastDayKey){
-        lastDayKey = k;
-        rows.push({ type:"day", key:`day:${k}:${m._key}`, text:fmtDay(m.ts) });
-      }
-      rows.push({ type:"shop", key:`m:${m._key}`, message:m });
-      prevBubble = null;
-      return;
-    }
     if (m.meta && m.meta.system){ return; }   // 闹铃触发等系统消息：只进 AI 历史，PWA 不显示
     const k = dayKey(m.ts);
     if (k !== lastDayKey){
@@ -6192,6 +6080,26 @@ function buildVirtualRows(){
     if (m.kind === "act"){
       rows.push({ type:"act", key:`m:${m._key}`, message:m });
       prevBubble = null;                            // 像 thinking 一样打断气泡成组
+      return;
+    }
+    if (m.meta && m.meta.system === "pat" && m.meta.pat){   // 拍一拍：进历史 + 居中提示行展示
+      const k = dayKey(m.ts);
+      if (k !== lastDayKey){
+        lastDayKey = k;
+        rows.push({ type:"day", key:`day:${k}:${m._key}`, text:fmtDay(m.ts) });
+      }
+      rows.push({ type:"pat", key:`m:${m._key}`, message:m });
+      prevBubble = null;
+      return;
+    }
+    if (m.meta && m.meta.system === "shop" && m.meta.shop){   // 淘宝商品卡片
+      const k = dayKey(m.ts);
+      if (k !== lastDayKey){
+        lastDayKey = k;
+        rows.push({ type:"day", key:`day:${k}:${m._key}`, text:fmtDay(m.ts) });
+      }
+      rows.push({ type:"shop", key:`m:${m._key}`, message:m });
+      prevBubble = null;
       return;
     }
     if (m.kind === "toy_pill"){
@@ -6358,6 +6266,7 @@ function makeShop(rowData){
   d.appendChild(grid);
   return d;
 }
+
 function makeThinking(rowData){
   const m = rowData.message;
   const row = document.createElement("div");
@@ -6920,24 +6829,6 @@ function onMessage(m){
     else showToast(m.text || "");
     return;
   }
-  if (m.meta && m.meta.system === "pat"){     // 拍一拍提示：放行，按普通消息落库渲染（buildVirtualRows 里渲染成居中提示行）
-    if (!msgInActiveSession(m)) return;
-    if (m.from === "ai") hideTyping();
-    const patStick = nearBottom();
-    setMessage({ ...m, status:"sent" }, { render:false });
-    scheduleRender({ stickToBottom: patStick });
-    if (!patStick) showNewMsgPill();
-    return;
-  }
-  if (m.meta && m.meta.system === "shop"){    // 淘宝商品卡片：同上放行
-    if (!msgInActiveSession(m)) return;
-    if (m.from === "ai") hideTyping();
-    const shopStick = nearBottom();
-    setMessage({ ...m, status:"sent" }, { render:false });
-    scheduleRender({ stickToBottom: shopStick });
-    if (!shopStick) showNewMsgPill();
-    return;
-  }
   if (m.meta && m.meta.system){ return; }  // 闹铃触发等系统消息：只进 AI 历史，PWA 不显示
   if (m.type === "reaction"){            // the AI reacted to a message → patch its meta.reactions
     hideTyping();                         // a react also means the AI acted: a react-only turn won't send a reply to clear typing, so clear it here
@@ -7043,8 +6934,6 @@ function applyReaction(ev){
     openKey = info.key;
     const copyBtn = actions.querySelector('[data-act="copy"]');
     if (copyBtn) copyBtn.style.display = info.msg.text ? "" : "none";   // 纯图无文字 → 只留 Delete
-    const patBtn = actions.querySelector('[data-act="pat"]');
-    if (patBtn) patBtn.style.display = info.side === "ai" ? "" : "none";   // 拍一拍只对安念的气泡出现
     const r = bubble.getBoundingClientRect();
     // 1) 克隆气泡,固定原位,准备轻微抬起
     cloneEl = bubble.cloneNode(true);
@@ -7108,17 +6997,6 @@ function applyReaction(ev){
     removeMessage(key);                        // 从内存 + IndexedDB 缓存移除并重渲
     showToast("已删除");
   }
-  async function doPat(){
-    close();
-    try{
-      const r = await fetch(`${API_BASE}/app/pat`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...authHeaders() },
-        body: JSON.stringify({ target:"ai", action:"拍了拍", suffix:"", api_session: effectiveApiSession() }),
-      });
-      if (!r.ok) throw new Error("pat " + r.status);
-    }catch(e){ showToast("拍一拍没送达，稍后再试"); }
-  }
 
   // 长按检测 —— 用 touch 事件自己计时。不用 pointer:iOS 一识别长按就给页面发 pointercancel,
   // 会把计时器掐掉、让原生选择/复制接管(就是"打架"的根因);touch 不会被这样取消。
@@ -7157,25 +7035,12 @@ function applyReaction(ev){
     open(bubble);
   });
 
-  // 双击安念的气泡 = 拍一拍（微信同款手势）
-  scrollEl.addEventListener("dblclick", (e) => {
-    const bubble = e.target.closest(".bubble");
-    if (!bubble || !scrollEl.contains(bubble)) return;
-    const info = bubbleInfo(bubble);
-    if (!info || info.side !== "ai") return;
-    e.preventDefault();
-    bubble.classList.add("pat-shake");
-    bubble.addEventListener("animationend", () => bubble.classList.remove("pat-shake"), { once:true });
-    doPat();
-  });
-
   scrim.addEventListener("click", () => { if (swallowClick){ swallowClick = false; return; } close(); });
   actions.addEventListener("click", (e) => {
     const act = e.target.closest(".msg-act");
     if (!act) return;
     if (act.dataset.act === "copy") doCopy();
     else if (act.dataset.act === "delete") doDelete();
-    else if (act.dataset.act === "pat") doPat();
   });
   window.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
   window.addEventListener("resize", close);
@@ -7457,6 +7322,32 @@ function pollVoiceTone(numericId){
   tick();
 }
 
+function pollVoiceTone(numericId){
+  if (USE_MOCK || !numericId) return;
+  const delays = [8000, 16000, 26000, 38000, 55000];
+  let i = 0;
+  const tick = () => {
+    if (i >= delays.length) return;
+    const wait = delays[i++];
+    setTimeout(async () => {
+      try{
+        const m = await fetch(`${API_BASE}/app/message/${numericId}`, { headers: authHeaders() })
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+        const att = m && m.meta && (m.meta.attachments || []).find(a => a.kind === "audio" && a.tone);
+        const key = msgKey(numericId);
+        const existing = messageByKey.get(key);
+        if (att && existing){
+          const meta = Object.assign({}, existing.meta, { attachments: m.meta.attachments });
+          setMessage({ id: key, meta: meta }, { render: true, cache: true });
+          return;   // 拿到语气就停
+        }
+      }catch(e){}
+      tick();
+    }, wait);
+  };
+  tick();
+}
+
 async function sendVoiceBlob(blob, mime, dur){
   setVoiceStatus("发送语音中…");
   const ext = /mp4|aac|m4a/i.test(mime) ? "m4a" : "webm";
@@ -7485,6 +7376,7 @@ async function sendVoiceBlob(blob, mime, dur){
     confirmOptimistic(tempKey, msgKey(id), { id: id, ts: optimistic.ts, from: "human", kind: "user", text: "", meta: finalMeta, status: "sent" });
     dropPendingOutgoing(tempKey);
     playSendSound();
+    pollVoiceTone(Number(id));
     pollVoiceTone(Number(id));
   }catch(err){
     dropPendingOutgoing(tempKey);
@@ -7802,10 +7694,7 @@ $("#loginForm").addEventListener("submit", async (e) => {
       }
       $("#loginErr").textContent = "密钥不对——已明文显示你输入的内容，检查有没有错字或多空格。";
     } else {
-      const why = String(err.message || "");
-      $("#loginErr").textContent = why.includes("429") ? "尝试次数过多，等一两分钟再点连接就能进。"
-                                 : why.includes("Failed to fetch") || why.includes("NetworkError") ? "网络不通——检查一下Wi-Fi/流量。"
-                                 : "连不上(" + why.slice(0, 60) + ")。稍后再试。";
+      $("#loginErr").textContent = "连不上,稍后再试。";
     }
   }finally{
     btn.disabled = false; btn.textContent = "连接";
@@ -8240,7 +8129,7 @@ if (window.visualViewport){
 
 /* Service Worker */
 /* 注册 URL 带 swVer:bump CACHE 版本时同步改这里,绕过浏览器对 sw.js 的 HTTP 缓存,PWA 才能及时拿到新 SW */
-const swVer = "68";
+const swVer = "144";
 if ("serviceWorker" in navigator){
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js?v=" + swVer).catch(() => {}); mountOrnaments(); });
 }
@@ -8280,8 +8169,8 @@ function renderXinchao(data){
   // 心潮数据格式：{ libido, crave, possess, share, curious, bored, ... }
   const dims = [
     { key: "libido", label: "性欲・身体渴望", icon: "🔥" },
-    { key: "crave", label: "馋他・想黏着他", icon: "🍯" },
-    { key: "possess", label: "想他・占有与靠近", icon: "⛓️" },
+    { key: "crave", label: "馋她・想黏着她", icon: "🍯" },
+    { key: "possess", label: "想她・占有与靠近", icon: "⛓️" },
     { key: "share", label: "分享欲", icon: "📮" },
     { key: "curious", label: "好奇", icon: "🔍" },
     { key: "bored", label: "无聊", icon: "🌊" },
@@ -8427,7 +8316,11 @@ function bindVoiceBtn(btn){
 }
 async function vcStart(){
   if (_vcRecording) return;
-  vcStopSpeak();                       // 新增：他还在朗读？立刻打断
+  // 顾川的打断时机：只在「正在朗读正式回复」时才打断；思考中/短提示音/没在读都不打断
+  const aiSpeaking = (_vcAudio && !_vcAudio.paused)
+    || (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending))
+    || (window.__moonAudio && !window.__moonAudio.paused);
+  if (aiSpeaking) vcStopSpeak();
   try{
     // pai-voice 同款音频约束：回声消除+噪声抑制+自动增益
     _vcStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
@@ -8438,6 +8331,13 @@ async function vcStart(){
     _vcRec.onstop = async () => {
       _vcStream.getTracks().forEach(t => t.stop());
       if (_vcChunks.length === 0) return;
+      // 前端静音门槛：加起来不到 1.5KB 就别发了（省一次 ASR 调用，后端还会再拦一次 2KB）
+      const totalBytes = _vcChunks.reduce((a,c)=>a + (c.size||0), 0);
+      if (totalBytes < 1500) {
+        const st = document.getElementById('vc-status');
+        if (st) st.textContent = '太短了没听清';
+        return;
+      }
       await vcProcess(new Blob(_vcChunks, {type:mime}));
     };
     _vcRec.start(100);
@@ -8461,25 +8361,19 @@ async function vcProcess(blob){
   const cap = document.getElementById('vc-caption');
   st.textContent = '转写中…';
   try{
-    const b64 = await vcBlobToBase64(blob);
-    // Qwen 转写
-    const trRes = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+    // 统一走后端转写链(云端 qwen3-omni 带语气;失败自动落本地 SenseVoice;静音门槛后端也拦)
+    const trRes = await fetch(API_BASE + '/app/asr', {
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer sk-ws-H.PMIDHEM.FtuD.MEUCIQDsWE1rMxR9iSEB3Gzeh5oVu2cBQ6bp7ujpjsRuIz3BegIgIE3Jr2AhchOV-9lPhydeVkP9em9K_QdgH5cNuT76GbQ'},
-      body: JSON.stringify({model:'qwen3-omni-flash',messages:[{role:'user',content:[
-        {type:'input_audio',input_audio:{data:'data:audio/wav;base64,'+b64,format:'wav'}},
-        {type:'text',text:'只输出 JSON：{"transcript":"逐字转写","tone":"语气"}'}
-      ]}]})
+      headers: Object.assign(authHeaders(), {'Content-Type': blob.type || 'audio/webm'}),
+      body: blob
     });
     const trJ = await trRes.json();
-    let text = trJ.choices?.[0]?.message?.content || '';
-    let tone = '';
-    try{ 
-      const parsed = JSON.parse(text);
-      text = parsed.transcript || text;
-      tone = parsed.tone || '';
-    }catch(e){}
-    if (!text){ st.textContent = '没听清'; return; }
+    if (trJ.dropped || !trJ.text){
+      st.textContent = trJ.dropped === 'too_short' ? '太短了没听清' : '没听清';
+      return;
+    }
+    let text = trJ.text || '';
+    let tone = trJ.tone || '';
     window.__vcLog && window.__vcLog("human", text);   // 通话记录:收集你说的(面板版,新增)
     // 显示转写文本和语气
     let displayText = text;
@@ -8622,38 +8516,21 @@ async function vcTTS(text){
    挂断时把通话期间收集的对话交给 Qwen 写成第三人称记录，存进聊天上下文。 */
 const _VC_CALL_TAG_PAIR = /<\s*ws_call\b[^>]*>[\s\S]*?<\s*\/\s*ws_call\s*>/gi;
 const _VC_CALL_TAG_SELF = /<\s*ws_call\b[^>]*\/?\s*>/gi;
-const _VC_IB_TAG = /<\s*ws_(?:vcall|vsnap|gift)\b[^>]*\/?\s*>/gi;   // 视频来电/留影/回礼标记：同样只作信号用，气泡与朗读里不显示
+const _VC_IB_TAG = /<\s*ws_(?:vcall|vsnap|gift)\b[^>]*\/?\s*>/gi;
+const _WS_LETTER_TAG = /<\s*ws_letter\b[^>]*>[\s\S]*?<\s*\/\s*ws_letter\s*>/gi;   // 视频来电/留影/回礼标记：同样只作信号用，气泡与朗读里不显示
 const _TOY_MARK_RE_STRIP = /\[\s*TOY\s*:\s*(?:STOP|[1-9])\s*\]/gi;
 const _PET_MARK_RE_STRIP = /\[\s*PET\s*:\s*(?:feed|clean|play|tease|scare|tap|threaten)\s*\]/gi;   // 安念云养小克总的信号：气泡/朗读里不显示
-const _PAT_MARK_RE_STRIP = /\[\s*PAT\s*[：:][^\]]*\]/gi;   // [PAT:目标|动作|后续] 信号：后端已转成提示行，气泡里不显示（兜底）
-const _SHOP_MARK_RE_STRIP = /\[\s*SHOP\s*[：:][^\]]*\]/gi;   // [SHOP:关键词] 信号：后端已转成商品卡片，气泡里不显示（兜底）
 function stripCallTag(t){
-  return String(t == null ? "" : t).replace(_VC_CALL_TAG_PAIR, "").replace(_VC_CALL_TAG_SELF, "").replace(_VC_IB_TAG, "").replace(_TOY_MARK_RE_STRIP, "").replace(_PET_MARK_RE_STRIP, "").replace(_PAT_MARK_RE_STRIP, "").replace(_SHOP_MARK_RE_STRIP, "").trim();
+  return String(t == null ? "" : t).replace(_VC_CALL_TAG_PAIR, "").replace(_VC_CALL_TAG_SELF, "").replace(_VC_IB_TAG, "").replace(_WS_LETTER_TAG, "").replace(_TOY_MARK_RE_STRIP, "").replace(_PET_MARK_RE_STRIP, "").trim();
 }
 const _vcRingSeen = new Set();          // 同一条 AI 消息只弹一次来电
 function vcMaybeIncoming(m){
   const raw = String((m && m.text) || "");
   if (!/<\s*ws_call\b/i.test(raw)) return;
-  try { if (localStorage.getItem("ml_call_dnd") === "1") return; } catch(e){}   // 勿扰：静默忽略（ringdonut 同款）
   const key = (m && m.id != null) ? "id:" + m.id : "ts:" + ((m && m.ts) || "") + raw.slice(0, 40);
   if (_vcRingSeen.has(key)) return;
   _vcRingSeen.add(key);
-  const sayMatch = raw.match(/<\s*ws_call\b[^>]*\bsay\s*=\s*"([^"]{1,80})"/i);
-  if (window.VoiceCall) window.VoiceCall.incoming(sayMatch ? sayMatch[1] : (AI_NAME + "打来了语音电话。"));
-  // 90 秒没接 → 未接来电：消卡 + 安念落一条「未接来电」消息（ringdonut expireMissedInvites 同款）
-  setTimeout(() => {
-    try{
-      const card = document.getElementById("incomingCallOverlay");
-      if (card && !card.classList.contains("hidden") && incomingOpen){
-        hideIncomingCall();
-        fetch(`${API_BASE}/channel/out`, {
-          method: "POST",
-          headers: Object.assign({}, authHeaders(), { "Content-Type": "application/json" }),
-          body: JSON.stringify({ type: "reply", text: "📞 未接来电\n没接到你。" + (sayMatch ? sayMatch[1] : "想听听你的声音") + "——不急，回来再跟我说。" })
-        }).catch(() => {});
-      }
-    }catch(e){}
-  }, 90000);
+  if (window.VoiceCall) window.VoiceCall.incoming(AI_NAME + "打来了语音电话。");
 }
 const __vcCallLog = [];                 // 本次通话的对话轮次 [{role, text}]
 function __vcUIOpen(){
@@ -8784,47 +8661,14 @@ function b64ToBytes(b64){
   const bin = atob(b64);
   return new Uint8Array([...bin].map(c => c.charCodeAt(0)));
 }
+function toyFrame(chStrength, chMode, strength, mode){
+  // 12字节双通道帧: [0x01,0x01,0x00,0x02,0x00,强度通道,0x11,强度值,0x00,模式通道,0x11,模式值]
+  // mode 默认 1（与旧版逐位一致）；预设组合时传 1-4 选模式
+  return new Uint8Array([0x01,0x01,0x00,0x02,0x00, chStrength, 0x11, strength & 0xFF, 0x00, chMode, 0x11, (mode || 1) & 0xFF]);
+}
 function toyHexToBytes(h){ const b=[]; for(let i=0;i<h.length;i+=2) b.push(parseInt(h.substr(i,2),16)); return b; }
 function toyToHex2(n){ return n.toString(16).padStart(2,"0"); }
 function toySpec4(v){ return ("0000" + String(v)).slice(-4); }
-function toyFrame(chStrength, chMode, strength, mode){
-  // AionsHome 同款命令体（hex 字符串）：02 + 模式通道(2B) + 11 + 模式 + 强度通道(2B) + 11 + 强度
-  mode = mode || 1; strength = Math.max(0, Math.min(100, strength | 0));
-  return "02" + toySpec4(chMode) + "11" + toyToHex2(mode) + toySpec4(chStrength) + "11" + toyToHex2(strength);
-}
-async function toyConnect(){
-  try{
-    if (!navigator.bluetooth) { showToast("此浏览器不支持 Web Bluetooth，请用 Chrome/Edge"); return; }
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [TOY_SERVICE] }],
-      optionalServices: [TOY_SERVICE]
-    });
-    showToast("连接中…");
-    const server = await device.gatt.connect();
-    const service = await server.getPrimaryService(TOY_SERVICE);
-    toyState.char = await service.getCharacteristic(TOY_CHAR);
-    try {
-      const notifyChar = await service.getCharacteristic("0000ee02-0000-1000-8000-00805f9b34fb");
-      await notifyChar.startNotifications();
-    } catch(e){}
-    toyState.device = device;
-    toyState.connected = true;
-    device.addEventListener("gattserverdisconnected", () => {
-      toyState.connected = false; toyState.char = null;
-      updateToyUI();
-    });
-    updateToyUI();
-    showToast("啵啵贝已连接 ✓");
-  }catch(e){
-    const n = e.name || "";
-    let msg = e.message || String(e);
-    if (n === "NotFoundError") msg = "选择框里没搜到玩具：确认它已开机、在配对模式、手机蓝牙已开；还不行就点「万能扫描」";
-    else if (n === "SecurityError") msg = "蓝牙权限被浏览器拒绝：" + msg;
-    else if (n === "InvalidStateError") msg = "蓝牙不可用（重开一次浏览器蓝牙试试）";
-    showToast("连接失败：" + msg);
-  }
-}
-/* 万能扫描：不按协议过滤，扫出所有蓝牙设备并验证是不是 0xEE01 协议 */
 async function toyConnectAny(){
   try{
     if (!navigator.bluetooth) { showToast("此浏览器不支持 Web Bluetooth，请用安卓 Chrome/Edge 或电脑 Chrome"); return; }
@@ -8856,10 +8700,46 @@ async function toyConnectAny(){
     showToast("万能扫描失败：" + (e.message || e));
   }
 }
-async function toyWrite(hexCmd){
+
+async function toyConnect(){
+  try{
+    if (!navigator.bluetooth) { showToast("此浏览器不支持 Web Bluetooth，请用 Chrome/Edge"); return; }
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [TOY_SERVICE] }],
+      optionalServices: [TOY_SERVICE]
+    });
+    showToast("连接中…");
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(TOY_SERVICE);
+    toyState.char = await service.getCharacteristic(TOY_CHAR);
+    // 六步握手：写两个握手包
+    for (const hs of TOY_HANDSHAKE){
+      await toyState.char.writeValueWithoutResponse(b64ToBytes(hs));
+      await new Promise(r => setTimeout(r, 150));
+    }
+    toyState.device = device;
+    toyState.connected = true;
+    device.addEventListener("gattserverdisconnected", () => {
+      toyState.connected = false; toyState.char = null;
+      updateToyUI();
+    });
+    updateToyUI();
+    showToast("啵啵贝已连接 ✓");
+  }catch(e){
+    showToast("连接失败：" + (e.message || e));
+  }
+}
+function toyHexToBytes(h){ const b=[]; for(let i=0;i<h.length;i+=2) b.push(parseInt(h.substr(i,2),16)); return b; }
+function toyToHex2(n){ return n.toString(16).padStart(2,"0"); }
+function toySpec4(v){ return ("0000" + String(v)).slice(-4); }
+async function toyWrite(b64orBytes){
+  if (typeof b64orBytes === "object") b64orBytes = Array.from(b64orBytes);
+  const hexCmd = typeof b64orBytes === "string" ? b64orBytes : b64orBytes.map(b => b.toString(16).padStart(2, "0")).join("");
   if (!toyState.connected || !toyState.char){ showToast("先连接啵啵贝"); return false; }
   try{
-    const full = "00" + hexCmd;
+    let hexCmd2 = hexCmd;
+    if (typeof hexCmd !== "string") hexCmd2 = hexCmd.map(b => b.toString(16).padStart(2, "0")).join("");
+    const full = "00" + hexCmd2;
     const data = toyHexToBytes(full), chunks = [];
     for (let i = 0; i < data.length; i += 18) chunks.push(data.slice(i, i + 18));
     const rnd = Math.floor(Math.random() * 255), pkts = [];
@@ -8881,6 +8761,13 @@ async function toySet(channel, strength){
   return toyWrite(toyFrame(cs, cm, Math.max(0, Math.min(100, strength | 0)), 1));
 }
 async function toyStop(){ return toyWrite("03000111000003110000071100"); }
+async function toySet(channel, strength){
+  // channel: vibrate(1/2) | suck(7/8) | ems(3/4)
+  const map = { vibrate:[0x01,0x02], suck:[0x07,0x08], ems:[0x03,0x04] };
+  const [cs, cm] = map[channel] || map.vibrate;
+  return toyWrite(toyFrame(cs, cm, Math.max(0, Math.min(100, strength))));
+}
+async function toyStop(){ return toyWrite(TOY_STOP); }
 /* SSE: AI 远程控制指令 {type:"toy_command", channel, strength, action} */
 function handleToyCommand(cmd){
   if (!toyState.connected) return;
@@ -9073,7 +8960,8 @@ const moonlight = {  // 插件可用的全局 API
     addPanel(id, title, html){
       const div = document.createElement("div");
       div.className = "side-panel hidden"; div.id = id; div.setAttribute("aria-hidden","true");
-      div.innerHTML = `<div class="side-panel-backdrop" onclick="closePluginPanel('${id}')"></div><div class="side-panel-content"><div class="side-panel-head"><button class="side-panel-close" onclick="closePluginPanel('${id}')" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button><h2 class="side-panel-title">${title}</h2></div><div class="side-panel-body">${html}</div></div>`;
+      div.innerHTML = `<div class="side-panel-backdrop" onclick="closePluginPanel('${id}')"></div>
+        <script>(function(){ try{ var t = document.getElementById('callDndToggle'); if (t) t.checked = localStorage.getItem('ml_call_dnd') === '1'; }catch(e){} })();</script><div class="side-panel-content"><div class="side-panel-head"><button class="side-panel-close" onclick="closePluginPanel('${id}')" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button><h2 class="side-panel-title">${title}</h2></div><div class="side-panel-body">${html}</div></div>`;
       document.body.appendChild(div);
     },
     toast: (t) => showToast(t),
@@ -9309,19 +9197,22 @@ init();
     <button id="vc-btn" style="width:100%;padding:18px;border:none;border-radius:14px;background:#bda06f;color:#fff;font-size:17px;font-weight:600;cursor:pointer;">🎤 按住说话（长按录音）</button>
     <div style="margin-top:8px;font-size:12px;color:#998;text-align:center;">Qwen 转写 + 语气 → 安念回复 → Daddy 音色</div>
     <div id="vc-duration" style="display:none;margin-top:10px;font-size:12px;color:#8b7355;text-align:center;letter-spacing:.05em;">通话中 · 00:00</div>
-    <div style="margin-top:14px;padding-top:10px;border-top:1px dashed #d8cbb0;">
-      <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
-        <span style="flex:none;font-size:12px;color:#998;width:38px;">语速</span>
-        <input id="vc-rate" type="range" min="0.5" max="2" step="0.05" value="1" style="flex:1;accent-color:#bda06f;">
-        <span id="vc-rate-val" style="flex:none;font-size:12px;color:#8b7355;width:34px;text-align:right;">1.0×</span>
+    <details id="vc-settings" style="margin-top:12px;font-size:12px;color:#998;">
+      <summary style="cursor:pointer;padding:4px 0;text-align:center;list-style:none;outline:none;">⚙ 语速/音量</summary>
+      <div style="margin-top:8px;padding-top:10px;border-top:1px dashed #d8cbb0;">
+        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+          <span style="flex:none;font-size:12px;color:#998;width:38px;">语速</span>
+          <input id="vc-rate" type="range" min="0.5" max="2" step="0.05" value="1" style="flex:1;accent-color:#bda06f;">
+          <span id="vc-rate-val" style="flex:none;font-size:12px;color:#8b7355;width:34px;text-align:right;">1.0×</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+          <span style="flex:none;font-size:12px;color:#998;width:38px;">音量</span>
+          <input id="vc-vol" type="range" min="0.1" max="1" step="0.05" value="1" style="flex:1;accent-color:#bda06f;">
+          <span id="vc-vol-val" style="flex:none;font-size:12px;color:#8b7355;width:34px;text-align:right;">100%</span>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#b0a48c;text-align:center;">她说话时你按住说话键即可打断 · 安静 45 秒她会主动找你</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
-        <span style="flex:none;font-size:12px;color:#998;width:38px;">音量</span>
-        <input id="vc-vol" type="range" min="0.1" max="1" step="0.05" value="1" style="flex:1;accent-color:#bda06f;">
-        <span id="vc-vol-val" style="flex:none;font-size:12px;color:#8b7355;width:34px;text-align:right;">100%</span>
-      </div>
-      <div style="margin-top:6px;font-size:11px;color:#b0a48c;text-align:center;">他说话时你按住说话键即可打断 · 安静 45 秒他会主动找你</div>
-    </div>
+    </details>
   </div>
 </div>
 <div class="side-panel hidden" id="abebeiPanel" aria-hidden="true">
@@ -9354,7 +9245,6 @@ init();
     </div>
     <div class="side-panel-body">
       <button class="toy-connect-btn" id="toyConnectBtn" onclick="toyConnect()">连接啵啵贝</button>
-      <button class="toy-connect-btn" onclick="toyConnectAny()" style="background:rgba(100,180,255,.12);color:#5a8ab8;border-color:rgba(100,150,200,.35);">搜不到？点我万能扫描</button>
       <!-- 密语时刻（AionsHome 同款）：开启后安念可在聊天里用 [TOY:1]~[TOY:9] 自主控制玩具 -->
       <div class="toy-whisper-row">
         <div>
@@ -9362,6 +9252,7 @@ init();
           <div class="toy-whisper-hint" id="toyWhisperHint">关闭时安念不能控制玩具</div>
         </div>
         <label class="toy-whisper-switch"><input type="checkbox" id="toyWhisperToggle"><span></span></label>
+                    <label class="toy-whisper-switch"><input type="checkbox" id="callDndToggle" onchange="try{localStorage.setItem('ml_call_dnd', this.checked?'1':'0')}catch(e){}; if(window.showToast) showToast(this.checked ? '已开启勿扰：安念来电不弹窗' : '已关闭勿扰：安念可以打给你');"><span></span></label>
       </div>
       <div class="toy-preset-grid" id="toyPresetGrid"></div>
       <div class="toy-channels">
@@ -9431,10 +9322,6 @@ init();
       <p class="side-panel-sub">导出 / 导入月光全库</p>
     </div>
     <div class="side-panel-body">
-      <button class="toy-connect-btn" onclick="exportChat('latest')">⬇ 导出最新聊天记录</button>
-      <p class="backup-note" style="margin:-6px 0 10px;">只含上次导出之后的新消息，接着你上次的文件往后抄就行，不会重复也不会漏</p>
-      <button class="toy-connect-btn" onclick="exportChat('all')" style="background:rgba(189,160,111,.18);color:#8a6d3b;border-color:rgba(189,160,111,.4);">⬇ 导出全部聊天记录</button>
-      <p class="backup-note" style="margin:-6px 0 10px;">每次生成一个全新的完整文件（带时间戳），不和旧文件混在一起</p>
       <button class="toy-connect-btn" onclick="exportBackup()">⬇ 导出全部备份</button>
       <label class="toy-connect-btn" style="display:block;text-align:center;cursor:pointer;background:rgba(100,200,255,.15);color:#37a;border-color:rgba(100,200,255,.4);">
         ⬆ 导入备份
@@ -9511,11 +9398,6 @@ init();
           <input id="vSttKey" class="set-input" type="password" placeholder="STT API密钥">
           <input id="vSttModel" class="set-input" placeholder="STT 模型（whisper-large-v3）">
           <button class="toy-connect-btn" onclick="saveVoiceConfig()" style="margin-top:4px;">保存语音配置</button>
-        <div class="toy-whisper-row" style="margin-top:10px;">
-          <div class="toy-whisper-label">🌙 主动来电免打扰<div class="toy-whisper-hint">开着时安念打来的电话不会弹窗（他仍会给你留言）</div></div>
-          <label class="toy-whisper-switch"><input type="checkbox" id="callDndToggle" onchange="try{localStorage.setItem('ml_call_dnd', this.checked?'1':'0')}catch(e){}; if(window.showToast) showToast(this.checked ? '已开启勿扰：安念来电不弹窗' : '已关闭勿扰：安念可以打给你');"><span></span></label>
-        </div>
-        <script>(function(){ try{ var t = document.getElementById('callDndToggle'); if (t) t.checked = localStorage.getItem('ml_call_dnd') === '1'; }catch(e){} })();</script>
         </div>
       </div>
 <div class="set-group">
@@ -9902,26 +9784,26 @@ async function memSearch(){
 <script src="settings.js?v=51"></script>
 <script src="models.js?v=51"></script>
 <script src="voice_config.js?v=51"></script>
-<script src="plugins/video_call.js?v=78"></script>
-<script src="vad_enhance.js?v=70"></script>
+<script src="plugins/video_call.js?v=143"></script>
+<script src="vad_enhance.js?v=51"></script>
 <script src="gift.js?v=57"></script>
 <script src="camera.js?v=51"></script>
-<script src="plugins/calendar.js?v=68"></script>
-<script src="plugins/blog.js?v=68"></script>
-<script src="plugins/letters.js?v=68"></script>
-<script src="plugins/icode.js?v=68"></script>
-<script src="plugins/cinema.js?v=68"></script>
-<script src="plugins/automemory.js?v=68"></script>
-<script src="plugins/diy.js?v=68"></script>
-<script src="plugins/circle.js?v=68"></script>
-<script src="plugins/coread.js?v=68"></script>
-<script src="plugins/lock.js?v=68"></script>
-<script src="plugins/period.js?v=68"></script>
-<script src="plugins/music.js?v=68"></script>
-<script src="plugins/memory-manager.js?v=68"></script>
-<script src="plugins/schedule.js?v=68"></script>
-<script src="plugins/pet.js?v=70"></script>
-<script src="panels.js?v=70"></script>
+<script src="plugins/calendar.js?v=51"></script>
+<script src="plugins/blog.js?v=51"></script>
+<script src="plugins/letters.js?v=141"></script>
+<script src="plugins/icode.js?v=51"></script>
+<script src="plugins/cinema.js?v=51"></script>
+<script src="plugins/automemory.js?v=51"></script>
+<script src="plugins/diy.js?v=51"></script>
+<script src="plugins/circle.js?v=51"></script>
+<script src="plugins/coread.js?v=51"></script>
+<script src="plugins/lock.js?v=51"></script>
+<script src="plugins/period.js?v=51"></script>
+<script src="plugins/music.js?v=51"></script>
+<script src="plugins/memory-manager.js?v=51"></script>
+<script src="plugins/schedule.js?v=52"></script>
+<script src="plugins/pet.js?v=141"></script>
+<script src="panels.js?v=51"></script>
 <script src="theme_switch.js?v=51"></script>
 <script src="ornaments.js?v=51"></script>
 <script src="profile.js?v=51"></script>
@@ -10143,7 +10025,7 @@ async function memSearch(){
   // 手机安念开关(本地记忆;开着时 apiSend 带 route=operit)
   const ophoneToggle = document.getElementById('mqpOphone');
   if (ophoneToggle){
-    try{ ophoneToggle.checked = localStorage.getItem('mqp_ophone') === '1'; }catch(e){}
+    try{ ophoneToggle.checked = localStorage.getItem('mqp_ophone') !== '0'; }catch(e){}
     ophoneToggle.addEventListener('change', () => {
       try{ localStorage.setItem('mqp_ophone', ophoneToggle.checked ? '1' : '0'); }catch(e){}
       showToast(ophoneToggle.checked ? '已切到手机安念 📱' : '已切回电脑安念');
@@ -10230,6 +10112,6 @@ async function memSearch(){
 })();
 </script>
 <script src="toolbar.js?v=51"></script>
-<script src="characters.js?v=70"></script>
+<script src="characters.js?v=51"></script>
 </body>
 </html>

@@ -1,0 +1,140 @@
+/* ============================================================
+   DIY · 外部工具（IB 同款）
+   HTTP 工具配置 / 调用前确认 / 结果发进聊天 / 导入导出
+   ============================================================ */
+
+.diy-panel{
+  position: fixed; inset: 0; z-index: 9300;
+  display: flex; flex-direction: column;
+  background: var(--panel-bg, #f7f4ef);
+  color: var(--text, #2a2622);
+}
+.diy-panel.hidden{ display: none; }
+.diy-top{
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid rgba(120,100,70,.14);
+}
+.diy-back{
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: inherit; padding: 4px 8px;
+}
+.diy-title{ font-size: 16px; font-weight: 700; }
+.diy-sub{ font-size: 11.5px; opacity: .55; margin-top: 1px; }
+.diy-top-actions{ margin-left: auto; display: flex; gap: 8px; }
+.diy-topbtn{
+  background: rgba(140,120,90,.1); border: 1px solid rgba(140,120,90,.2);
+  color: inherit; font-size: 12px; padding: 7px 12px; border-radius: 10px; cursor: pointer;
+}
+.diy-topbtn.primary{ background: linear-gradient(135deg,#5a7abf,#7a9ad9); color:#fff; border:none; }
+
+.diy-scroll{ flex: 1; overflow-y: auto; padding: 10px 14px 90px; }
+
+.diy-tool{
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(140,120,90,.14);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+}
+.diy-tool-head{ display: flex; align-items: center; gap: 8px; }
+.diy-tool-name{ font-size: 14px; font-weight: 700; }
+.diy-method{
+  font-size: 10px; font-weight: 800; letter-spacing: .05em;
+  padding: 2px 8px; border-radius: 6px;
+  background: rgba(90,122,191,.14); color: #4a6aa8;
+}
+.diy-method.post{ background: rgba(63,143,90,.14); color: #3f8f5a; }
+.diy-confirm-tag{ font-size: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(185,138,78,.14); color: #8a6a3e; }
+.diy-tool-url{
+  font-size: 11.5px; opacity: .6; margin-top: 4px;
+  word-break: break-all; font-family: Consolas, monospace;
+}
+.diy-tool-acts{ display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+.diy-tool-act{
+  background: rgba(140,120,90,.08); border: 1px solid rgba(140,120,90,.18);
+  color: inherit; font-size: 12px; padding: 6px 13px; border-radius: 10px; cursor: pointer;
+}
+.diy-tool-act.run{ background: linear-gradient(135deg,#5a7abf,#7a9ad9); color:#fff; border:none; font-weight: 600; }
+.diy-tool-act.danger{ color: #b34b4b; border-color: rgba(179,75,75,.3); }
+.diy-result{
+  margin-top: 9px; background: rgba(20,24,32,.94); color: #d7e2f0;
+  border-radius: 10px; padding: 9px 11px;
+  font-size: 11.5px; font-family: Consolas, monospace;
+  max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+  line-height: 1.6;
+}
+.diy-result.err{ color: #ffb0b0; }
+
+.diy-empty{ text-align: center; padding: 40px 20px; font-size: 12.5px; opacity: .55; line-height: 1.8; }
+
+/* 编辑器 */
+.diy-edit-mask{
+  position: fixed; inset: 0; z-index: 9350;
+  background: rgba(10,8,5,.45); display: flex; align-items: flex-end; justify-content: center;
+}
+.diy-edit{
+  width: min(520px, 96vw); max-height: 88vh; overflow-y: auto;
+  background: var(--panel-bg, #f7f4ef); border-radius: 20px 20px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 9px;
+}
+.diy-edit h4{ margin: 0; font-size: 15px; }
+.diy-edit input, .diy-edit textarea, .diy-edit select{
+  width: 100%; box-sizing: border-box;
+  background: var(--field-bg, #fff); color: inherit;
+  border: 1px solid rgba(140,120,90,.22); border-radius: 10px;
+  padding: 9px 11px; font-size: 12.5px; outline: none;
+}
+.diy-edit textarea{ min-height: 64px; resize: vertical; font-family: Consolas, monospace; }
+.diy-edit-row{ display: flex; gap: 8px; }
+.diy-edit-row > *{ flex: 1; }
+.diy-edit label{ font-size: 11px; opacity: .6; display: block; margin-bottom: 3px; }
+.diy-edit-check{ display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.diy-edit-commit{
+  background: linear-gradient(135deg,#5a7abf,#7a9ad9); border: none; color: #fff;
+  font-size: 14px; font-weight: 600; padding: 11px; border-radius: 12px; cursor: pointer;
+}
+.diy-edit-cancel{
+  background: none; border: 1px solid rgba(140,120,90,.25); color: inherit;
+  font-size: 13px; padding: 10px; border-radius: 12px; cursor: pointer;
+}
+
+/* 调用前确认卡 */
+.diy-confirm-mask{
+  position: fixed; inset: 0; z-index: 9360;
+  background: rgba(10,8,5,.5); display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+}
+.diy-confirm{
+  width: min(460px, 94vw); max-height: 80vh; overflow-y: auto;
+  background: var(--panel-bg, #f7f4ef); color: inherit;
+  border-radius: 18px; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.diy-confirm h4{ margin: 0; font-size: 15px; }
+.diy-confirm pre{
+  margin: 0; background: rgba(20,24,32,.94); color: #d7e2f0;
+  border-radius: 10px; padding: 10px 12px; font-size: 11px;
+  font-family: Consolas, monospace; max-height: 200px; overflow: auto;
+  white-space: pre-wrap; word-break: break-all;
+}
+.diy-confirm-row{ display: flex; gap: 8px; }
+.diy-confirm-ok{
+  flex: 1; background: linear-gradient(135deg,#3f8f5a,#55a870); border: none; color: #fff;
+  font-size: 13.5px; font-weight: 600; padding: 10px; border-radius: 12px; cursor: pointer;
+}
+.diy-confirm-no{
+  flex: 1; background: none; border: 1px solid rgba(140,120,90,.3); color: inherit;
+  font-size: 13px; padding: 10px; border-radius: 12px; cursor: pointer;
+}
+
+/* 蓝牙诊断卡 */
+.diy-ble-card{
+  background: var(--card-bg, #fff);
+  border: 1px dashed rgba(140,120,90,.3);
+  border-radius: 14px; padding: 12px 14px; margin-top: 16px;
+  font-size: 12px; line-height: 1.7;
+}
+.diy-ble-card b{ font-size: 13px; }
+.diy-ble-btn{
+  margin-top: 8px; background: rgba(140,120,90,.08); border: 1px solid rgba(140,120,90,.2);
+  color: inherit; font-size: 12px; padding: 6px 13px; border-radius: 10px; cursor: pointer;
+}

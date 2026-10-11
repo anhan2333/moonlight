@@ -1,9 +1,9 @@
 {
   "main_chain": [
     {
-      "url": "https://nova.cervus.cn/v1",
-      "key": "sk-0tYI0sAF4K5quuusA0DFXN5XL1zZFszZ9Em0ig2rYcHggGj8",
-      "model": "[ruru12]gemini-3.5-flash"
+      "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "key": "sk-ws-H.PMIDHEM.FtuD.MEUCIQDsWE1rMxR9iSEB3Gzeh5oVu2cBQ6bp7ujpjsRuIz3BegIgIE3Jr2AhchOV-9lPhydeVkP9em9K_QdgH5cNuT76GbQ",
+      "model": "qwen-plus"
     }
   ],
   "sessions": [
@@ -11,8 +11,113 @@
       "id": "api-20260906-132611-1699",
       "title": "新对话",
       "since_id": 12,
-      "created_at": "2026-09-06T13:26:11.096141+00:00"
+      "created_at": "2026-09-06T13:26:11.096141+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-053513-dad9",
+      "title": "英语角",
+      "since_id": 544,
+      "created_at": "2026-10-02T05:35:13.586786+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-062122-8a3e",
+      "title": "英语角",
+      "since_id": 569,
+      "created_at": "2026-10-02T06:21:22.033110+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-062151-9f50",
+      "title": "英语角",
+      "since_id": 569,
+      "created_at": "2026-10-02T06:21:51.229803+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-064038-3cc5",
+      "title": "英语角",
+      "since_id": 585,
+      "created_at": "2026-10-02T06:40:38.886045+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-090813-2600",
+      "title": "英语角",
+      "since_id": 593,
+      "created_at": "2026-10-02T09:08:13.776339+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-095827-7dfe",
+      "title": "英语角",
+      "since_id": 602,
+      "created_at": "2026-10-02T09:58:27.428243+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-095929-a966",
+      "title": "英语角",
+      "since_id": 602,
+      "created_at": "2026-10-02T09:59:29.968153+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-100223-c3f5",
+      "title": "英语角",
+      "since_id": 609,
+      "created_at": "2026-10-02T10:02:23.361244+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-111614-1b0a",
+      "title": "英语角",
+      "since_id": 609,
+      "created_at": "2026-10-02T11:16:14.019326+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-111738-c0aa",
+      "title": "英语角",
+      "since_id": 614,
+      "created_at": "2026-10-02T11:17:38.772229+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-135731-0157",
+      "title": "英语角",
+      "since_id": 615,
+      "created_at": "2026-10-02T13:57:31.737291+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-165438-c167",
+      "title": "英语角",
+      "since_id": 632,
+      "created_at": "2026-10-02T16:54:38.869010+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-170000-21b7",
+      "title": "英语角",
+      "since_id": 636,
+      "created_at": "2026-10-02T17:00:00.555266+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-170236-4de2",
+      "title": "英语角",
+      "since_id": 640,
+      "created_at": "2026-10-02T17:02:36.269561+00:00",
+      "pinned": false
+    },
+    {
+      "id": "api-20261002-170731-9fd6",
+      "title": "英语角",
+      "since_id": 643,
+      "created_at": "2026-10-02T17:07:31.442750+00:00"
     }
   ],
-  "active_session": "api-20260906-132611-1699"
+  "active_session": "api-20261002-170731-9fd6"
 }

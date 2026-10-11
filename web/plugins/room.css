@@ -1,0 +1,948 @@
+/* ════════════ Room像素艺术互动房间样式 ═══════════ */
+
+/* 房间按钮 */
+.room-btn {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.room-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}
+
+.room-btn:active {
+  transform: translateY(0);
+}
+
+/* 房间面板 */
+.room-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.room-panel-content {
+  background: linear-gradient(135deg, #2d1b69 0%, #0f0c29 100%);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.room-panel-header {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.room-panel-header h2 {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.room-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.room-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 房间控制 */
+.room-controls {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-background,
+.room-lighting,
+.room-music {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.room-background label,
+.room-lighting label,
+.room-music label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  min-width: 60px;
+}
+
+.room-background select,
+.room-lighting select,
+.room-music select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  flex: 1;
+}
+
+.room-background select:focus,
+.room-lighting select:focus,
+.room-music select:focus {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+}
+
+/* 房间模块 */
+.room-modules {
+  padding: 20px;
+}
+
+.room-module-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 5px;
+  overflow-x: auto;
+}
+
+.room-module-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.room-module-tab:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.room-module-tab.active {
+  color: white;
+  background: rgba(255, 107, 107, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.room-module-content {
+  position: relative;
+  min-height: 400px;
+}
+
+.room-module-pane {
+  display: none;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.room-module-pane.active {
+  display: block;
+}
+
+/* 房间画布 */
+.room-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+#room-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* Sui模块样式 */
+.sui-module {
+  color: white;
+}
+
+.sui-interface {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.sui-avatar {
+  flex: 0 0 100px;
+  text-align: center;
+}
+
+.sui-avatar-image {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.sui-avatar-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sui-dialogue {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.sui-messages {
+  height: 200px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.sui-message {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.sui-message.user {
+  background: rgba(255, 107, 107, 0.2);
+  margin-left: auto;
+}
+
+.sui-message.sui {
+  background: rgba(255, 255, 255, 0.1);
+  margin-right: auto;
+}
+
+.sui-message-content {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+
+.sui-message-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sui-input {
+  display: flex;
+  gap: 10px;
+}
+
+.sui-input input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.sui-input input:focus {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+}
+
+.sui-input button {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sui-input button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+/* Tea模块样式 */
+.tea-module {
+  color: white;
+}
+
+.tea-interface {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tea-mood-selector {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tea-mood-option {
+  flex: 0 0 120px;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.tea-mood-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.tea-mood-option.active {
+  border-color: #87CEEB;
+  background: rgba(135, 206, 235, 0.1);
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.3);
+}
+
+.tea-mood-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.tea-mood-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tea-moments {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.tea-moments h4 {
+  color: white;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.tea-moments-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.tea-moment {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.tea-moment-content {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+
+.tea-moment-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 5px;
+}
+
+.tea-mood-tag {
+  display: inline-block;
+  background: rgba(135, 206, 235, 0.2);
+  color: #87CEEB;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.tea-moment-input {
+  display: flex;
+  gap: 10px;
+}
+
+.tea-moment-input input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.tea-moment-input input:focus {
+  border-color: #87CEEB;
+  box-shadow: 0 0 0 2px rgba(135, 206, 235, 0.2);
+}
+
+.tea-moment-input button {
+  background: linear-gradient(135deg, #87CEEB 0%, #98D8E8 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.tea-moment-input button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.4);
+}
+
+/* Story模块样式 */
+.story-module {
+  color: white;
+}
+
+.story-interface {
+  display: flex;
+  gap: 20px;
+}
+
+.story-selector {
+  flex: 0 0 200px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.story-option {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.story-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.story-content {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 400px;
+}
+
+.story-text {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.story-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.story-choice {
+  background: linear-gradient(135deg, #9370DB 0%, #BA55D3 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.story-choice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(147, 112, 219, 0.4);
+}
+
+/* Tarot模块样式 */
+.tarot-module {
+  color: white;
+}
+
+.tarot-interface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.tarot-deck {
+  position: relative;
+  width: 120px;
+  height: 180px;
+  cursor: pointer;
+}
+
+.tarot-card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #4B0082 0%, #8B008B 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(75, 0, 130, 0.4);
+}
+
+.tarot-card:hover {
+  transform: translateY(-5px) rotate(5deg);
+  box-shadow: 0 12px 30px rgba(75, 0, 130, 0.6);
+}
+
+.tarot-card-back {
+  font-size: 72px;
+}
+
+.tarot-card-front {
+  font-size: 48px;
+}
+
+.tarot-reading {
+  width: 100%;
+  text-align: center;
+}
+
+.tarot-cards {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.tarot-reading .tarot-card {
+  width: 80px;
+  height: 120px;
+  font-size: 32px;
+}
+
+.tarot-card-meaning {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 5px;
+}
+
+.tarot-interpretation {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: left;
+}
+
+.tarot-interpretation h4 {
+  color: white;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.tarot-interpretation p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Wardrobe模块样式 */
+.wardrobe-module {
+  color: white;
+}
+
+.wardrobe-interface {
+  display: flex;
+  gap: 20px;
+}
+
+.wardrobe-clothes {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.clothing-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clothing-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.clothing-icon {
+  font-size: 24px;
+}
+
+.clothing-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.wardrobe-outfit {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.outfit-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.outfit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.outfit-icon {
+  font-size: 20px;
+}
+
+.outfit-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Sleep模块样式 */
+.sleep-module {
+  color: white;
+}
+
+.sleep-interface {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sleep-controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.sleep-controls button {
+  background: linear-gradient(135deg, #4169E1 0%, #6495ED 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sleep-controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.4);
+}
+
+.sleep-stats {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.sleep-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sleep-duration,
+.sleep-quality,
+.sleep-time {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Pet模块样式 */
+.pet-module {
+  color: white;
+}
+
+.pet-interface {
+  display: flex;
+  gap: 20px;
+}
+
+.pet-display {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.pet-avatar {
+  margin-bottom: 20px;
+}
+
+.pet-image {
+  font-size: 64px;
+  margin-bottom: 10px;
+}
+
+.pet-name {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pet-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.pet-controls button {
+  background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pet-controls button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 182, 193, 0.4);
+}
+
+.pet-status {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.pet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pet-hunger,
+.pet-happiness,
+.pet-energy {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .room-panel-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .room-controls {
+    padding: 15px;
+  }
+  
+  .room-modules {
+    padding: 15px;
+  }
+  
+  .room-module-tabs {
+    gap: 3px;
+  }
+  
+  .room-module-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  
+  .sui-interface,
+  .tea-interface,
+  .story-interface,
+  .wardrobe-interface,
+  .pet-interface {
+    flex-direction: column;
+  }
+  
+  .story-selector,
+  .wardrobe-clothes,
+  .pet-display,
+  .pet-status {
+    flex: none;
+    max-height: 200px;
+  }
+  
+  .sui-avatar {
+    flex: none;
+    text-align: center;
+  }
+  
+  .tarot-cards {
+    flex-wrap: wrap;
+  }
+  
+  .tarot-card {
+    width: 60px;
+    height: 90px;
+    font-size: 24px;
+  }
+  
+  .sleep-controls {
+    flex-direction: column;
+  }
+  
+  .pet-controls {
+    flex-direction: column;
+  }
+  
+  .room-btn {
+    bottom: 100px;
+    right: 10px;
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.tea-mood-option:hover,
+.story-option:hover,
+.clothing-item:hover,
+.tarot-card:hover,
+.sleep-controls button:hover,
+.pet-controls button:hover {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 滚动条样式 */
+.room-module-tabs::-webkit-scrollbar,
+.story-selector::-webkit-scrollbar,
+.wardrobe-clothes::-webkit-scrollbar,
+.sui-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.room-module-tabs::-webkit-scrollbar-track,
+.story-selector::-webkit-scrollbar-track,
+.wardrobe-clothes::-webkit-scrollbar-track,
+.sui-messages::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.room-module-tabs::-webkit-scrollbar-thumb,
+.story-selector::-webkit-scrollbar-thumb,
+.wardrobe-clothes::-webkit-scrollbar-thumb,
+.sui-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.room-module-tabs::-webkit-scrollbar-thumb:hover,
+.story-selector::-webkit-scrollbar-thumb:hover,
+.wardrobe-clothes::-webkit-scrollbar-thumb:hover,
+.sui-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

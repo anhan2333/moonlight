@@ -1,0 +1,642 @@
+/* ════════════ 多端口AI实时对话增强样式 ═══════════ */
+
+/* AI端口切换按钮 */
+.ai-port-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+}
+
+.ai-port-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.ai-port-name {
+  font-size: 12px;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AI选择器 */
+.ai-selector {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.ai-selector-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.ai-selector-header {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-selector-header h3 {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ai-selector-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.ai-selector-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ai-port-option {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.ai-port-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ai-port-option.active {
+  background: rgba(102, 126, 234, 0.1);
+  border-left: 4px solid #667eea;
+}
+
+.ai-port-info {
+  flex: 1;
+}
+
+.ai-port-name {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ai-port-model {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.ai-port-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.token-usage {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.token-bar {
+  width: 100px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.token-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6bcf7f 0%, #ffd93d 50%, #ff6b6b 100%);
+  transition: width 0.3s ease;
+}
+
+.ai-port-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ai-port-switch,
+.ai-port-settings {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.ai-port-switch:hover,
+.ai-port-settings:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ai-port-add {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-port-add-btn {
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.ai-port-add-btn:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+}
+
+/* Token监控 */
+.token-monitor {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  max-width: 250px;
+}
+
+.token-monitor.expanded {
+  max-width: 300px;
+}
+
+.token-monitor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.token-monitor-toggle:hover {
+  color: white;
+}
+
+.token-monitor-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.token-monitor-content {
+  display: none;
+  margin-top: 15px;
+}
+
+.token-monitor.expanded .token-monitor-content {
+  display: block;
+}
+
+.token-info {
+  margin-bottom: 15px;
+}
+
+.token-current,
+.token-today {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.token-current span,
+.token-today span {
+  color: white;
+  font-weight: 600;
+}
+
+.token-chart {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+#tokenChart {
+  width: 100%;
+  height: 80px;
+}
+
+/* 话题频道按钮 */
+.channel-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+}
+
+.channel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+}
+
+.channel-name {
+  font-size: 12px;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 频道选择器 */
+.channel-selector {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.channel-selector-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.channel-selector-header {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.channel-selector-header h3 {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.channel-selector-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.channel-selector-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.channel-option {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.channel-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.channel-option.active {
+  background: rgba(240, 147, 251, 0.1);
+  border-left: 4px solid #f093fb;
+}
+
+.channel-info {
+  flex: 1;
+}
+
+.channel-name {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.channel-desc {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.channel-meta {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.channel-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.channel-switch {
+  background: rgba(240, 147, 251, 0.1);
+  border: 1px solid rgba(240, 147, 251, 0.3);
+  color: #f093fb;
+  padding: 6px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.channel-switch:hover {
+  background: rgba(240, 147, 251, 0.2);
+  border-color: #f093fb;
+}
+
+.channel-add {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.channel-add-btn {
+  background: rgba(240, 147, 251, 0.1);
+  border: 2px dashed rgba(240, 147, 251, 0.3);
+  color: #f093fb;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.channel-add-btn:hover {
+  background: rgba(240, 147, 251, 0.2);
+  border-color: #f093fb;
+}
+
+/* 消息样式增强 */
+.message {
+  margin-bottom: 15px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.human {
+  background: linear-gradient(135deg, rgba(193, 154, 86, 0.14) 0%, rgba(193, 154, 86, 0.08) 100%);
+  border: 1px solid rgba(193, 154, 86, 0.3);
+  margin-left: auto;
+}
+
+.message.ai {
+  background: linear-gradient(135deg, rgba(26, 22, 18, 0.92) 0%, rgba(26, 22, 18, 0.8) 100%);
+  border: 1px solid rgba(193, 154, 86, 0.22);
+  margin-right: auto;
+}
+
+.message-content {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.message-time {
+  font-family: monospace;
+}
+
+.message-tokens {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+/* 错误提示 */
+.chat-error {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+  z-index: 3000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-port-btn,
+  .channel-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .ai-port-name,
+  .channel-name {
+    max-width: 40px;
+  }
+  
+  .token-monitor {
+    bottom: 100px;
+    right: 10px;
+    max-width: 200px;
+  }
+  
+  .token-monitor.expanded {
+    max-width: 250px;
+  }
+  
+  .message {
+    max-width: 90%;
+  }
+  
+  .ai-selector-content,
+  .channel-selector-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .ai-port-option,
+  .channel-option {
+    padding: 15px;
+  }
+  
+  .ai-port-info,
+  .channel-info {
+    flex: 1;
+  }
+  
+  .ai-port-actions,
+  .channel-actions {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .ai-port-switch,
+  .ai-port-settings,
+  .channel-switch {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.ai-port-option:hover,
+.channel-option:hover {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-selector,
+.channel-selector {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 滚动条样式 */
+.ai-selector-content,
+.channel-selector-content {
+  overflow-y: auto;
+}
+
+.ai-selector-content::-webkit-scrollbar,
+.channel-selector-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-selector-content::-webkit-scrollbar-track,
+.channel-selector-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.ai-selector-content::-webkit-scrollbar-thumb,
+.channel-selector-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.ai-selector-content::-webkit-scrollbar-thumb:hover,
+.channel-selector-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

@@ -1,0 +1,83 @@
+/* ============================================================
+   闹铃日程 · Schedule plugin for 月光（AionsHome 同款）
+   到点安念主动开口提醒 + 位置共享上下文
+   ============================================================ */
+
+.sc-panel{
+  position: fixed; inset: 0; z-index: 9300;
+  display: flex; flex-direction: column;
+  background: var(--panel-bg, #f7f4ef); color: var(--text, #2a2622);
+}
+.sc-panel.hidden{ display: none; }
+.sc-top{
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid rgba(120,100,70,.14);
+}
+.sc-back{ background: none; border: none; font-size: 20px; cursor: pointer; color: inherit; padding: 4px 8px; }
+.sc-title{ font-size: 16px; font-weight: 700; }
+.sc-sub{ font-size: 11px; opacity: .55; margin-top: 1px; }
+.sc-topbtn{
+  margin-left: auto; background: linear-gradient(135deg,#b98a4e,#d4a96a); color: #fff;
+  border: none; font-size: 12.5px; padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600;
+}
+.sc-body{ flex: 1; overflow-y: auto; padding: 14px 16px 90px; }
+.sc-hint{ font-size: 11.5px; opacity: .6; line-height: 1.7; margin-bottom: 12px; }
+
+.sc-item{
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card-bg, #fff); border: 1px solid var(--card-line, rgba(140,120,90,.15));
+  border-radius: 13px; padding: 12px 14px; margin-bottom: 9px;
+}
+.sc-item.fired{ opacity: .5; }
+.sc-item-main{ flex: 1; min-width: 0; }
+.sc-item-time{ font-size: 13px; font-weight: 700; color: var(--accent, #b98a4e); }
+.sc-item-content{ font-size: 13px; margin-top: 2px; word-break: break-word; }
+.sc-item-repeat{ font-size: 10.5px; opacity: .55; margin-top: 2px; }
+.sc-item-acts{ display: flex; gap: 6px; flex: 0 0 auto; }
+.sc-mini{
+  background: rgba(140,120,90,.1); border: 1px solid rgba(140,120,90,.2); color: inherit;
+  font-size: 11px; padding: 5px 9px; border-radius: 8px; cursor: pointer;
+}
+.sc-mini.danger{ color: #b34b4b; border-color: rgba(179,75,75,.3); }
+
+.sc-empty{ text-align: center; padding: 36px 16px; font-size: 12.5px; opacity: .55; line-height: 1.8; }
+
+/* 位置卡 */
+.sc-loc{
+  margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--card-line, rgba(140,120,90,.2));
+}
+.sc-loc-head{ font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.sc-loc-row{ display: flex; align-items: center; justify-content: space-between; padding: 9px 0; }
+.sc-loc-row .lab{ font-size: 12.5px; }
+.sc-loc-row .val{ font-size: 11.5px; opacity: .6; }
+.sc-switch{ position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
+.sc-switch input{ opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.sc-switch span{ position: absolute; inset: 0; border-radius: 999px; background: rgba(140,120,90,.25); transition: background .2s; pointer-events: none; }
+.sc-switch span::after{ content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.2); transition: transform .2s; }
+.sc-switch input:checked + span{ background: #3f8f5a; }
+.sc-switch input:checked + span::after{ transform: translateX(20px); }
+.sc-loc-btns{ display: flex; gap: 8px; margin-top: 8px; }
+.sc-loc-btn{
+  flex: 1; background: rgba(140,120,90,.1); border: 1px solid rgba(140,120,90,.2); color: inherit;
+  font-size: 12px; padding: 9px; border-radius: 10px; cursor: pointer;
+}
+
+/* 新建弹层 */
+.sc-new-mask{
+  position: fixed; inset: 0; z-index: 9350; background: rgba(10,8,5,.45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sc-new{
+  width: min(520px, 96vw); background: var(--panel-bg, #f7f4ef); color: inherit;
+  border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sc-new h4{ margin: 0; font-size: 15px; }
+.sc-new input, .sc-new select, .sc-new textarea{
+  width: 100%; box-sizing: border-box; background: var(--field-bg, #faf8f4); color: inherit;
+  border: 1px solid rgba(140,120,90,.22); border-radius: 11px; padding: 10px 12px; font-size: 13px; outline: none;
+}
+.sc-new-row{ display: flex; gap: 8px; }
+.sc-new-row > *{ flex: 1; }
+.sc-new-ok{ background: linear-gradient(135deg,#b98a4e,#d4a96a); border: none; color: #fff; font-size: 14px; font-weight: 600; padding: 11px; border-radius: 12px; cursor: pointer; }
+.sc-new-no{ background: none; border: 1px solid rgba(140,120,90,.25); color: inherit; font-size: 13px; padding: 10px; border-radius: 12px; cursor: pointer; }

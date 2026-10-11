@@ -1,0 +1,894 @@
+#!/usr/bin/env python3
+"""
+api_loop.py — optional server-side OpenAI-compatible loop for Companion Channel.
+
+Run this beside backend/app.py when you want the VPS to answer directly via an
+LLM API instead of routing every message to the Claude Code channel plugin.
+
+Relay flow:
+  PWA POST /relay/app/send
+    -> relay stores the human message
+    -> when /relay/app/brain == "loop", relay POSTs here: /loop/ingest
+    -> this loop builds persona + same-session history + current message
+    -> model answer is POSTed back to relay /channel/out
+
+All private values live in env/.env. This file contains no domain, key, or
+personal identity.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import datetime as dt
+import json
+import os
+import re
+import shutil
+import sqlite3
+import subprocess
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from pathlib import Path
+from typing import Any
+
+import httpx
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+
+
+def load_dotenv(path: Path) -> None:
+    try:
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except FileNotFoundError:
+        pass
+
+
+HERE = Path(__file__).resolve().parent
+load_dotenv(HERE / ".env")
+
+LOOP_PORT = int(os.environ.get("LOOP_PORT", "3020"))
+LOOP_CONFIG = Path(os.environ.get("LOOP_CONFIG", str(HERE / "api_loop.config.json")))
+RELAY_DB = os.environ.get("RELAY_DB", str(HERE.parent / "relay.db"))
+RELAY_URL = os.environ.get("RELAY_URL", "http://127.0.0.1:3011").rstrip("/")
+RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
+PERSONA_FILE = os.environ.get("PERSONA_FILE", "")
+PERSONA = os.environ.get("PERSONA", "").strip()
+HISTORY_N = int(os.environ.get("HISTORY_N", "24"))
+MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "2000"))
+TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.7"))
+STREAM_OUTPUT = os.environ.get("LOOP_STREAM", "1").lower() not in {"0", "false", "no"}
+FALLBACK_CODES = {401, 403, 404, 408, 409, 429, 500, 502, 503, 504}
+# 中转站有时把上游报错当 200 正文返回（如 "Gemini 3.5 Flash is no longer available…Antigravity"），
+# HTTP 层看是成功的——必须在文本层识别成失败，否则错误原文会直接发进聊天（实战踩过）。
+_UPSTREAM_JUNK_RE = re.compile(
+    r"is no longer available|antigravity|insufficient_quota|api key.*invalid|invalid api key",
+    re.IGNORECASE,
+)
+
+if not PERSONA and PERSONA_FILE:
+    try:
+        PERSONA = Path(PERSONA_FILE).read_text(encoding="utf-8").strip()
+    except OSError:
+        PERSONA = ""
+if not PERSONA:
+    PERSONA = (
+        "You are the user's private AI companion in a one-to-one chat. "
+        "Reply naturally, warmly, and concisely unless the user asks for detail."
+    )
+
+
+def env_routes() -> list[dict[str, str]]:
+    routes: list[dict[str, str]] = []
+    for suffix in ("", "_2", "_3", "_4"):
+        base = os.environ.get(f"LLM_API_BASE{suffix}", "").rstrip("/")
+        key = os.environ.get(f"LLM_API_KEY{suffix}", "")
+        model = os.environ.get(f"LLM_MODEL{suffix}", "")
+        if base and key and model:
+            routes.append({"url": base, "key": key, "model": model})
+    return routes
+
+
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def mask_key(key: str) -> str:
+    key = str(key or "")
+    if not key:
+        return ""
+    if len(key) <= 10:
+        return "***"
+    return key[:6] + "***" + key[-4:]
+
+
+def load_config() -> dict[str, Any]:
+    try:
+        data = json.loads(LOOP_CONFIG.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except FileNotFoundError:
+        return {}
+    except Exception:
+        return {}
+
+
+def save_config(cfg: dict[str, Any]) -> None:
+    LOOP_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    tmp = LOOP_CONFIG.with_suffix(LOOP_CONFIG.suffix + ".tmp")
+    tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(LOOP_CONFIG)
+
+
+def main_chain() -> list[dict[str, str]]:
+    cfg = load_config()
+    configured = cfg.get("main_chain")
+    if isinstance(configured, list):
+        rows = [r for r in configured if isinstance(r, dict) and r.get("url") and r.get("key") and r.get("model")]
+        if rows:
+            return rows
+    return env_routes()
+
+
+# ── 模型联动:PWA 面板里选的模型(relay /app/models/resolve)优先 ──
+# 这样在聊天页切换模型/思考程度,loop 立刻跟随;拉不到再回退 main_chain。
+_no_reasoning: set = set()
+_think_cache: dict[str, Any] = {"at": 0.0, "route": None, "level": ""}
+
+def resolve_panel_route() -> dict[str, str] | None:
+    try:
+        req = urllib.request.Request(
+            RELAY_URL + "/app/models/resolve?func=chat",
+            headers={"Authorization": "Bearer " + RELAY_SECRET},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            cfg = (json.loads(r.read().decode("utf-8")).get("config")) or {}
+        if cfg.get("endpoint") and cfg.get("model"):
+            return {
+                "url": str(cfg["endpoint"]).rstrip("/"),
+                "key": str(cfg.get("api_key") or ""),
+                "model": str(cfg["model"]),
+            }
+    except Exception:
+        pass
+    return None
+
+
+THINK_EFFORT = {"low": "low", "medium": "medium", "high": "high", "xhigh": "high", "max": "high"}
+
+def panel_thinking_level() -> str:
+    """当前绑定配置的思考程度,回退全局 kv;60s 缓存。"""
+    now = time.time()
+    if now - float(_think_cache.get("at") or 0) < 60:
+        return str(_think_cache.get("level") or "")
+    lv = ""
+    try:
+        req = urllib.request.Request(
+            RELAY_URL + "/app/models/resolve?func=chat",
+            headers={"Authorization": "Bearer " + RELAY_SECRET},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            cfg = (json.loads(r.read().decode("utf-8")).get("config")) or {}
+        lv = str(cfg.get("thinking_level") or "").strip().lower()
+    except Exception:
+        pass
+    if not lv:
+        try:
+            req = urllib.request.Request(
+                RELAY_URL + "/app/config/get",
+                headers={"Authorization": "Bearer " + RELAY_SECRET},
+            )
+            with urllib.request.urlopen(req, timeout=8) as r:
+                lv = str(((json.loads(r.read().decode("utf-8")).get("config")) or {}).get("thinking_level") or "").strip().lower()
+        except Exception:
+            pass
+    _think_cache["at"] = now
+    _think_cache["level"] = lv
+    return lv
+
+
+def active_routes() -> list[dict[str, str]]:
+    route = resolve_panel_route()
+    if route:
+        return [route] + [r for r in main_chain() if r.get("model") != route.get("model")]
+    return main_chain()
+
+
+def history_n() -> int:
+    try:
+        return max(0, min(int(load_config().get("history_n", HISTORY_N)), 200))
+    except Exception:
+        return HISTORY_N
+
+
+def session_rows() -> list[dict[str, Any]]:
+    rows = load_config().get("sessions")
+    if not isinstance(rows, list):
+        return []
+    out = []
+    for item in rows:
+        if isinstance(item, dict) and item.get("id"):
+            out.append({
+                "id": str(item.get("id")),
+                "title": str(item.get("title") or "New chat"),
+                "since_id": int(item.get("since_id") or 0),
+                "created_at": item.get("created_at") or "",
+                "pinned": bool(item.get("pinned", False)),
+            })
+    return out
+
+
+def active_session_id() -> str:
+    cfg = load_config()
+    active = str(cfg.get("active_session") or "").strip()
+    ids = {s["id"] for s in session_rows()}
+    if active in ids:
+        return active
+    rows = session_rows()
+    return rows[-1]["id"] if rows else ""
+
+
+def save_sessions(rows: list[dict[str, Any]], active: str | None = None) -> dict[str, Any]:
+    cfg = load_config()
+    cfg["sessions"] = rows
+    if active is not None:
+        cfg["active_session"] = active
+    save_config(cfg)
+    return sessions_public()
+
+
+def sessions_public() -> dict[str, Any]:
+    return {"active_session": active_session_id(), "sessions": session_rows()}
+
+
+def create_session(title: str = "New chat", since_id: int = 0, activate: bool = True) -> dict[str, Any]:
+    rows = session_rows()
+    sid = "api-" + dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:4]
+    row = {"id": sid, "title": title or "New chat", "since_id": int(since_id or 0), "created_at": now_iso()}
+    rows.append(row)
+    save_sessions(rows, sid if activate else None)
+    return row
+
+
+def patch_session(session_id: str, body: dict[str, Any]) -> dict[str, Any]:
+    rows = session_rows()
+    found = False
+    for item in rows:
+        if item["id"] != session_id:
+            continue
+        found = True
+        if "title" in body:
+            item["title"] = str(body.get("title") or item["title"]).strip() or item["title"]
+        if "pinned" in body:
+            item["pinned"] = bool(body.get("pinned"))
+    if not found:
+        raise HTTPException(status_code=404, detail="session not found")
+    active = session_id if body.get("active") else None
+    return save_sessions(rows, active)
+
+
+def relay_rows(before_id: int | None, session_id: str, limit: int) -> list[dict[str, Any]]:
+    path = Path(RELAY_DB)
+    if not path.exists():
+        return []
+    params: list[Any] = []
+    where = ["kind IN ('user','voice','reply')"]
+    if before_id:
+        where.append("id < ?")
+        params.append(int(before_id))
+    if session_id:
+        where.append("json_extract(meta, '$.api_session') = ?")
+        params.append(session_id)
+    else:
+        where.append("(json_extract(meta, '$.api_session') IS NULL OR json_extract(meta, '$.api_session') = '')")
+    sql = (
+        "SELECT id, direction, kind, text, meta FROM messages "
+        f"WHERE {' AND '.join(where)} ORDER BY id DESC LIMIT ?"
+    )
+    params.append(max(0, limit))
+    with sqlite3.connect(str(path)) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in reversed(rows)]
+
+
+# ── 人格单一来源:Moonlight 角色卡面板(/app/characters/resolve) ──
+# 默认卡 = 安念的完整人设(用户资料+角色卡);60s 缓存;拉不到回退启动时的 PERSONA。
+_persona_cache: dict[str, Any] = {"at": 0.0, "text": None}
+
+def current_persona() -> str:
+    now = time.time()
+    if now - float(_persona_cache.get("at") or 0) < 60 and _persona_cache.get("text") is not None:
+        return _persona_cache["text"]
+    text = None
+    try:
+        req = urllib.request.Request(
+            RELAY_URL + "/app/characters/resolve",
+            headers={"Authorization": "Bearer " + RELAY_SECRET},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            text = str(json.loads(r.read().decode("utf-8")).get("persona") or "") or None
+    except Exception:
+        pass
+    if not text:
+        text = PERSONA
+    _persona_cache["at"] = now
+    _persona_cache["text"] = text
+    return text
+
+
+def build_messages(text: str, *, before_id: int | None = None, session_id: str = "", use_context: bool = True, attachments: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = [{"role": "system", "content": current_persona()}]
+    if use_context:
+        for row in relay_rows(before_id, session_id, history_n()):
+            content = str(row.get("text") or "").strip()
+            if not content:
+                continue
+            role = "assistant" if row.get("direction") == "out" else "user"
+            messages.append({"role": role, "content": content})
+    parts = attachment_parts(attachments or [])
+    if text:
+        parts.insert(0, {"type": "text", "text": text})
+    if not parts:
+        parts = [{"type": "text", "text": "(空消息)"}]
+    # 纯文本退化为字符串;带图/音才用多模态数组
+    content: Any = parts if len(parts) > 1 or parts[0].get("type") != "text" else text
+    messages.append({"role": "user", "content": content})
+    return messages
+
+
+# ── 附件(语音条/图片)→ OpenAI 多模态 content part ──
+def _download_att(att: dict[str, Any]) -> bytes:
+    u = str(att.get("url") or "")
+    i = u.find("/uploads/")
+    path = u[i:] if i >= 0 else ("/uploads/" + u.rsplit("/", 1)[-1])
+    req = urllib.request.Request(
+        RELAY_URL + path + ("&" if "?" in path else "?") + "token=" + RELAY_SECRET,
+        headers={"Authorization": "Bearer " + RELAY_SECRET},
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return r.read()
+
+
+def _audio_to_wav_b64(data: bytes, src_ext: str) -> str | None:
+    if not shutil.which("ffmpeg"):
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / ("in." + (src_ext or "webm"))
+        dst = Path(td) / "out.wav"
+        src.write_bytes(data)
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
+                 "-ar", "16000", "-ac", "1", str(dst)],
+                check=True, timeout=60,
+            )
+        except Exception:
+            return None
+        return base64.b64encode(dst.read_bytes()).decode("ascii")
+
+
+def attachment_parts(atts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    parts: list[dict[str, Any]] = []
+    notes: list[str] = []
+    for att in atts:
+        kind = str(att.get("kind") or "")
+        mime = str(att.get("mime") or "").lower()
+        name = str(att.get("name") or "attachment")
+        try:
+            data = _download_att(att)
+        except Exception as exc:
+            notes.append(f"(附件 {name} 下载失败: {exc})")
+            continue
+        if kind == "image" or mime.startswith("image/"):
+            b64 = base64.b64encode(data).decode("ascii")
+            parts.append({"type": "image_url", "image_url": {"url": f"data:{mime or 'image/jpeg'};base64,{b64}"}})
+            continue
+        if kind == "audio" or mime.startswith("audio/"):
+            ext = "m4a" if ("mp4" in mime or "aac" in mime or "m4a" in name) else "webm"
+            wav_b64 = _audio_to_wav_b64(data, ext)
+            if not wav_b64:
+                notes.append(f"(对方发来一条语音「{name}」,但本机没有 ffmpeg,无法转码给模型听)")
+                continue
+            parts.append({"type": "input_audio", "input_audio": {"data": f"data:audio/wav;base64,{wav_b64}", "format": "wav"}})
+            continue
+        notes.append(f"(对方发来附件 {name})")
+    for n in notes:
+        parts.append({"type": "text", "text": n})
+    return parts
+
+
+# ── Gemini 原生路径:OpenAI 兼容层(OneAPI 系)会静默丢弃音频,
+#    但中转的 /v1beta Gemini 原生端点认 inline_data — 语音条/图片走这条路,
+#    模型真的能"听到"(含语气)。纯文本仍走 OpenAI 路径(流式)。──
+THINK_BUDGET = {"low": 1024, "medium": 4096, "high": 8192, "xhigh": -1, "max": -1}
+
+def _gemini_base(route: dict[str, Any]) -> str:
+    base = str(route.get("url") or "").rstrip("/")
+    if base.endswith("/v1"):
+        base = base[: -len("/v1")]
+    return base
+
+def _gemini_generate(route: dict[str, Any], contents: list[dict[str, Any]], level: str) -> str:
+    """同步调 Gemini 原生 generateContent,返回回复文本。"""
+    body: dict[str, Any] = {"contents": contents}
+    sys_p = current_persona()
+    if sys_p:
+        body["system_instruction"] = {"parts": [{"text": sys_p}]}
+    budget = THINK_BUDGET.get(level)
+    if budget is not None:
+        body["generationConfig"] = {"thinkingConfig": {"thinkingBudget": budget}}
+    model = urllib.parse.quote(str(route.get("model") or ""), safe="")
+    url = _gemini_base(route) + f"/v1beta/models/{model}:generateContent?key=" + str(route.get("key") or "")
+    req = urllib.request.Request(
+        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            out = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        # thinkingConfig 不认 → 摘掉重试一次
+        if "generationConfig" in body and e.code in (400, 422):
+            body.pop("generationConfig")
+            req = urllib.request.Request(
+                url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST",
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=180) as r:
+                out = json.loads(r.read().decode("utf-8"))
+        else:
+            raise
+    cands = out.get("candidates") or [{}]
+    parts = ((cands[0].get("content") or {}).get("parts")) or []
+    return "".join(p.get("text", "") for p in parts).strip()
+
+def _gemini_download_inline(att: dict[str, Any]) -> dict[str, Any] | None:
+    """附件 → Gemini inline_data part;处理不了的返回文字备注 part。"""
+    kind = str(att.get("kind") or "")
+    mime = str(att.get("mime") or "").lower()
+    name = str(att.get("name") or "attachment")
+    try:
+        data = _download_att(att)
+    except Exception as exc:
+        return {"text": f"(附件 {name} 下载失败: {exc})"}
+    if kind == "audio" or mime.startswith("audio/"):
+        ext = "m4a" if ("mp4" in mime or "aac" in mime or "m4a" in name) else "webm"
+        wav_b64 = _audio_to_wav_b64(data, ext)
+        if not wav_b64:
+            return {"text": f"(对方发来一条语音,但本机没有 ffmpeg,无法转码给模型听)"}
+        return {"inline_data": {"mime_type": "audio/wav", "data": wav_b64}}
+    if kind == "image" or mime.startswith("image/"):
+        return {"inline_data": {"mime_type": mime or "image/jpeg", "data": base64.b64encode(data).decode("ascii")}}
+    return {"text": f"(对方发来附件 {name})"}
+
+async def gemini_native_reply(route: dict[str, Any], text: str, attachments: list[dict[str, Any]], before_id: int | None, session_id: str, *, emit_stream: bool, stream_id: str = "") -> dict[str, Any]:
+    parts: list[dict[str, Any]] = []
+    if text:
+        parts.append({"text": text})
+    for att in attachments or []:
+        parts.append(_gemini_download_inline(att))
+    contents = []
+    for row in relay_rows(before_id, session_id, history_n()):
+        t = str(row.get("text") or "").strip()
+        if not t:
+            continue
+        role = "model" if row.get("direction") == "out" else "user"
+        contents.append({"role": role, "parts": [{"text": t}]})
+    contents.append({"role": "user", "parts": parts or [{"text": "(空消息)"}]})
+    level = panel_thinking_level()
+    reply = await asyncio.to_thread(_gemini_generate, route, contents, level)
+    # 不在这里发 delta — handle_ingest 统一负责(避免双 done)
+    return {"text": reply, "model": route.get("model"), "via": "gemini-native", "usage": {}}
+
+
+# ── 语音条语气标签:回复发出后异步生成,写进语音消息 meta.attachments[*].tone ──
+def _save_tone(msg_id: int, att_index: int, tone: str) -> None:
+    try:
+        with sqlite3.connect(RELAY_DB) as conn:
+            row = conn.execute("SELECT meta FROM messages WHERE id=?", (msg_id,)).fetchone()
+            if not row:
+                return
+            meta = json.loads(row[0] or "{}")
+            atts = meta.get("attachments") or []
+            if att_index < len(atts):
+                atts[att_index]["tone"] = tone
+                meta["attachments"] = atts
+                conn.execute("UPDATE messages SET meta=? WHERE id=?", (json.dumps(meta, ensure_ascii=False), msg_id))
+                conn.commit()
+    except Exception as exc:
+        print(f"[tone] save failed: {exc}", flush=True)
+
+
+def tone_job(route: dict[str, Any], msg_id: int, atts: list[dict[str, Any]]) -> None:
+    for idx, att in enumerate(atts):
+        is_audio = str(att.get("kind") or "") == "audio" or str(att.get("mime") or "").startswith("audio/")
+        if not is_audio or att.get("tone"):
+            continue
+        try:
+            data = _download_att(att)
+            mime = str(att.get("mime") or "").lower()
+            ext = "m4a" if ("mp4" in mime or "aac" in mime or "m4a" in str(att.get("name") or "")) else "webm"
+            wav_b64 = _audio_to_wav_b64(data, ext)
+            if not wav_b64:
+                continue
+            contents = [{"role": "user", "parts": [
+                {"text": "听这条语音:先用两三个字概括说话内容主题,再用两三个字概括语气,格式:主题·语气(例如:想你了·撒娇)。只输出这个结果,不要任何其它字。"},
+                {"inline_data": {"mime_type": "audio/wav", "data": wav_b64}},
+            ]}]
+            tone = _gemini_generate(route, contents, "")
+            tone = re.sub(r"[。.!!??\s]+", "", str(tone))[:16]
+            if tone:
+                _save_tone(msg_id, idx, tone)
+                print(f"[tone] #{msg_id}: {tone}", flush=True)
+        except Exception as exc:
+            print(f"[tone] failed: {type(exc).__name__}: {exc}", flush=True)
+
+
+def public_config() -> dict[str, Any]:
+    return {
+        "history_n": history_n(),
+        "active_session": active_session_id(),
+        "sessions": session_rows(),
+        "main_chain": [
+            {"index": i, "model": r.get("model", ""), "url": r.get("url", ""), "key_masked": mask_key(r.get("key", ""))}
+            for i, r in enumerate(main_chain())
+        ],
+    }
+
+
+def update_config(body: dict[str, Any]) -> dict[str, Any]:
+    cfg = load_config()
+    if "history_n" in body:
+        cfg["history_n"] = max(0, min(int(body.get("history_n") or 0), 200))
+    if isinstance(body.get("main_chain"), list):
+        old = main_chain()
+        new_chain = []
+        for pos, item in enumerate(body["main_chain"]):
+            if not isinstance(item, dict):
+                continue
+            old_idx = int(item.get("index", pos) or 0)
+            prev = old[old_idx] if 0 <= old_idx < len(old) else {}
+            entry = {
+                "model": str(item.get("model") or prev.get("model") or "").strip(),
+                "url": str(item.get("url") or prev.get("url") or "").strip().rstrip("/"),
+                "key": str(item.get("key") or prev.get("key") or ""),
+            }
+            if not (entry["model"] and entry["url"] and entry["key"]):
+                raise HTTPException(status_code=400, detail=f"row {pos + 1}: model/url/key required")
+            new_chain.append(entry)
+        if new_chain:
+            cfg["main_chain"] = new_chain
+    save_config(cfg)
+    return public_config()
+
+
+def _chat_url(base: str) -> str:
+    """面板配置里的 endpoint 常常漏掉 /v1（如 https://host）——补上；已带 /v<N> 结尾的端点(智谱v4等)不动。"""
+    base = (base or "").rstrip("/")
+    if not re.search(r"/v\d+$", base):
+        base += "/v1"
+    return base + "/chat/completions"
+
+
+async def relay_out(payload: dict[str, Any]) -> tuple[bool, Any]:
+    if not RELAY_SECRET:
+        return False, "RELAY_SECRET missing"
+    async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
+        resp = await client.post(
+            f"{RELAY_URL}/channel/out",
+            headers={"Authorization": f"Bearer {RELAY_SECRET}", "Content-Type": "application/json"},
+            json=payload,
+        )
+    try:
+        body: Any = resp.json()
+    except Exception:
+        body = resp.text[:500]
+    return resp.status_code < 300, body
+
+
+def _prepare_body(route: dict[str, Any], messages: list[dict[str, Any]], *, stream: bool) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "model": route["model"],
+        "messages": messages,
+        "temperature": TEMPERATURE,
+        "max_tokens": MAX_TOKENS,
+        "stream": stream,
+    }
+    lv = panel_thinking_level()
+    effort = THINK_EFFORT.get(lv)
+    if effort and _route_key(route) not in _no_reasoning:
+        body["reasoning_effort"] = effort
+    return body
+
+
+def _route_key(route: dict[str, Any]) -> str:
+    return f"{route.get('url', '')}|{route.get('model', '')}"
+
+
+def _chat_headers(route: dict[str, Any]) -> dict[str, str]:
+    return {"Authorization": f"Bearer {route['key']}", "Content-Type": "application/json"}
+
+
+async def stream_chat(route: dict[str, str], messages: list[dict[str, Any]], sink) -> dict[str, Any]:
+    body = _prepare_body(route, messages, stream=True)
+    text_parts: list[str] = []
+    usage: dict[str, Any] = {}
+    url = _chat_url(route["url"])
+    async with httpx.AsyncClient(timeout=None, trust_env=False) as client:
+        async with client.stream("POST", url, headers=_chat_headers(route), json=body) as resp:
+            if resp.status_code == 400 and "reasoning_effort" in body:
+                # 端点不认识 reasoning_effort:摘掉重试一次,并记住此路由
+                _no_reasoning.add(_route_key(route))
+                body = {k: v for k, v in body.items() if k != "reasoning_effort"}
+                async with client.stream("POST", url, headers=_chat_headers(route), json=body) as resp2:
+                    if resp2.status_code in FALLBACK_CODES:
+                        raise HTTPException(status_code=resp2.status_code, detail="fallback")
+                    resp2.raise_for_status()
+                    async for line in resp2.aiter_lines():
+                        line = line.strip()
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            ev = json.loads(data)
+                        except json.JSONDecodeError:
+                            continue
+                        if isinstance(ev.get("usage"), dict):
+                            usage = ev["usage"]
+                        delta = (((ev.get("choices") or [{}])[0]).get("delta") or {})
+                        chunk = delta.get("content") or ""
+                        if chunk:
+                            text_parts.append(chunk)
+                            await sink(chunk)
+                return {"text": "".join(text_parts).strip(), "usage": usage}
+            if resp.status_code in FALLBACK_CODES:
+                raise HTTPException(status_code=resp.status_code, detail="fallback")
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    ev = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(ev.get("usage"), dict):
+                    usage = ev["usage"]
+                delta = (((ev.get("choices") or [{}])[0]).get("delta") or {})
+                chunk = delta.get("content") or ""
+                if chunk:
+                    text_parts.append(chunk)
+                    await sink(chunk)
+    return {"text": "".join(text_parts).strip(), "usage": usage}
+
+
+async def complete_chat(route: dict[str, str], messages: list[dict[str, Any]]) -> dict[str, Any]:
+    body = _prepare_body(route, messages, stream=False)
+    async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+        resp = await client.post(_chat_url(route["url"]), headers=_chat_headers(route), json=body)
+        if resp.status_code == 400 and "reasoning_effort" in body:
+            _no_reasoning.add(_route_key(route))
+            body = {k: v for k, v in body.items() if k != "reasoning_effort"}
+            resp = await client.post(_chat_url(route["url"]), headers=_chat_headers(route), json=body)
+    if resp.status_code in FALLBACK_CODES:
+        raise HTTPException(status_code=resp.status_code, detail="fallback")
+    resp.raise_for_status()
+    data = resp.json()
+    msg = ((data.get("choices") or [{}])[0]).get("message") or {}
+    return {"text": (msg.get("content") or "").strip(), "usage": data.get("usage") or {}}
+
+
+async def run_model(messages: list[dict[str, Any]], *, stream_id: str = "", session_id: str = "", emit_stream: bool = False) -> dict[str, Any]:
+    tried = []
+    last_error = ""
+    for route in active_routes():
+        tried.append(route.get("model"))
+        try:
+            if emit_stream and STREAM_OUTPUT:
+                async def sink(chunk: str) -> None:
+                    await relay_out({
+                        "type": "reply_delta",
+                        "stream_id": stream_id,
+                        "text": chunk,
+                        "done": False,
+                        "api_session": session_id,
+                    })
+                out = await stream_chat(route, messages, sink)
+            else:
+                out = await complete_chat(route, messages)
+            if _UPSTREAM_JUNK_RE.search((out.get("text") or "")[:500]):
+                last_error = "upstream junk text"
+                print(f"[loop] route {route.get('model')} upstream junk, falling back")
+                continue
+            out["model"] = route.get("model")
+            out["tried"] = tried[:-1]
+            return out
+        except HTTPException as exc:
+            if exc.status_code not in FALLBACK_CODES:
+                raise
+            last_error = f"HTTP {exc.status_code}"
+        except Exception as exc:
+            last_error = f"{type(exc).__name__}: {exc}"
+            print(f"[loop] route {route.get('model')} failed: {last_error[:220]}")
+    print(f"[loop] all routes failed: tried={tried} last_error={last_error}")
+    return {"text": "", "error": last_error or "all models failed", "tried": tried}
+
+
+async def handle_ingest(text: str, msg_id: int | None, session_id: str, *, dry: bool = False, attachments: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    stream_id = "api-" + uuid.uuid4().hex[:16]
+    atts = attachments or []
+    has_media = any(
+        str(a.get("kind") or "") in ("image", "audio") or
+        str(a.get("mime") or "").startswith(("image/", "audio/"))
+        for a in atts
+    )
+    
+    # Check for custom model routing from the frontend
+    custom_endpoint = None
+    custom_model = None
+    custom_key = None
+    
+    # For voice calls, check if we should use custom routing
+    if text and text.startswith("🎤"):
+        # Check if we have custom model info from the request
+        custom_endpoint = os.environ.get("CUSTOM_ENDPOINT")
+        custom_model = os.environ.get("CUSTOM_MODEL")
+        custom_key = os.environ.get("CUSTOM_KEY")
+    
+    route = None
+    if custom_endpoint and custom_model and custom_key:
+        # Use custom model routing
+        route = {
+            "url": custom_endpoint,
+            "key": custom_key,
+            "model": custom_model
+        }
+    else:
+        # Use normal panel route resolution
+        route = resolve_panel_route()
+    
+    routes = ([route] if route else []) + [r for r in main_chain() if not route or r.get("model") != route.get("model")]
+    out: dict[str, Any] = {"text": "", "error": "no route"}
+    used_route = None
+    
+    for r in routes:
+        try:
+            if has_media:
+                # 语音条/图片:OpenAI 兼容层会丢音频,走 Gemini 原生 inline_data,模型真的能听到
+                out = await gemini_native_reply(r, text, atts, msg_id, session_id, emit_stream=not dry, stream_id=stream_id)
+            else:
+                messages = build_messages(text, before_id=msg_id, session_id=session_id, use_context=True)
+                out = await run_model(messages, stream_id=stream_id, session_id=session_id, emit_stream=not dry)
+            used_route = r
+            break
+        except Exception as exc:
+            out = {"text": "", "error": f"{type(exc).__name__}: {exc}"}
+    
+    out.setdefault("model", None)
+    out["tried"] = []
+    
+    # 语音条:异步生成语气标签写到消息 meta(PWA 稍后轮询拉到)
+    if used_route and msg_id and any(
+        str(a.get("kind") or "") == "audio" or str(a.get("mime") or "").startswith("audio/")
+        for a in atts
+    ):
+        asyncio.create_task(asyncio.to_thread(tone_job, used_route, int(msg_id), atts))
+    
+    reply = (out.get("text") or "").strip()
+    if not reply:
+        reply = "(The API loop did not produce a reply.)"
+    meta = {
+        "runtime": "api_loop",
+        "model": out.get("model"),
+        "fallback_from": out.get("tried") or [],
+        "usage": out.get("usage") or {},
+        "session": session_id,
+    }
+    if out.get("error"):
+        meta["error"] = str(out.get("error"))[:300]
+    if dry:
+        return {"ok": True, "reply": reply, "api": meta}
+    if STREAM_OUTPUT:
+        ok, body = await relay_out({
+            "type": "reply_delta",
+            "stream_id": stream_id,
+            "done": True,
+            "final_text": reply,
+            "api": meta,
+            "api_session": session_id,
+        })
+    else:
+        ok, body = await relay_out({"type": "reply", "text": reply, "api": meta, "api_session": session_id})
+    return {"ok": ok, "relay": body, "api": meta}
+
+
+app = FastAPI(title="companion-api-loop")
+
+
+@app.get("/healthz")
+async def healthz():
+    return {
+        "ok": True,
+        "models": [r.get("model") for r in main_chain()],
+        "history_n": history_n(),
+        "relay_db": RELAY_DB,
+        "relay_secret_loaded": bool(RELAY_SECRET),
+    }
+
+
+@app.get("/loop/config")
+async def loop_config():
+    return public_config()
+
+
+@app.post("/loop/config")
+async def loop_config_update(request: Request):
+    return update_config(await request.json())
+
+
+@app.get("/loop/sessions")
+async def loop_sessions():
+    return sessions_public()
+
+
+@app.post("/loop/sessions")
+async def loop_sessions_create(request: Request):
+    body = await request.json()
+    row = create_session(
+        title=str(body.get("title") or "New chat"),
+        since_id=int(body.get("since_id") or 0),
+        activate=bool(body.get("activate", True)),
+    )
+    return {**sessions_public(), "created": row}
+
+
+@app.patch("/loop/sessions/{session_id}")
+async def loop_sessions_patch(session_id: str, request: Request):
+    return patch_session(session_id, await request.json())
+
+
+@app.post("/loop/chat")
+async def loop_chat(request: Request):
+    body = await request.json()
+    text = str(body.get("text") or body.get("message") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="empty text")
+    session_id = str(body.get("session_id") or body.get("api_session") or active_session_id() or "").strip()
+    messages = build_messages(text, before_id=None, session_id=session_id, use_context=bool(body.get("use_context", True)))
+    out = await run_model(messages, emit_stream=False)
+    return {"ok": True, "reply": out.get("text") or "", "api": out}
+
+
+@app.post("/loop/ingest")
+async def loop_ingest(request: Request):
+    body = await request.json()
+    text = str(body.get("text") or body.get("message") or "").strip()
+    atts = body.get("attachments") if isinstance(body.get("attachments"), list) else []
+    if not text and not atts:
+        raise HTTPException(status_code=400, detail="empty text")
+    msg_id = body.get("id")
+    try:
+        before_id = int(msg_id) if msg_id is not None else None
+    except Exception:
+        before_id = None
+    session_id = str(body.get("session_id") or body.get("api_session") or active_session_id() or "").strip()
+    dry = bool(body.get("dry"))
+    return await handle_ingest(text, before_id, session_id, dry=dry, attachments=atts)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=LOOP_PORT)

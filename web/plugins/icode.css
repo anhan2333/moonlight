@@ -1,0 +1,1009 @@
+/* ═══════════ ICode代码工作区插件 ═══════════
+   基于 InternalBeyond ICode 系统的完整实现
+   功能：代码编辑器、语法高亮、AI助手、文件管理、运行环境、版本控制
+*/
+
+/* 代码工作区面板 */
+.icode-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  background: var(--bg);
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.icode-panel.open {
+  transform: translateX(0);
+}
+
+.icode-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--hairline);
+  position: relative;
+  background: linear-gradient(135deg, rgba(189, 160, 111, 0.05), transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icode-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icode-subtitle {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin: 4px 0 0;
+}
+
+.icode-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--card-bg);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-soft);
+  transition: all 0.2s ease;
+}
+
+.icode-close:hover {
+  background: var(--row-press);
+  color: var(--text);
+}
+
+.icode-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 文件树 */
+.icode-sidebar {
+  width: 280px;
+  background: var(--card-bg);
+  border-right: 1px solid var(--card-line);
+  display: flex;
+  flex-direction: column;
+}
+
+.icode-sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--card-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icode-sidebar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.icode-sidebar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icode-sidebar-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--card-line);
+  background: var(--card-bg);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-soft);
+  transition: all 0.2s ease;
+}
+
+.icode-sidebar-btn:hover {
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.icode-file-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.icode-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.icode-file-item:hover {
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.icode-file-item.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.icode-file-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.icode-file-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icode-file-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.icode-file-item:hover .icode-file-actions {
+  opacity: 1;
+}
+
+.icode-file-action {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-faint);
+  transition: all 0.2s ease;
+}
+
+.icode-file-action:hover {
+  background: var(--row-press);
+  color: var(--text);
+}
+
+/* 文件夹样式 */
+.icode-folder {
+  margin-left: 0;
+}
+
+.icode-folder .icode-file-icon {
+  color: #FFB400;
+}
+
+.icode-folder .icode-file-item {
+  padding-left: 20px;
+}
+
+.icode-folder.expanded .icode-file-icon {
+  transform: rotate(90deg);
+}
+
+.icode-folder-children {
+  margin-left: 20px;
+  border-left: 1px solid var(--card-line);
+  padding-left: 8px;
+}
+
+/* 代码编辑器 */
+.icode-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.icode-editor-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--card-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+}
+
+.icode-editor-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icode-editor-path {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.icode-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icode-editor-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--card-line);
+  background: var(--card-bg);
+  border-radius: 6px;
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icode-editor-btn:hover {
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.icode-editor-btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.icode-editor-btn.primary:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.icode-editor-content {
+  flex: 1;
+  position: relative;
+  background: #1e1e1e;
+  overflow: hidden;
+}
+
+.icode-editor-textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 16px;
+  resize: none;
+  outline: none;
+}
+
+.icode-editor-textarea:focus {
+  outline: none;
+}
+
+/* 语法高亮 */
+.icode-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.icode-highlight-line {
+  white-space: pre;
+  font-variant-ligatures: none;
+}
+
+.icode-highlight-keyword {
+  color: #569cd6;
+}
+
+.icode-highlight-string {
+  color: #ce9178;
+}
+
+.icode-highlight-comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.icode-highlight-function {
+  color: #dcdcaa;
+}
+
+.icode-highlight-number {
+  color: #b5cea8;
+}
+
+.icode-highlight-variable {
+  color: #9cdcfe;
+}
+
+/* 运行终端 */
+.icode-terminal {
+  height: 200px;
+  background: #1e1e1e;
+  border-top: 1px solid var(--card-line);
+  display: flex;
+  flex-direction: column;
+}
+
+.icode-terminal-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2d2d2d;
+}
+
+.icode-terminal-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icode-terminal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icode-terminal-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #ccc;
+  transition: all 0.2s ease;
+}
+
+.icode-terminal-btn:hover {
+  background: #3d3d3d;
+}
+
+.icode-terminal-content {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ccc;
+}
+
+.icode-terminal-line {
+  margin-bottom: 4px;
+}
+
+.icode-terminal-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.icode-terminal-prompt {
+  color: #569cd6;
+  font-weight: 500;
+}
+
+.icode-terminal-command {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-family: inherit;
+  font-size: inherit;
+  outline: none;
+}
+
+.icode-terminal-output {
+  color: #ccc;
+  margin-left: 16px;
+}
+
+.icode-terminal-error {
+  color: #f48771;
+  margin-left: 16px;
+}
+
+/* AI助手 */
+.icode-ai-assistant {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  width: 360px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(100px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+.icode-ai-assistant.show {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.icode-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.icode-ai-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+.icode-ai-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.icode-ai-message {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.icode-ai-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icode-ai-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--hairline);
+  background: var(--card-bg);
+  color: var(--text-soft);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.icode-ai-btn:hover {
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.icode-ai-btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.icode-ai-code {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #d4d4d4;
+  overflow-x: auto;
+}
+
+/* 文件创建对话框 */
+.icode-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.icode-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.icode-modal-content {
+  background: var(--bg);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.icode-modal.show .icode-modal-content {
+  transform: scale(1);
+}
+
+.icode-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.icode-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.icode-modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--card-bg);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-soft);
+  transition: all 0.2s ease;
+}
+
+.icode-modal-close:hover {
+  background: var(--row-press);
+  color: var(--text);
+}
+
+.icode-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.icode-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icode-form-group label {
+  font-size: 14px;
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.icode-form-control {
+  padding: 10px 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.icode-form-control:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(189, 160, 111, 0.1);
+}
+
+.icode-form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.icode-form-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icode-form-btn:hover {
+  background: var(--field-bg);
+  color: var(--text);
+}
+
+.icode-form-btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.icode-form-btn.primary:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* 快捷键提示 — 默认隐藏，仅当 ICode 面板打开时显示（与其他弹层同模式） */
+.icode-shortcuts {
+  position: fixed;
+  bottom: 80px;
+  left: 24px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  max-width: 300px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.icode-shortcuts.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.icode-shortcuts-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.icode-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icode-shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.icode-shortcut-key {
+  background: var(--field-bg);
+  border: 1px solid var(--field-line);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.icode-shortcut-desc {
+  flex: 1;
+  margin-right: 12px;
+}
+
+/* 状态栏 */
+.icode-status-bar {
+  height: 32px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--card-line);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.icode-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icode-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+}
+
+.icode-status-indicator.modified {
+  background: #FFB400;
+}
+
+.icode-status-indicator.error {
+  background: #F44336;
+}
+
+/* 代码片段 */
+.icode-snippets {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1003;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.icode-snippets.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.icode-snippets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.icode-snippets-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.icode-snippets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.icode-snippet-item {
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icode-snippet-item:hover {
+  background: var(--field-bg);
+  border-color: var(--accent);
+}
+
+.icode-snippet-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.icode-snippet-description {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.icode-snippet-code {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #d4d4d4;
+  overflow-x: auto;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .icode-panel {
+    max-width: 100%;
+  }
+  
+  .icode-sidebar {
+    width: 240px;
+  }
+  
+  .icode-ai-assistant {
+    width: calc(100% - 32px);
+    right: 16px;
+  }
+  
+  .icode-shortcuts {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+  
+  .icode-snippets {
+    max-width: calc(100% - 32px);
+    left: 16px;
+    right: 16px;
+  }
+}
+
+/* 加载动画 */
+.icode-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.icode-loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--card-line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: icode-spin 1s linear infinite;
+  margin-left: 12px;
+}
+
+@keyframes icode-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 空状态 */
+.icode-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-faint);
+}
+
+.icode-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.icode-empty-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.icode-empty-subtext {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* 工具提示 */
+.icode-tooltip {
+  position: absolute;
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-soft);
+  z-index: 1004;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.icode-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 搜索框 */
+.icode-search {
+  padding: 12px;
+  border-bottom: 1px solid var(--card-line);
+}
+
+.icode-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.icode-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(189, 160, 111, 0.1);
+}
+
+/* 文件类型图标 */
+.icode-file-icon.js {
+  color: #f7df1e;
+}
+
+.icode-file-icon.py {
+  color: #3776ab;
+}
+
+.icode-file-icon.html {
+  color: #e34c26;
+}
+
+.icode-file-icon.css {
+  color: #1572b6;
+}
+
+.icode-file-icon.json {
+  color: #000000;
+}
+
+.icode-file-icon.md {
+  color: #083fa1;
+}
+
+.icode-file-icon.txt {
+  color: #7f7f7f;
+}

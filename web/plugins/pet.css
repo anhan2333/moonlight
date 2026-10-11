@@ -1,0 +1,134 @@
+/* ============================================================
+   小克总 · Pet plugin for 月光（AionsHome 宠物玩法，粉色触手克苏鲁版）
+   水缸养成：饱食/清洁/开心三值 + 离线衰减 + 喂食游动 + 便便清理
+   + 水变浑 + 气泡说话 + 七种互动。视觉为 CSS+SVG 粉色小克总。
+   ============================================================ */
+
+.pk-panel{
+  position: fixed; inset: 0; z-index: 9300;
+  display: flex; flex-direction: column;
+  background: radial-gradient(ellipse at 50% 0%, #241a2e, #0d0a14 60%);
+  color: #f0e8f5;
+}
+.pk-panel.hidden{ display: none; }
+.pk-top{
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+}
+.pk-back{ background: none; border: none; font-size: 20px; cursor: pointer; color: inherit; padding: 4px 8px; }
+.pk-title{ font-size: 16px; font-weight: 700; }
+.pk-sub{ font-size: 11px; opacity: .55; margin-top: 1px; }
+.pk-rename{
+  margin-left: auto; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+  color: inherit; font-size: 11.5px; padding: 6px 12px; border-radius: 10px; cursor: pointer;
+}
+
+.pk-body{ flex: 1; overflow-y: auto; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+/* 状态条 */
+.pk-stats{ display: flex; gap: 10px; }
+.pk-stat{
+  flex: 1; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; padding: 9px 11px;
+}
+.pk-stat-head{ display: flex; align-items: center; gap: 6px; font-size: 11px; opacity: .8; margin-bottom: 6px; }
+.pk-stat-head .ic{ font-size: 13px; }
+.pk-meter{ height: 6px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
+.pk-meter > i{ display: block; height: 100%; border-radius: 6px; transition: width .5s ease, background .4s; }
+.pk-meter.full > i{ background: linear-gradient(90deg,#e88aa8,#ff9ec4); }
+.pk-meter.clean > i{ background: linear-gradient(90deg,#6fd0c0,#8fe0d0); }
+.pk-meter.happy > i{ background: linear-gradient(90deg,#f0b860,#ffd68a); }
+
+/* 水缸 */
+.pk-tank{
+  position: relative; height: min(46vh, 360px); border-radius: 22px; overflow: hidden;
+  background: linear-gradient(180deg, #2a2140 0%, #1a2a3a 40%, #14324a 100%);
+  box-shadow: inset 0 0 60px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
+  border: 1px solid rgba(255,255,255,.08);
+  transition: background .8s ease;
+}
+.pk-tank.murky{ background: linear-gradient(180deg, #33262a 0%, #2a2a24 40%, #24301f 100%); }
+.pk-tank.murky::after{ content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 60%, rgba(120,110,60,.18), transparent 70%); pointer-events:none; }
+.pk-light{ position:absolute; top:-30%; left:50%; width:120%; height:60%; transform:translateX(-50%); background: radial-gradient(ellipse at top, rgba(255,240,200,.12), transparent 70%); pointer-events:none; }
+.pk-status{ position:absolute; top:10px; right:12px; font-size:10px; letter-spacing:.1em; opacity:.6; font-family:Consolas,monospace; }
+.pk-bubbles{ position:absolute; inset:0; pointer-events:none; }
+.pk-bubbles span{ position:absolute; bottom:-20px; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.18); animation: pkBubble 6s linear infinite; }
+.pk-bubbles span:nth-child(2){ left:20%; animation-delay:1.2s; width:6px; height:6px; }
+.pk-bubbles span:nth-child(3){ left:45%; animation-delay:2.6s; }
+.pk-bubbles span:nth-child(4){ left:70%; animation-delay:0.6s; width:5px; height:5px; }
+.pk-bubbles span:nth-child(5){ left:85%; animation-delay:3.4s; width:7px; height:7px; }
+@keyframes pkBubble{ 0%{ transform:translateY(0); opacity:0; } 10%{ opacity:.7; } 100%{ transform:translateY(-360px); opacity:0; } }
+.pk-plants{ position:absolute; bottom:0; left:0; right:0; height:40%; pointer-events:none; }
+.pk-plant{ position:absolute; bottom:-6px; width:14px; height:70px; border-radius:50% 50% 0 0/70% 70% 0 0; background:linear-gradient(180deg,#2f6b52,#1c4636); transform-origin:bottom center; animation: pkSway 5s ease-in-out infinite; }
+.pk-plant.b{ left:14%; height:90px; background:linear-gradient(180deg,#3a7a5c,#22503c); animation-delay:1s; }
+.pk-plant.c{ right:10%; left:auto; height:60px; animation-delay:2s; }
+.pk-plant.a{ left:6%; }
+@keyframes pkSway{ 0%,100%{ transform:rotate(-4deg); } 50%{ transform:rotate(5deg); } }
+.pk-stones{ position:absolute; bottom:0; left:0; right:0; height:14px; background:radial-gradient(ellipse at 20% 100%, #3a3550 0 12px, transparent 13px), radial-gradient(ellipse at 60% 100%, #35304a 0 16px, transparent 17px), radial-gradient(ellipse at 88% 100%, #3a3550 0 11px, transparent 12px); }
+
+/* 食物颗粒 */
+.pk-food-layer{ position:absolute; inset:0; pointer-events:none; }
+.pk-pellet{ position:absolute; width:7px; height:7px; border-radius:50%; background:#e8b06a; box-shadow:0 0 4px rgba(232,176,106,.6); transition: transform .3s, opacity .3s; }
+.pk-pellet.eaten{ transform:scale(0); opacity:0; }
+/* 便便（可点清理）*/
+.pk-waste-layer{ position:absolute; inset:0; }
+.pk-waste{ position:absolute; left:var(--x); bottom:var(--bottom); width:14px; height:12px; border-radius:60% 40% 55% 45%; background:#6b5a40; box-shadow:inset -2px -2px 3px rgba(0,0,0,.3); cursor:pointer; border:none; animation: pkWasteIn .4s ease; }
+.pk-waste:hover{ filter:brightness(1.3); }
+@keyframes pkWasteIn{ from{ transform:scale(0); } to{ transform:scale(1); } }
+
+/* 小克总本体 */
+.pk-pet{
+  position:absolute; left:50%; bottom:22%; width:120px; height:120px; margin:-60px 0 0 -60px;
+  transform:translate(0,0); transition:left .9s cubic-bezier(.4,0,.4,1), bottom .9s cubic-bezier(.4,0,.4,1);
+  cursor:pointer;
+}
+.pk-pet-inner{ position:relative; width:100%; height:100%; animation: pkFloat 3.4s ease-in-out infinite; }
+.pk-pet.hungry .pk-pet-inner{ animation-duration: 1.6s; }
+@keyframes pkFloat{ 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(2deg); } }
+.pk-glow{ position:absolute; inset:-20% -10%; border-radius:50%; background:radial-gradient(circle, rgba(255,150,200,.25), transparent 65%); filter:blur(6px); }
+.pk-body-svg{ position:relative; width:100%; height:100%; display:block; }
+/* 触手摆动 */
+.pk-tentacle{ transform-origin: 60px 78px; animation: pkWave 2.6s ease-in-out infinite; }
+.pk-tentacle.t2{ animation-delay:.4s; } .pk-tentacle.t3{ animation-delay:.8s; }
+.pk-tentacle.t4{ animation-delay:1.2s; } .pk-tentacle.t5{ animation-delay:1.6s; }
+@keyframes pkWave{ 0%,100%{ transform:rotate(-6deg); } 50%{ transform:rotate(6deg); } }
+.pk-eye{ transform-origin:center; animation: pkBlink 5s infinite; }
+@keyframes pkBlink{ 0%,92%,100%{ transform:scaleY(1); } 95%{ transform:scaleY(.1); } }
+.pk-pet.scared .pk-pet-inner{ animation: pkShake .3s 3; }
+@keyframes pkShake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-6px) rotate(-4deg); } 75%{ transform:translateX(6px) rotate(4deg); } }
+.pk-pet.happy .pk-pet-inner{ animation: pkHop .5s 2; }
+@keyframes pkHop{ 0%,100%{ transform:translateY(0); } 40%{ transform:translateY(-22px) scale(1.04); } }
+
+/* 气泡 */
+.pk-bubble{
+  position:absolute; left:50%; bottom:calc(22% + 118px); transform:translateX(-50%);
+  max-width:80%; background:#fff; color:#3a2a38; font-size:12.5px; line-height:1.5;
+  padding:8px 12px; border-radius:14px; opacity:0; transition:opacity .3s; pointer-events:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+.pk-bubble::after{ content:""; position:absolute; bottom:-7px; left:50%; margin-left:-7px; border:7px solid transparent; border-top-color:#fff; border-bottom:0; }
+.pk-bubble.show{ opacity:1; }
+
+/* 名牌 + 说话条 */
+.pk-nameplate{ text-align:center; font-size:15px; font-weight:700; letter-spacing:.05em; }
+.pk-nameplate .tag{ font-size:10px; font-weight:400; opacity:.5; margin-left:6px; }
+.pk-say{ text-align:center; font-size:12px; opacity:.65; min-height:18px; font-style:italic; }
+
+/* 互动网格 */
+.pk-actions{ display:grid; grid-template-columns:repeat(4, 1fr); gap:9px; }
+.pk-act{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+  color:#f0e8f5; border-radius:13px; padding:11px 4px; cursor:pointer;
+  transition:transform .12s, background .2s;
+}
+.pk-act:active{ transform:scale(.93); }
+.pk-act:hover{ background:rgba(255,150,200,.12); }
+.pk-act .ic{ font-size:20px; line-height:1; }
+.pk-act .lb{ font-size:10.5px; opacity:.85; }
+
+/* 事件日志 */
+.pk-log-title{ font-size:11.5px; opacity:.6; margin-top:4px; }
+.pk-log{ display:flex; flex-direction:column; gap:6px; }
+.pk-log-item{ font-size:11.5px; line-height:1.5; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:7px 10px; }
+.pk-log-item .t{ opacity:.45; font-family:Consolas,monospace; margin-right:6px; }
